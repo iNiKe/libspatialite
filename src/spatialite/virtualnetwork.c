@@ -208,8 +208,8 @@ typedef VirtualNetworkCursor *VirtualNetworkCursorPtr;
 /
 / Author: Luigi Costalli luigi.costalli@gmail.com
 / version 1.0. 2008 October 21
- /
- */
+/
+*/
 
 static DijkstraNodesPtr
 dijkstra_init (NetworkPtr graph)
@@ -387,7 +387,7 @@ dijkstra_shortest_path (DijkstraNodesPtr e, NetworkNodePtr pfrom,
       }
     *ll = cnt;
     return (result);
-};
+}
 
 /* END of Luigi Costalli Dijkstra Shortest Path implementation */
 
@@ -468,7 +468,7 @@ delete_solution (SolutionPtr solution)
     if (solution->Geometry)
 	gaiaFreeGeomColl (solution->Geometry);
     free (solution);
-};
+}
 
 static void
 reset_solution (SolutionPtr solution)
@@ -512,7 +512,7 @@ reset_solution (SolutionPtr solution)
     solution->CurrentRowId = 0;
     solution->TotalCost = 0.0;
     solution->Geometry = NULL;
-};
+}
 
 static SolutionPtr
 alloc_solution ()
@@ -530,7 +530,7 @@ alloc_solution ()
     p->TotalCost = 0.0;
     p->Geometry = NULL;
     return p;
-};
+}
 
 static void
 add_arc_to_solution (SolutionPtr solution, NetworkArcPtr arc)
@@ -974,7 +974,7 @@ network_block (NetworkPtr graph, const unsigned char *blob, int size)
     int ia;
     int index;
     char code[256];
-    int nodeId;
+    int nodeId = -1;
     int arcs;
     NetworkNodePtr pN;
     NetworkArcPtr pA;
@@ -1169,6 +1169,8 @@ vnet_create (sqlite3 * db, void *pAux, int argc, const char *const *argv,
     int ok_id;
     int ok_data;
     NetworkPtr graph = NULL;
+    if (pAux)
+	pAux = pAux;		/* unused arg warning suppression */
 /* checking for table_name and geo_column_name */
     if (argc == 4)
       {
@@ -1279,6 +1281,8 @@ vnet_best_index (sqlite3_vtab * pVTab, sqlite3_index_info * pIdxInfo)
     int to = 0;
     int i_from = -1;
     int i_to = -1;
+    if (pVTab)
+	pVTab = pVTab;		/* unused arg warning suppression */
     for (i = 0; i < pIdxInfo->nConstraint; i++)
       {
 	  /* verifying the constraints */
@@ -1388,6 +1392,8 @@ vnet_filter (sqlite3_vtab_cursor * pCursor, int idxNum, const char *idxStr,
     int node_code = 0;
     VirtualNetworkCursorPtr cursor = (VirtualNetworkCursorPtr) pCursor;
     VirtualNetworkPtr net = (VirtualNetworkPtr) cursor->pVtab;
+    if (idxStr)
+	idxStr = idxStr;	/* unused arg warning suppression */
     node_code = net->graph->NodeCode;
     reset_solution (cursor->solution);
     cursor->eof = 1;
@@ -1603,6 +1609,8 @@ vnet_update (sqlite3_vtab * pVTab, int argc, sqlite3_value ** argv,
 	     sqlite_int64 * pRowid)
 {
 /* generic update [INSERT / UPDATE / DELETE */
+    if (pVTab || argc || argv || pRowid)
+	pVTab = pVTab;		/* unused arg warning suppression */
     return SQLITE_READONLY;
 }
 
@@ -1610,6 +1618,8 @@ static int
 vnet_begin (sqlite3_vtab * pVTab)
 {
 /* BEGIN TRANSACTION */
+    if (pVTab)
+	pVTab = pVTab;		/* unused arg warning suppression */
     return SQLITE_OK;
 }
 
@@ -1617,6 +1627,8 @@ static int
 vnet_sync (sqlite3_vtab * pVTab)
 {
 /* BEGIN TRANSACTION */
+    if (pVTab)
+	pVTab = pVTab;		/* unused arg warning suppression */
     return SQLITE_OK;
 }
 
@@ -1624,6 +1636,8 @@ static int
 vnet_commit (sqlite3_vtab * pVTab)
 {
 /* BEGIN TRANSACTION */
+    if (pVTab)
+	pVTab = pVTab;		/* unused arg warning suppression */
     return SQLITE_OK;
 }
 
@@ -1631,6 +1645,8 @@ static int
 vnet_rollback (sqlite3_vtab * pVTab)
 {
 /* BEGIN TRANSACTION */
+    if (pVTab)
+	pVTab = pVTab;		/* unused arg warning suppression */
     return SQLITE_OK;
 }
 

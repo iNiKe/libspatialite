@@ -1026,7 +1026,7 @@ exifImportFloat32 (const unsigned char *p, int little_endian,
 
 static void
 exifSetTagValue (gaiaExifTagPtr tag, const unsigned char *blob, int endian_mode,
-		 int endian_arch)
+		 int endian_arch, int app1_offset)
 {
 /* setting the TAG value */
     int i;
@@ -1056,7 +1056,7 @@ exifSetTagValue (gaiaExifTagPtr tag, const unsigned char *blob, int endian_mode,
       {
 	  /* jumping to offset */
 	  offset = exifImportU32 (tag->TagOffset, endian_mode, endian_arch);
-	  offset += 12;
+	  offset += app1_offset + 10;
 	  ptr = blob + offset;
       }
     if (tag->Type == 1 || tag->Type == 6 || tag->Type == 7)
@@ -1171,7 +1171,8 @@ exifSetTagValue (gaiaExifTagPtr tag, const unsigned char *blob, int endian_mode,
 
 static void
 exifParseTag (const unsigned char *blob, unsigned int offset, int endian_mode,
-	      int endian_arch, gaiaExifTagListPtr list, int gps)
+	      int endian_arch, gaiaExifTagListPtr list, int gps,
+	      int app1_offset)
 {
 /* parsing some TAG and inserting into the list */
     unsigned short tag_id;
@@ -1182,10 +1183,10 @@ exifParseTag (const unsigned char *blob, unsigned int offset, int endian_mode,
     type = exifImportU16 (blob + offset + 2, endian_mode, endian_arch);
     count = exifImportU32 (blob + offset + 4, endian_mode, endian_arch);
     tag = malloc (sizeof (gaiaExifTag));
-    tag->Gps = gps;
+    tag->Gps = (char) gps;
     tag->TagId = tag_id;
     tag->Type = type;
-    tag->Count = count;
+    tag->Count = (unsigned short) count;
     memcpy (tag->TagOffset, blob + offset + 8, 4);
     tag->ByteValue = NULL;
     tag->StringValue = NULL;
@@ -1199,7 +1200,7 @@ exifParseTag (const unsigned char *blob, unsigned int offset, int endian_mode,
     tag->SignedLongRationals2 = NULL;
     tag->FloatValues = NULL;
     tag->DoubleValues = NULL;
-    exifSetTagValue (tag, blob, endian_mode, endian_arch);
+    exifSetTagValue (tag, blob, endian_mode, endian_arch, app1_offset);
     tag->Next = NULL;
     if (!(list->First))
 	list->First = tag;
@@ -1211,7 +1212,7 @@ exifParseTag (const unsigned char *blob, unsigned int offset, int endian_mode,
 
 static void
 exifExpandIFD (gaiaExifTagListPtr list, const unsigned char *blob,
-	       int endian_mode, int endian_arch)
+	       int endian_mode, int endian_arch, int app1_offset)
 {
 /* trying to expand the EXIF-IFD */
     unsigned int offset;
@@ -1227,14 +1228,14 @@ exifExpandIFD (gaiaExifTagListPtr list, const unsigned char *blob,
 		/* ok, this one is an IFD pointer */
 		offset =
 		    exifImportU32 (tag->TagOffset, endian_mode, endian_arch);
-		offset += 12;
+		offset += app1_offset + 10;
 		items = exifImportU16 (blob + offset, endian_mode, endian_arch);
 		offset += 2;
 		for (i = 0; i < items; i++)
 		  {
 		      /* fetching the TAGs */
 		      exifParseTag (blob, offset, endian_mode, endian_arch,
-				    list, 0);
+				    list, 0, app1_offset);
 		      offset += 12;
 		  }
 	    }
@@ -1244,7 +1245,7 @@ exifExpandIFD (gaiaExifTagListPtr list, const unsigned char *blob,
 
 static void
 exifExpandGPS (gaiaExifTagListPtr list, const unsigned char *blob,
-	       int endian_mode, int endian_arch)
+	       int endian_mode, int endian_arch, int app1_offset)
 {
 /* trying to expand the EXIF-GPS */
     unsigned int offset;
@@ -1260,14 +1261,14 @@ exifExpandGPS (gaiaExifTagListPtr list, const unsigned char *blob,
 		/* ok, this one is a GPSinfo-IFD pointer */
 		offset =
 		    exifImportU32 (tag->TagOffset, endian_mode, endian_arch);
-		offset += 12;
+		offset += app1_offset + 10;
 		items = exifImportU16 (blob + offset, endian_mode, endian_arch);
 		offset += 2;
 		for (i = 0; i < items; i++)
 		  {
 		      /* fetching the TAGs */
 		      exifParseTag (blob, offset, endian_mode, endian_arch,
-				    list, 1);
+				    list, 1, app1_offset);
 		      offset += 12;
 		  }
 	    }
@@ -1286,6 +1287,9 @@ gaiaGetExifTags (const unsigned char *blob, int size)
     unsigned int offset;
     unsigned short items;
     unsigned short i;
+    int x;
+    int app1_offset;
+    int app1_marker = 0;
     gaiaExifTagPtr pT;
     if (!blob)
 	goto error;
@@ -1296,42 +1300,62 @@ gaiaGetExifTags (const unsigned char *blob, int size)
 	;
     else
 	goto error;
+    app1_offset = 2;
+    for (x = 2; x < size; x++)
+      {
+	  /* retrieving the APP1 Marker */
+	  if (*(blob + x) == 0xff)
+	      app1_marker = 1;
+	  if (*(blob + x) == 0xe1)
+	    {
+		if (app1_marker)
+		  {
+		      app1_offset = x - 1;
+		      break;
+		  }
+		else
+		    app1_marker = 0;
+	    }
+      }
 /* checking for APP1 Marker */
-    if (*(blob + 2) == 0xff && *(blob + 3) == 0xe1)
+    if (*(blob + app1_offset) == 0xff && *(blob + app1_offset + 1) == 0xe1)
 	;
     else
 	goto error;
 /* checking for EXIF identifier */
-    if (memcmp (blob + 6, "Exif", 4) == 0)
+    if (memcmp (blob + app1_offset + 4, "Exif", 4) == 0)
 	;
     else
 	goto error;
 /* checking for Pad */
-    if (*(blob + 10) == 0x00 && *(blob + 11) == 0x00)
+    if (*(blob + app1_offset + 8) == 0x00 && *(blob + app1_offset + 9) == 0x00)
 	;
     else
 	goto error;
-    if (memcmp (blob + 12, "II", 2) == 0)
+    if (memcmp (blob + app1_offset + 10, "II", 2) == 0)
 	endian_mode = GAIA_LITTLE_ENDIAN;
-    else if (memcmp (blob + 12, "MM", 2) == 0)
+    else if (memcmp (blob + app1_offset + 10, "MM", 2) == 0)
 	endian_mode = GAIA_BIG_ENDIAN;
     else
 	goto error;
 /* OK: this BLOB seems to contain a valid EXIF */
-    app1_size = exifImportU16 (blob + 4, endian_mode, endian_arch);
-    if ((app1_size + 6) > size)
+    app1_size =
+	exifImportU16 (blob + app1_offset + 2, endian_mode, endian_arch);
+    if ((app1_size + app1_offset + 4) > size)
 	goto error;
 /* checking for marker */
     if (endian_mode == GAIA_BIG_ENDIAN)
       {
-	  if (*(blob + 14) == 0x00 && *(blob + 15) == 0x2a)
+	  if (*(blob + app1_offset + 12) == 0x00
+	      && *(blob + app1_offset + 13) == 0x2a)
 	      ;
 	  else
 	      goto error;
       }
     else
       {
-	  if (*(blob + 14) == 0x2a && *(blob + 15) == 0x00)
+	  if (*(blob + app1_offset + 12) == 0x2a
+	      && *(blob + app1_offset + 13) == 0x00)
 	      ;
 	  else
 	      goto error;
@@ -1342,20 +1366,21 @@ gaiaGetExifTags (const unsigned char *blob, int size)
     list->Last = NULL;
     list->NumTags = 0;
     list->TagsArray = NULL;
-    offset = exifImportU32 (blob + 16, endian_mode, endian_arch);
-    offset += 12;
+    offset = exifImportU32 (blob + app1_offset + 14, endian_mode, endian_arch);
+    offset += app1_offset + 10;
 /* jump to offset */
     items = exifImportU16 (blob + offset, endian_mode, endian_arch);
     offset += 2;
     for (i = 0; i < items; i++)
       {
 /* fetching the EXIF TAGs */
-	  exifParseTag (blob, offset, endian_mode, endian_arch, list, 0);
+	  exifParseTag (blob, offset, endian_mode, endian_arch, list, 0,
+			app1_offset);
 	  offset += 12;
       }
 /* expanding the IFD and GPS tags */
-    exifExpandIFD (list, blob, endian_mode, endian_arch);
-    exifExpandGPS (list, blob, endian_mode, endian_arch);
+    exifExpandIFD (list, blob, endian_mode, endian_arch, app1_offset);
+    exifExpandGPS (list, blob, endian_mode, endian_arch, app1_offset);
     if (list->NumTags)
       {
 	  /* organizing the EXIF TAGS as an Array */
@@ -2219,12 +2244,12 @@ gaiaExifTagGetHumanReadable (const gaiaExifTagPtr tag, char *str, int len,
 		      if (dblval < 1.0)
 			{
 			    dblval = 1.0 / dblval;
-			    sprintf (dummy, "1/%1.0lf sec", dblval);
+			    sprintf (dummy, "1/%1.0f sec", dblval);
 			    human = dummy;
 			}
 		      else
 			{
-			    sprintf (dummy, "%1.0lf sec", dblval);
+			    sprintf (dummy, "%1.0f sec", dblval);
 			    human = dummy;
 			}
 		  }
@@ -2242,12 +2267,12 @@ gaiaExifTagGetHumanReadable (const gaiaExifTagPtr tag, char *str, int len,
 		      if (dblval < 1.0)
 			{
 			    dblval = math_round (1.0 / dblval);
-			    sprintf (dummy, "%1.0lf sec", dblval);
+			    sprintf (dummy, "%1.0f sec", dblval);
 			    human = dummy;
 			}
 		      else
 			{
-			    sprintf (dummy, "1/%1.0lf sec", dblval);
+			    sprintf (dummy, "1/%1.0f sec", dblval);
 			    human = dummy;
 			}
 		  }
@@ -2259,7 +2284,7 @@ gaiaExifTagGetHumanReadable (const gaiaExifTagPtr tag, char *str, int len,
 		dblval = gaiaExifTagGetRationalValue (tag, 0, &xok);
 		if (xok)
 		  {
-		      sprintf (dummy, "F %1.1lf", dblval);
+		      sprintf (dummy, "F %1.1f", dblval);
 		      human = dummy;
 		  }
 	    }
@@ -2272,7 +2297,7 @@ gaiaExifTagGetHumanReadable (const gaiaExifTagPtr tag, char *str, int len,
 		if (xok)
 		  {
 		      dblval = exp ((dblval * log (2)) / 2.0);
-		      sprintf (dummy, "F %1.1lf", dblval);
+		      sprintf (dummy, "F %1.1f", dblval);
 		      human = dummy;
 		  }
 	    }
@@ -2283,7 +2308,7 @@ gaiaExifTagGetHumanReadable (const gaiaExifTagPtr tag, char *str, int len,
 		dblval = gaiaExifTagGetRationalValue (tag, 0, &xok);
 		if (xok)
 		  {
-		      sprintf (dummy, "%1.1lf mm", dblval);
+		      sprintf (dummy, "%1.1f mm", dblval);
 		      human = dummy;
 		  }
 	    }
@@ -2301,7 +2326,7 @@ gaiaExifTagGetHumanReadable (const gaiaExifTagPtr tag, char *str, int len,
 		dblval = gaiaExifTagGetSignedRationalValue (tag, 0, &xok);
 		if (xok)
 		  {
-		      sprintf (dummy, "%1.2lf EV", dblval);
+		      sprintf (dummy, "%1.2f EV", dblval);
 		      human = dummy;
 		  }
 	    }
@@ -2323,6 +2348,36 @@ gaiaExifTagGetHumanReadable (const gaiaExifTagPtr tag, char *str, int len,
     *ok = 0;
 }
 
+static int
+check_wavelet (const unsigned char *blob, int blob_size)
+{
+/* testing WAVELET */
+    int len;
+    char to_check[64];
+    int ok_header = 0;
+    int ok_footer = 0;
+/* checking the header */
+    strcpy (to_check, "StartWaveletsImage$$");
+    len = strlen (to_check);
+    if (blob_size > len)
+      {
+	  if (memcmp ((char *) blob, to_check, len + 1) == 0)
+	      ok_header = 1;
+      }
+/* checking the footer */
+    strcpy (to_check, "$$EndWaveletsImage");
+    len = strlen (to_check);
+    if (blob_size > len)
+      {
+	  if (memcmp
+	      ((char *) blob + (blob_size - (len + 1)), to_check, len + 1) == 0)
+	      ok_footer = 1;
+      }
+    if (ok_header && ok_footer)
+	return 1;
+    return 0;
+}
+
 GAIAEXIF_DECLARE int
 gaiaGuessBlobType (const unsigned char *blob, int size)
 {
@@ -2340,6 +2395,8 @@ gaiaGuessBlobType (const unsigned char *blob, int size)
     unsigned char exif_signature[4];
     unsigned char png_signature[8];
     unsigned char zip_signature[4];
+    unsigned char tiff_signature_little[4];
+    unsigned char tiff_signature_big[4];
     jpeg1_signature[0] = 0xff;
     jpeg1_signature[1] = 0xd8;
     jpeg2_signature[0] = 0xff;
@@ -2368,8 +2425,25 @@ gaiaGuessBlobType (const unsigned char *blob, int size)
     zip_signature[1] = 0x4b;
     zip_signature[2] = 0x03;
     zip_signature[3] = 0x04;
+    tiff_signature_little[0] = 'I';
+    tiff_signature_little[1] = 'I';
+    tiff_signature_little[2] = 0x2a;
+    tiff_signature_little[3] = 0x00;
+    tiff_signature_big[0] = 'M';
+    tiff_signature_big[1] = 'M';
+    tiff_signature_big[2] = 0x00;
+    tiff_signature_big[3] = 0x2a;
     if (size < 1 || !blob)
 	return GAIA_HEX_BLOB;
+    if (check_wavelet (blob, size))
+	return GAIA_WAVELET_BLOB;
+    if (size > 4)
+      {
+	  if (memcmp (blob, tiff_signature_big, 4) == 0)
+	      return GAIA_TIFF_BLOB;
+	  if (memcmp (blob, tiff_signature_little, 4) == 0)
+	      return GAIA_TIFF_BLOB;
+      }
     if (size > 5)
       {
 	  if (strncmp ((char *) blob, "%PDF-", 5) == 0)
@@ -2480,19 +2554,19 @@ gaiaGetGpsCoords (const unsigned char *blob, int size, double *longitude,
 	    {
 		if (pT->Gps && pT->TagId == 0x01)
 		  {
-		      // ok, this one is the GPSLatitudeRef tag
+		      /* ok, this one is the GPSLatitudeRef tag */
 		      if (pT->Type == 2)
 			  lat_ref = *(pT->StringValue);
 		  }
 		if (pT->Gps && pT->TagId == 0x03)
 		  {
-		      // ok, this one is the GPSLongitudeRef tag
+		      /* ok, this one is the GPSLongitudeRef tag */
 		      if (pT->Type == 2)
 			  long_ref = *(pT->StringValue);
 		  }
 		if (pT->Gps && pT->TagId == 0x02)
 		  {
-		      // ok, this one is the GPSLatitude tag 
+		      /* ok, this one is the GPSLatitude tag */
 		      if (pT->Type == 5 && pT->Count == 3)
 			{
 			    dblval = gaiaExifTagGetRationalValue (pT, 0, &ok);
@@ -2508,7 +2582,7 @@ gaiaGetGpsCoords (const unsigned char *blob, int size, double *longitude,
 		  }
 		if (pT->Gps && pT->TagId == 0x04)
 		  {
-		      // ok, this one is the GPSLongitude tag
+		      /* ok, this one is the GPSLongitude tag */
 		      if (pT->Type == 5 && pT->Count == 3)
 			{
 			    dblval = gaiaExifTagGetRationalValue (pT, 0, &ok);
@@ -2589,19 +2663,19 @@ gaiaGetGpsLatLong (const unsigned char *blob, int size, char *latlong,
 	    {
 		if (pT->Gps && pT->TagId == 0x01)
 		  {
-		      // ok, this one is the GPSLatitudeRef tag
+		      /* ok, this one is the GPSLatitudeRef tag */
 		      if (pT->Type == 2)
 			  lat_ref = *(pT->StringValue);
 		  }
 		if (pT->Gps && pT->TagId == 0x03)
 		  {
-		      // ok, this one is the GPSLongitudeRef tag
+		      /* ok, this one is the GPSLongitudeRef tag */
 		      if (pT->Type == 2)
 			  long_ref = *(pT->StringValue);
 		  }
 		if (pT->Gps && pT->TagId == 0x02)
 		  {
-		      // ok, this one is the GPSLatitude tag 
+		      /* ok, this one is the GPSLatitude tag */
 		      if (pT->Type == 5 && pT->Count == 3)
 			{
 			    dblval = gaiaExifTagGetRationalValue (pT, 0, &ok);
@@ -2617,7 +2691,7 @@ gaiaGetGpsLatLong (const unsigned char *blob, int size, char *latlong,
 		  }
 		if (pT->Gps && pT->TagId == 0x04)
 		  {
-		      // ok, this one is the GPSLongitude tag
+		      /* ok, this one is the GPSLongitude tag */
 		      if (pT->Type == 5 && pT->Count == 3)
 			{
 			    dblval = gaiaExifTagGetRationalValue (pT, 0, &ok);
@@ -2641,7 +2715,7 @@ gaiaGetGpsLatLong (const unsigned char *blob, int size, char *latlong,
 	      && long_secs != -DBL_MAX)
 	    {
 		sprintf (ll,
-			 "%c %1.2lf %1.2lf %1.2lf / %c %1.2lf %1.2lf %1.2lf",
+			 "%c %1.2f %1.2f %1.2f / %c %1.2f %1.2f %1.2f",
 			 lat_ref, lat_degs, lat_mins, lat_secs, long_ref,
 			 long_degs, long_mins, long_secs);
 		len = strlen (ll);

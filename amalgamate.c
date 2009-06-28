@@ -44,7 +44,7 @@ do_headers (FILE * out)
     fprintf (out,
 	     "** This file is an amalgamation of many separate C source files from SpatiaLite\n");
     fprintf (out,
-	     "** version 2.3.0.  By combining all the individual C code files into this\n");
+	     "** version 2.3.1.  By combining all the individual C code files into this\n");
     fprintf (out,
 	     "** single large file, the entire code can be compiled as a one translation\n");
     fprintf (out,
@@ -113,12 +113,17 @@ do_headers (FILE * out)
     fprintf (out, "#include <float.h>\n");
     fprintf (out, "#include <locale.h>\n");
     fprintf (out, "#include <errno.h>\n\n");
-    fprintf (out, "#include \"sqlite3ext.h\"\n\n");
     fprintf (out, "#if defined(__MINGW32__) || defined(_WIN32)\n");
     fprintf (out, "#define LIBICONV_STATIC\n");
     fprintf (out, "#include <iconv.h>\n");
     fprintf (out, "#define LIBCHARSET_STATIC\n");
+    fprintf (out, "#ifdef _MSC_VER\n");
+    fprintf (out, "/* <localcharset.h> isn't supported on OSGeo4W */\n");
+    fprintf (out, "/* applying a tricky workaround to fix this issue */\n");
+    fprintf (out, "extern const char * locale_charset (void);\n");
+    fprintf (out, "#else /* sane Windows - not OSGeo4W */\n");
     fprintf (out, "#include <localcharset.h>\n");
+    fprintf (out, "#endif /* end localcharset */\n");
     fprintf (out, "#else /* not WINDOWS */\n");
     fprintf (out, "#ifdef __APPLE__\n");
     fprintf (out, "#include <iconv.h>\n");
@@ -134,8 +139,8 @@ do_headers (FILE * out)
     fprintf (out, "#include <proj_api.h>\n");
     fprintf (out, "#endif\n\n");
     fprintf (out, "#ifdef _WIN32\n");
-    fprintf (out, "#define strcasecmp\tstricmp\n");
-    fprintf (out, "#define strncasecmp\tstrnicmp\n");
+    fprintf (out, "#define strcasecmp\t_stricmp\n");
+    fprintf (out, "#define strncasecmp\t_strnicmp\n");
     fprintf (out, "#define atoll\t_atoi64\n");
     fprintf (out, "#endif /* not WIN32 */\n\n");
 }
@@ -222,6 +227,40 @@ do_copy (FILE * out, const char *basedir, const char *file)
     do_note (out, file, 1);
 }
 
+
+static void
+do_copy_sqlite (FILE * out, const char *basedir, const char *file)
+{
+
+/* copy the sqlite3.h untouched*/
+    char input[1024];
+    char row[256];
+    char *p = row;
+    int c;
+    strcpy (input, PREFIX);
+    strcat (input, basedir);
+    strcat (input, file);
+    FILE *in = fopen (input, "r");
+    if (!in)
+      {
+	  fprintf (stderr, "Error opening %s\n", input);
+	  return;
+      }
+    do_note (out, file, 0);
+    while ((c = getc (in)) != EOF)
+      {
+	  *p++ = c;
+	  if (c == '\n')
+	    {
+		*p = '\0';
+		p = row;
+		fprintf (out, "%s", row);
+	    }
+      }
+    fclose (in);
+    do_note (out, file, 1);
+}
+
 static void
 do_copy_plain (FILE * out, const char *file)
 {
@@ -271,6 +310,9 @@ main ()
 	  return 1;
       }
     do_headers (out);
+    do_copy_sqlite (out, "/headers/spatialite/", "sqlite3.h");
+    do_copy (out, "/headers/spatialite/", "sqlite3ext.h");
+    do_copy (out, "/headers/", "spatialite.h");
     do_copy (out, "/headers/", "spatialite.h");
     do_copy (out, "/headers/spatialite/", "gaiaaux.h");
     do_copy (out, "/headers/spatialite/", "gaiaexif.h");
@@ -449,15 +491,6 @@ main ()
 	  return 1;
       }
     do_copy_plain (out, "/automake/libspatialite.def");
-    fclose (out);
-    out = fopen ("amalgamation/libspatialite-geos.def", "wb");
-    if (!out)
-      {
-	  fprintf (stderr,
-		   "Error opening amalgamation/libspatialite-geos.def\n");
-	  return 1;
-      }
-    do_copy_plain (out, "/automake/libspatialite-geos.def");
     fclose (out);
     out = fopen ("amalgamation/spatialite.pc.in", "wb");
     if (!out)
