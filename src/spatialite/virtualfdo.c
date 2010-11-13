@@ -2,7 +2,7 @@
 
  virtualfdo.c -- SQLite3 extension [VIRTUAL TABLE accessing FDO-OGR tables]
 
- version 2.3, 2008 October 13
+ version 2.4, 2009 September 17
 
  Author: Sandro Furieri a.furieri@lqt.it
 
@@ -43,11 +43,22 @@ the terms of any one of the MPL, the GPL or the LGPL.
  
 */
 
+#if defined(_WIN32) && !defined(__MINGW32__)
+/* MSVC strictly requires this include [off_t] */
+#include <sys/types.h>
+#endif
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <limits.h>
+
+#ifdef SPL_AMALGAMATION	/* spatialite-amalgamation */
 #include <spatialite/sqlite3.h>
+#else
+#include <sqlite3.h>
+#endif
+
 #include <spatialite/spatialite.h>
 #include <spatialite/gaiaaux.h>
 #include <spatialite/gaiageo.h>
@@ -57,6 +68,10 @@ the terms of any one of the MPL, the GPL or the LGPL.
 #define FDO_OGR_WKT		1
 #define FDO_OGR_WKB		2
 #define FDO_OGR_FGF		3
+
+#ifdef _WIN32
+#define strcasecmp	_stricmp
+#endif /* not WIN32 */
 
 #if defined(_WIN32) && !defined(__MINGW32__)
 #define LONG64_MAX	_I64_MAX
@@ -111,8 +126,87 @@ typedef struct VirtualFDOCursorStruct
 } VirtualFDOCursor;
 typedef VirtualFDOCursor *VirtualFDOCursorPtr;
 
+static void
+vfdo_double_quoted_sql (char *buf)
+{
+/* well-formatting a string to be used as an SQL name */
+    char tmp[1024];
+    char *in = tmp;
+    char *out = buf;
+    strcpy (tmp, buf);
+    *out++ = '"';
+    while (*in != '\0')
+      {
+	  if (*in == '"')
+	      *out++ = '"';
+	  *out++ = *in++;
+      }
+    *out++ = '"';
+    *out = '\0';
+}
+
+
+static void
+vfdo_clean_sql_string (char *buf)
+{
+/* returns a well formatted TEXT value for SQL */
+    char tmp[1024];
+    char *in = tmp;
+    char *out = buf;
+    strcpy (tmp, buf);
+    while (*in != '\0')
+      {
+	  if (*in == '\'')
+	      *out++ = '\'';
+	  *out++ = *in++;
+      }
+    *out = '\0';
+}
+
+static void
+vfdo_dequote (char *buf)
+{
+/* dequoting an SQL string */
+    char tmp[1024];
+    char *in = tmp;
+    char *out = buf;
+    char strip = '\0';
+    int first = 0;
+    int len = strlen (buf);
+    if (buf[0] == '\'' && buf[len - 1] == '\'')
+	strip = '\'';
+    if (buf[0] == '"' && buf[len - 1] == '"')
+	strip = '"';
+    if (strip == '\0')
+	return;
+    strcpy (tmp, buf + 1);
+    len = strlen (tmp);
+    tmp[len - 1] = '\0';
+    while (*in != '\0')
+      {
+	  if (*in == strip)
+	    {
+		if (first)
+		  {
+		      first = 0;
+		      in++;
+		      continue;
+		  }
+		else
+		  {
+		      first = 1;
+		      *out++ = *in++;
+		      continue;
+		  }
+	    }
+	  first = 0;
+	  *out++ = *in++;
+      }
+    *out = '\0';
+}
+
 static SqliteValuePtr
-value_alloc ()
+value_alloc (void)
 {
 /* allocates and initialites a Value multitype */
     SqliteValuePtr p = malloc (sizeof (SqliteValue));
@@ -288,20 +382,25 @@ vfdo_insert_row (VirtualFDOPtr p_vt, sqlite3_int64 * rowid, int argc,
     char prefix[16];
     const char *text;
     const unsigned char *blob;
-    char *text_wkt;
+    gaiaOutBuffer out_buf;
     unsigned char *blob_wkb;
     int size;
     char sql[4096];
     char buf[256];
-    gaiaGeomCollPtr geom;
-    sprintf (sql, "INSERT INTO \"%s\" ", p_vt->table);
+    char xname[1024];
+    gaiaGeomCollPtr geom = NULL;
+    strcpy (xname, p_vt->table);
+    vfdo_double_quoted_sql (xname);
+    sprintf (sql, "INSERT INTO %s ", xname);
     for (ic = 0; ic < p_vt->nColumns; ic++)
       {
 	  if (ic == 0)
 	      strcpy (prefix, "(");
 	  else
 	      strcpy (prefix, ", ");
-	  sprintf (buf, "%s\"%s\"", prefix, *(p_vt->Column + ic));
+	  strcpy (xname, *(p_vt->Column + ic));
+	  vfdo_double_quoted_sql (xname);
+	  sprintf (buf, "%s%s", prefix, xname);
 	  strcat (sql, buf);
       }
     strcat (sql, ") VALUES ");
@@ -351,13 +450,19 @@ vfdo_insert_row (VirtualFDOPtr p_vt, sqlite3_int64 * rowid, int argc,
 				  switch (*(p_vt->Format + ig))
 				    {
 				    case FDO_OGR_WKT:
-					gaiaOutWkt (geom, &text_wkt);
-					if (text_wkt)
-					    sqlite3_bind_text (stmt, i - 1,
-							       text_wkt,
-							       strlen
-							       (text_wkt),
-							       free);
+					gaiaOutBufferInitialize (&out_buf);
+					gaiaOutWkt (&out_buf, geom);
+					if (out_buf.Error == 0
+					    && out_buf.Buffer != NULL)
+					  {
+					      sqlite3_bind_text (stmt, i - 1,
+								 out_buf.Buffer,
+								 out_buf.
+								 WriteOffset,
+								 free);
+					      out_buf.Buffer = NULL;
+					      gaiaOutBufferReset (&out_buf);
+					  }
 					else
 					  {
 					      err_geom = 1;
@@ -413,7 +518,15 @@ vfdo_insert_row (VirtualFDOPtr p_vt, sqlite3_int64 * rowid, int argc,
 		  }
 	    }
 	  if (geom_done)
-	      continue;
+	    {
+		if (geom)
+		  {
+		      /* memory cleanup: Kashif Rasul 14 Jan 2010 */
+		      gaiaFreeGeomColl (geom);
+		      geom = NULL;
+		  }
+		continue;
+	    }
 	  switch (sqlite3_value_type (argv[i]))
 	    {
 	    case SQLITE_INTEGER:
@@ -440,6 +553,11 @@ vfdo_insert_row (VirtualFDOPtr p_vt, sqlite3_int64 * rowid, int argc,
 	    };
       }
   error:
+    if (geom)
+      {
+	  /* memory cleanup: Kashif Rasul 14 Jan 2010 */
+	  gaiaFreeGeomColl (geom);
+      }
     if (err_geom || geom_constraint_err)
       {
 	  sqlite3_finalize (stmt);
@@ -474,20 +592,25 @@ vfdo_update_row (VirtualFDOPtr p_vt, sqlite3_int64 rowid, int argc,
     char prefix[16];
     const char *text;
     const unsigned char *blob;
-    char *text_wkt;
+    gaiaOutBuffer out_buf;
     unsigned char *blob_wkb;
     int size;
     char sql[4096];
     char buf[256];
+    char xname[1024];
     gaiaGeomCollPtr geom;
-    sprintf (sql, "UPDATE \"%s\" SET", p_vt->table);
+    strcpy (xname, p_vt->table);
+    vfdo_double_quoted_sql (xname);
+    sprintf (sql, "UPDATE %s SET", xname);
     for (ic = 0; ic < p_vt->nColumns; ic++)
       {
 	  if (ic == 0)
 	      strcpy (prefix, " ");
 	  else
 	      strcpy (prefix, ", ");
-	  sprintf (buf, "%s\"%s\" = ?", prefix, *(p_vt->Column + ic));
+	  strcpy (xname, *(p_vt->Column + ic));
+	  vfdo_double_quoted_sql (xname);
+	  sprintf (buf, "%s%s = ?", prefix, xname);
 	  strcat (sql, buf);
       }
 #if defined(_WIN32) || defined(__MINGW32__)
@@ -533,13 +656,19 @@ vfdo_update_row (VirtualFDOPtr p_vt, sqlite3_int64 rowid, int argc,
 				  switch (*(p_vt->Format + ig))
 				    {
 				    case FDO_OGR_WKT:
-					gaiaOutWkt (geom, &text_wkt);
-					if (text_wkt)
-					    sqlite3_bind_text (stmt, i - 1,
-							       text_wkt,
-							       strlen
-							       (text_wkt),
-							       free);
+					gaiaOutBufferInitialize (&out_buf);
+					gaiaOutWkt (&out_buf, geom);
+					if (out_buf.Error == 0
+					    && out_buf.Buffer != NULL)
+					  {
+					      sqlite3_bind_text (stmt, i - 1,
+								 out_buf.Buffer,
+								 out_buf.
+								 WriteOffset,
+								 free);
+					      out_buf.Buffer = NULL;
+					      gaiaOutBufferReset (&out_buf);
+					  }
 					else
 					  {
 					      err_geom = 1;
@@ -645,11 +774,14 @@ vfdo_delete_row (VirtualFDOPtr p_vt, sqlite3_int64 rowid)
 /* trying to delete a row from FDO-OGR real-table */
     char sql[1024];
     int ret;
+    char xname[1024];
+    strcpy (xname, p_vt->table);
+    vfdo_double_quoted_sql (xname);
 #if defined(_WIN32) || defined(__MINGW32__)
 /* CAVEAT: M$ runtime doesn't supports %lld for 64 bits */
-    sprintf (sql, "DELETE FROM \"%s\" WHERE ROWID = %I64d", p_vt->table, rowid);
+    sprintf (sql, "DELETE FROM %s WHERE ROWID = %I64d", xname, rowid);
 #else
-    sprintf (sql, "DELETE FROM \"%s\" WHERE ROWID = %lld", p_vt->table, rowid);
+    sprintf (sql, "DELETE FROM %s WHERE ROWID = %lld", xname, rowid);
 #endif
     ret = sqlite3_exec (p_vt->db, sql, NULL, NULL, NULL);
     return ret;
@@ -673,20 +805,25 @@ vfdo_read_row (VirtualFDOCursorPtr cursor)
     sqlite3_int64 pk;
     int geom_done;
     gaiaGeomCollPtr geom;
+    char xname[1024];
     strcpy (sql, "SELECT ROWID");
     for (ic = 0; ic < cursor->pVtab->nColumns; ic++)
       {
-	  sprintf (buf, ",\"%s\"", *(cursor->pVtab->Column + ic));
+	  strcpy (xname, *(cursor->pVtab->Column + ic));
+	  vfdo_double_quoted_sql (xname);
+	  sprintf (buf, ",%s", xname);
 	  strcat (sql, buf);
       }
+    strcpy (xname, cursor->pVtab->table);
+    vfdo_double_quoted_sql (xname);
     sprintf (buf,
 #if defined(_WIN32) || defined (__MINGW32__)
 /* CAVEAT: M$ runtime doesn't supports %lld for 64 bits */
-	     " FROM \"%s\" WHERE ROWID >= %I64d",
+	     " FROM %s WHERE ROWID >= %I64d",
 #else
-	     " FROM \"%s\" WHERE ROWID >= %lld",
+	     " FROM %s WHERE ROWID >= %lld",
 #endif
-	     cursor->pVtab->table, cursor->current_row);
+	     xname, cursor->current_row);
     strcat (sql, buf);
     ret =
 	sqlite3_prepare_v2 (cursor->pVtab->db, sql, strlen (sql), &stmt, NULL);
@@ -723,8 +860,9 @@ vfdo_read_row (VirtualFDOCursorPtr cursor)
 					geom = gaiaParseWkt (wkt, -1);
 					if (!geom)
 					    value_set_null (*
-							    (cursor->pVtab->
-							     Value + ic));
+							    (cursor->
+							     pVtab->Value +
+							     ic));
 					else
 					  {
 					      geom->Srid =
@@ -734,15 +872,13 @@ vfdo_read_row (VirtualFDOCursorPtr cursor)
 								       &size);
 					      if (xblob)
 						  value_set_blob (*
-								  (cursor->
-								   pVtab->
-								   Value + ic),
-								  xblob, size);
+								  (cursor->pVtab->Value
+								   + ic), xblob,
+								  size);
 					      else
 						  value_set_null (*
-								  (cursor->
-								   pVtab->
-								   Value + ic));
+								  (cursor->pVtab->Value
+								   + ic));
 					      gaiaFreeGeomColl (geom);
 					  }
 				    }
@@ -763,8 +899,9 @@ vfdo_read_row (VirtualFDOCursorPtr cursor)
 					geom = gaiaFromWkb (blob, size);
 					if (!geom)
 					    value_set_null (*
-							    (cursor->pVtab->
-							     Value + ic));
+							    (cursor->
+							     pVtab->Value +
+							     ic));
 					else
 					  {
 					      geom->Srid =
@@ -774,15 +911,13 @@ vfdo_read_row (VirtualFDOCursorPtr cursor)
 								       &size);
 					      if (xblob)
 						  value_set_blob (*
-								  (cursor->
-								   pVtab->
-								   Value + ic),
-								  xblob, size);
+								  (cursor->pVtab->Value
+								   + ic), xblob,
+								  size);
 					      else
 						  value_set_null (*
-								  (cursor->
-								   pVtab->
-								   Value + ic));
+								  (cursor->pVtab->Value
+								   + ic));
 					      gaiaFreeGeomColl (geom);
 					  }
 				    }
@@ -803,8 +938,9 @@ vfdo_read_row (VirtualFDOCursorPtr cursor)
 					geom = gaiaFromFgf (blob, size);
 					if (!geom)
 					    value_set_null (*
-							    (cursor->pVtab->
-							     Value + ic));
+							    (cursor->
+							     pVtab->Value +
+							     ic));
 					else
 					  {
 					      geom->Srid =
@@ -814,15 +950,13 @@ vfdo_read_row (VirtualFDOCursorPtr cursor)
 								       &size);
 					      if (xblob)
 						  value_set_blob (*
-								  (cursor->
-								   pVtab->
-								   Value + ic),
-								  xblob, size);
+								  (cursor->pVtab->Value
+								   + ic), xblob,
+								  size);
 					      else
 						  value_set_null (*
-								  (cursor->
-								   pVtab->
-								   Value + ic));
+								  (cursor->pVtab->Value
+								   + ic));
 					      gaiaFreeGeomColl (geom);
 					  }
 				    }
@@ -879,13 +1013,14 @@ vfdo_read_row (VirtualFDOCursorPtr cursor)
     cursor->current_row = pk;
 }
 
+
 static int
 vfdo_create (sqlite3 * db, void *pAux, int argc, const char *const *argv,
 	     sqlite3_vtab ** ppVTab, char **pzErr)
 {
 /* creates the virtual table connected to some FDO-OGR table */
-    const char *vtable;
-    const char *table;
+    char vtable[1024];
+    char table[1024];
     int ret;
     int i;
     int len;
@@ -902,14 +1037,17 @@ vfdo_create (sqlite3 * db, void *pAux, int argc, const char *const *argv,
     char sql[4096];
     char buf[256];
     char prefix[16];
+    char xname[1024];
     VirtualFDOPtr p_vt = NULL;
     if (pAux)
 	pAux = pAux;		/* unused arg warning suppression */
 /* checking for table_name */
     if (argc == 4)
       {
-	  vtable = argv[2];
-	  table = argv[3];
+	  strcpy (vtable, argv[2]);
+	  vfdo_dequote (vtable);
+	  strcpy (table, argv[3]);
+	  vfdo_dequote (table);
       }
     else
       {
@@ -919,7 +1057,9 @@ vfdo_create (sqlite3 * db, void *pAux, int argc, const char *const *argv,
 	  return SQLITE_ERROR;
       }
 /* retrieving the base table columns */
-    sprintf (sql, "PRAGMA table_info(\"%s\")", table);
+    strcpy (xname, table);
+    vfdo_double_quoted_sql (xname);
+    sprintf (sql, "PRAGMA table_info(%s)", xname);
     ret = sqlite3_get_table (db, sql, &results, &n_rows, &n_columns, NULL);
     if (ret != SQLITE_OK)
 	goto illegal;
@@ -976,7 +1116,9 @@ vfdo_create (sqlite3 * db, void *pAux, int argc, const char *const *argv,
     strcpy (sql,
 	    "SELECT f_geometry_column, geometry_type, srid, geometry_format, coord_dimension\n");
     strcat (sql, "FROM geometry_columns WHERE f_table_name LIKE '");
-    strcat (sql, table);
+    strcpy (xname, table);
+    vfdo_clean_sql_string (xname);
+    strcat (sql, xname);
     strcat (sql, "'");
     ret = sqlite3_get_table (db, sql, &results, &n_rows, &n_columns, NULL);
     if (ret != SQLITE_OK)
@@ -1027,17 +1169,20 @@ vfdo_create (sqlite3 * db, void *pAux, int argc, const char *const *argv,
     else
 	goto illegal;
 /* preparing the COLUMNs for this VIRTUAL TABLE */
-    strcpy (sql, "CREATE TABLE \"");
-    strcat (sql, vtable);
-    strcat (sql, "\" ");
+    strcpy (sql, "CREATE TABLE ");
+    strcpy (xname, vtable);
+    vfdo_double_quoted_sql (xname);
+    strcat (sql, xname);
+    strcat (sql, " ");
     for (i = 0; i < p_vt->nColumns; i++)
       {
 	  if (i == 0)
 	      strcpy (prefix, "(");
 	  else
 	      strcpy (prefix, ", ");
-	  sprintf (buf, "%s\"%s\" %s", prefix, *(p_vt->Column + i),
-		   *(p_vt->Type + i));
+	  strcpy (xname, *(p_vt->Column + i));
+	  vfdo_double_quoted_sql (xname);
+	  sprintf (buf, "%s%s %s", prefix, xname, *(p_vt->Type + i));
 	  if (*(p_vt->NotNull + i))
 	      strcat (buf, " NOT NULL");
 	  strcat (sql, buf);
@@ -1199,7 +1344,7 @@ vfdo_update (sqlite3_vtab * pVTab, int argc, sqlite3_value ** argv,
 	     sqlite_int64 * pRowid)
 {
 /* generic update [INSERT / UPDATE / DELETE */
-    sqlite3_int64 rowid;
+    sqlite3_int64 rowid = 0;
     int ret;
     VirtualFDOPtr p_vt = (VirtualFDOPtr) pVTab;
     if (argc == 1)

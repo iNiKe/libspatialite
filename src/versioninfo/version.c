@@ -1,7 +1,7 @@
 /*
  version.c -- Gaia spatial support for SQLite
 
- version 2.3, 2008 October 13
+ version 2.4, 2009 September 17
 
  Author: Sandro Furieri a.furieri@lqt.it
 
@@ -42,10 +42,15 @@ the terms of any one of the MPL, the GPL or the LGPL.
  
 */
 
+#ifdef SPL_AMALGAMATION	/* spatialite-amalgamation */
 #include <spatialite/sqlite3.h>
+#else
+#include <sqlite3.h>
+#endif
+
 #include <spatialite.h>
 
-const char spatialiteversion[] = "2.3.1";
+const char spatialiteversion[] = "2.4.0";
 
 SPATIALITE_DECLARE const char *
 spatialite_version (void)

@@ -2,7 +2,7 @@
 
  virtualshape.c -- SQLite3 extension [VIRTUAL TABLE accessing Shapefile]
 
- version 2.3, 2008 October 13
+ version 2.4, 2009 September 17
 
  Author: Sandro Furieri a.furieri@lqt.it
 
@@ -43,13 +43,30 @@ the terms of any one of the MPL, the GPL or the LGPL.
  
 */
 
+#if defined(_WIN32) && !defined(__MINGW32__)
+/* MSVC strictly requires this include [off_t] */
+#include <sys/types.h>
+#endif
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+
+#ifdef SPL_AMALGAMATION	/* spatialite-amalgamation */
 #include <spatialite/sqlite3.h>
+#else
+#include <sqlite3.h>
+#endif
+
 #include <spatialite/spatialite.h>
 #include <spatialite/gaiaaux.h>
 #include <spatialite/gaiageo.h>
+
+#ifdef _WIN32
+#define strcasecmp	_stricmp
+#endif /* not WIN32 */
+
+#if OMIT_ICONV == 0     /* if ICONV is disabled no SHP support is available */
 
 static struct sqlite3_module my_shape_module;
 
@@ -75,6 +92,25 @@ typedef struct VirtualShapeCursorStruct
     int eof;			/* the EOF marker */
 } VirtualShapeCursor;
 typedef VirtualShapeCursor *VirtualShapeCursorPtr;
+
+static void
+vshp_double_quoted_sql (char *buf)
+{
+/* well-formatting a string to be used as an SQL name */
+    char tmp[1024];
+    char *in = tmp;
+    char *out = buf;
+    strcpy (tmp, buf);
+    *out++ = '"';
+    while (*in != '\0')
+      {
+	  if (*in == '"')
+	      *out++ = '"';
+	  *out++ = *in++;
+      }
+    *out++ = '"';
+    *out = '\0';
+}
 
 static int
 vshp_create (sqlite3 * db, void *pAux, int argc, const char *const *argv,
@@ -153,8 +189,10 @@ vshp_create (sqlite3 * db, void *pAux, int argc, const char *const *argv,
     if (!(p_vt->Shp->Valid))
       {
 	  /* something is going the wrong way; creating a stupid default table */
+	  strcpy (dummyName, argv[2]);
+	  vshp_double_quoted_sql (dummyName);
 	  sprintf (buf, "CREATE TABLE %s (PKUID INTEGER, Geometry BLOB)",
-		   argv[1]);
+		   dummyName);
 	  if (sqlite3_declare_vtab (db, buf) != SQLITE_OK)
 	    {
 		*pzErr =
@@ -174,7 +212,9 @@ vshp_create (sqlite3 * db, void *pAux, int argc, const char *const *argv,
       }
 /* preparing the COLUMNs for this VIRTUAL TABLE */
     strcpy (buf, "CREATE TABLE ");
-    strcat (buf, argv[2]);
+    strcpy (dummyName, argv[2]);
+    vshp_double_quoted_sql (dummyName);
+    strcat (buf, dummyName);
     strcat (buf, " (PKUID INTEGER, Geometry BLOB");
 /* checking for duplicate / illegal column names and antialising them */
     col_cnt = 0;
@@ -191,7 +231,8 @@ vshp_create (sqlite3 * db, void *pAux, int argc, const char *const *argv,
     pFld = p_vt->Shp->Dbf->First;
     while (pFld)
       {
-	  sprintf (dummyName, "\"%s\"", pFld->Name);
+	  sprintf (dummyName, "%s", pFld->Name);
+	  vshp_double_quoted_sql (dummyName);
 	  dup = 0;
 	  for (idup = 0; idup < cnt; idup++)
 	    {
@@ -203,7 +244,10 @@ vshp_create (sqlite3 * db, void *pAux, int argc, const char *const *argv,
 	  if (strcasecmp (dummyName, "Geometry") == 0)
 	      dup = 1;
 	  if (dup)
-	      sprintf (dummyName, "COL_%d", seed++);
+	    {
+		sprintf (dummyName, "COL_%d", seed++);
+		vshp_double_quoted_sql (dummyName);
+	    }
 	  if (pFld->Type == 'N')
 	    {
 		if (pFld->Decimals > 0 || pFld->Length > 18)
@@ -527,3 +571,6 @@ virtualshape_extension_init (sqlite3 * db)
 {
     return sqlite3VirtualShapeInit (db);
 }
+
+#endif  /* ICONV enabled/disabled */
+

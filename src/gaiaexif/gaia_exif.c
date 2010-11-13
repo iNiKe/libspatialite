@@ -2,7 +2,7 @@
 
  gaia_exif.c -- Gaia EXIF support
   
- version 2.3, 2008 October 13
+ version 2.4, 2009 September 17
 
  Author: Sandro Furieri a.furieri@lqt.it
 
@@ -43,16 +43,31 @@ the terms of any one of the MPL, the GPL or the LGPL.
  
 */
 
+#if defined(_WIN32) && !defined(__MINGW32__)
+/* MSVC strictly requires this include [off_t] */
+#include <sys/types.h>
+#endif
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <memory.h>
 #include <math.h>
 #include <float.h>
+#include <string.h>
 
+#ifdef SPL_AMALGAMATION	/* spatialite-amalgamation */
 #include <spatialite/sqlite3ext.h>
+#else
+#include <sqlite3ext.h>
+#endif
+
 #include <spatialite/gaiageo.h>
 #include <spatialite/gaiaexif.h>
 #include <spatialite.h>
+
+#ifdef _WIN32
+#define strcasecmp	_stricmp
+#endif /* not WIN32 */
 
 static void
 exifTagName (char gps, unsigned short tag_id, char *str, int len)
@@ -1218,9 +1233,10 @@ exifExpandIFD (gaiaExifTagListPtr list, const unsigned char *blob,
     unsigned int offset;
     unsigned short items;
     unsigned short i;
-    gaiaExifTagPtr tag = list->First;
+    gaiaExifTagPtr tag;
     if (!list)
 	return;
+    tag = list->First;
     while (tag)
       {
 	  if (tag->TagId == 34665)
@@ -1251,9 +1267,10 @@ exifExpandGPS (gaiaExifTagListPtr list, const unsigned char *blob,
     unsigned int offset;
     unsigned short items;
     unsigned short i;
-    gaiaExifTagPtr tag = list->First;
+    gaiaExifTagPtr tag;
     if (!list)
 	return;
+    tag = list->First;
     while (tag)
       {
 	  if (tag->TagId == 34853)
@@ -2348,36 +2365,6 @@ gaiaExifTagGetHumanReadable (const gaiaExifTagPtr tag, char *str, int len,
     *ok = 0;
 }
 
-static int
-check_wavelet (const unsigned char *blob, int blob_size)
-{
-/* testing WAVELET */
-    int len;
-    char to_check[64];
-    int ok_header = 0;
-    int ok_footer = 0;
-/* checking the header */
-    strcpy (to_check, "StartWaveletsImage$$");
-    len = strlen (to_check);
-    if (blob_size > len)
-      {
-	  if (memcmp ((char *) blob, to_check, len + 1) == 0)
-	      ok_header = 1;
-      }
-/* checking the footer */
-    strcpy (to_check, "$$EndWaveletsImage");
-    len = strlen (to_check);
-    if (blob_size > len)
-      {
-	  if (memcmp
-	      ((char *) blob + (blob_size - (len + 1)), to_check, len + 1) == 0)
-	      ok_footer = 1;
-      }
-    if (ok_header && ok_footer)
-	return 1;
-    return 0;
-}
-
 GAIAEXIF_DECLARE int
 gaiaGuessBlobType (const unsigned char *blob, int size)
 {
@@ -2435,8 +2422,6 @@ gaiaGuessBlobType (const unsigned char *blob, int size)
     tiff_signature_big[3] = 0x2a;
     if (size < 1 || !blob)
 	return GAIA_HEX_BLOB;
-    if (check_wavelet (blob, size))
-	return GAIA_WAVELET_BLOB;
     if (size > 4)
       {
 	  if (memcmp (blob, tiff_signature_big, 4) == 0)

@@ -2,7 +2,7 @@
 
  gg_utf8.c -- locale charset handling
   
- version 2.3, 2008 October 13
+ version 2.4, 2009 September 17
 
  Author: Sandro Furieri a.furieri@lqt.it
 
@@ -43,16 +43,29 @@ the terms of any one of the MPL, the GPL or the LGPL.
  
 */
 
+#if defined(_WIN32) && !defined(__MINGW32__)
+/* MSVC strictly requires this include [off_t] */
+#include <sys/types.h>
+#endif
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
 
+#if OMIT_ICONV == 0     /* ICONV is absolutely required */
+
 #if defined(__MINGW32__) || defined(_WIN32)
 #define LIBICONV_STATIC
 #include <iconv.h>
 #define LIBCHARSET_STATIC
+#ifdef _MSC_VER
+/* <localcharset.h> isn't supported on OSGeo4W */
+/* applying a tricky workaround to fix this issue */
+extern const char * locale_charset (void);
+#else /* sane Windows - not OSGeo4W */
 #include <localcharset.h>
+#endif /* end localcharset */
 #else /* not MINGW32 - WIN32 */
 #ifdef __APPLE__
 #include <iconv.h>
@@ -164,3 +177,6 @@ gaiaConvertToUTF8 (void *cvtCS, const char *buf, int buflen, int *err)
     utf8buf[maxlen - utf8len] = '\0';
     return utf8buf;
 }
+
+#endif  /* ICONV enabled/disabled */
+

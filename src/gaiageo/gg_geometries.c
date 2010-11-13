@@ -2,7 +2,7 @@
 
  gg_geometries.c -- Gaia geometric objects
   
- version 2.3, 2008 October 13
+ version 2.4, 2009 September 17
 
  Author: Sandro Furieri a.furieri@lqt.it
 
@@ -43,13 +43,23 @@ the terms of any one of the MPL, the GPL or the LGPL.
  
 */
 
+#if defined(_WIN32) && !defined(__MINGW32__)
+/* MSVC strictly requires this include [off_t] */
+#include <sys/types.h>
+#endif
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <memory.h>
 #include <math.h>
 #include <float.h>
 
+#ifdef SPL_AMALGAMATION	/* spatialite-amalgamation */
 #include <spatialite/sqlite3ext.h>
+#else
+#include <sqlite3ext.h>
+#endif
+
 #include <spatialite/gaiageo.h>
 
 GAIAGEO_DECLARE gaiaPointPtr
@@ -59,6 +69,54 @@ gaiaAllocPoint (double x, double y)
     gaiaPointPtr p = malloc (sizeof (gaiaPoint));
     p->X = x;
     p->Y = y;
+    p->Z = 0.0;
+    p->M = 0.0;
+    p->DimensionModel = GAIA_XY;
+    p->Next = NULL;
+    p->Prev = NULL;
+    return p;
+}
+
+GAIAGEO_DECLARE gaiaPointPtr
+gaiaAllocPointXYZ (double x, double y, double z)
+{
+/* POINT object constructor */
+    gaiaPointPtr p = malloc (sizeof (gaiaPoint));
+    p->X = x;
+    p->Y = y;
+    p->Z = z;
+    p->M = 0.0;
+    p->DimensionModel = GAIA_XY_Z;
+    p->Next = NULL;
+    p->Prev = NULL;
+    return p;
+}
+
+GAIAGEO_DECLARE gaiaPointPtr
+gaiaAllocPointXYM (double x, double y, double m)
+{
+/* POINT object constructor */
+    gaiaPointPtr p = malloc (sizeof (gaiaPoint));
+    p->X = x;
+    p->Y = y;
+    p->Z = 0.0;
+    p->M = m;
+    p->DimensionModel = GAIA_XY_M;
+    p->Next = NULL;
+    p->Prev = NULL;
+    return p;
+}
+
+GAIAGEO_DECLARE gaiaPointPtr
+gaiaAllocPointXYZM (double x, double y, double z, double m)
+{
+/* POINT object constructor */
+    gaiaPointPtr p = malloc (sizeof (gaiaPoint));
+    p->X = x;
+    p->Y = y;
+    p->Z = z;
+    p->M = m;
+    p->DimensionModel = GAIA_XY_Z_M;
     p->Next = NULL;
     p->Prev = NULL;
     return p;
@@ -83,6 +141,55 @@ gaiaAllocLinestring (int vert)
     p->MinY = DBL_MAX;
     p->MaxX = -DBL_MAX;
     p->MaxY = -DBL_MAX;
+    p->DimensionModel = GAIA_XY;
+    p->Next = NULL;
+    return p;
+}
+
+GAIAGEO_DECLARE gaiaLinestringPtr
+gaiaAllocLinestringXYZ (int vert)
+{
+/* LINESTRING object constructor */
+    gaiaLinestringPtr p = malloc (sizeof (gaiaLinestring));
+    p->Coords = malloc (sizeof (double) * (vert * 3));
+    p->Points = vert;
+    p->MinX = DBL_MAX;
+    p->MinY = DBL_MAX;
+    p->MaxX = -DBL_MAX;
+    p->MaxY = -DBL_MAX;
+    p->DimensionModel = GAIA_XY_Z;
+    p->Next = NULL;
+    return p;
+}
+
+GAIAGEO_DECLARE gaiaLinestringPtr
+gaiaAllocLinestringXYM (int vert)
+{
+/* LINESTRING object constructor */
+    gaiaLinestringPtr p = malloc (sizeof (gaiaLinestring));
+    p->Coords = malloc (sizeof (double) * (vert * 3));
+    p->Points = vert;
+    p->MinX = DBL_MAX;
+    p->MinY = DBL_MAX;
+    p->MaxX = -DBL_MAX;
+    p->MaxY = -DBL_MAX;
+    p->DimensionModel = GAIA_XY_M;
+    p->Next = NULL;
+    return p;
+}
+
+GAIAGEO_DECLARE gaiaLinestringPtr
+gaiaAllocLinestringXYZM (int vert)
+{
+/* LINESTRING object constructor */
+    gaiaLinestringPtr p = malloc (sizeof (gaiaLinestring));
+    p->Coords = malloc (sizeof (double) * (vert * 4));
+    p->Points = vert;
+    p->MinX = DBL_MAX;
+    p->MinY = DBL_MAX;
+    p->MaxX = -DBL_MAX;
+    p->MaxY = -DBL_MAX;
+    p->DimensionModel = GAIA_XY_Z_M;
     p->Next = NULL;
     return p;
 }
@@ -99,22 +206,157 @@ gaiaFreeLinestring (gaiaLinestringPtr ptr)
       }
 }
 
+GAIAGEO_DECLARE int
+gaiaLineGetPoint (gaiaLinestringPtr ln, int v, double *x, double *y, double *z,
+		  double *m)
+{
+/* SAFE - getting coords for a vertex in LINESTRING */
+    double vx;
+    double vy;
+    double vz;
+    double vm;
+    *x = 0.0;
+    *y = 0.0;
+    *z = 0.0;
+    *m = 0.0;
+    if (!ln)
+	return 0;
+    if (v < 0 || v >= ln->Points)
+	return 0;
+    switch (ln->DimensionModel)
+      {
+      case GAIA_XY:
+	  gaiaGetPoint (ln->Coords, v, &vx, &vy);
+	  *x = vx;
+	  *y = vy;
+	  break;
+      case GAIA_XY_Z:
+	  gaiaGetPointXYZ (ln->Coords, v, &vx, &vy, &vz);
+	  *x = vx;
+	  *y = vy;
+	  *z = vz;
+	  break;
+      case GAIA_XY_M:
+	  gaiaGetPointXYM (ln->Coords, v, &vx, &vy, &vm);
+	  *x = vx;
+	  *y = vy;
+	  *m = vm;
+	  break;
+      case GAIA_XY_Z_M:
+	  gaiaGetPointXYZM (ln->Coords, v, &vx, &vy, &vz, &vm);
+	  *x = vx;
+	  *y = vy;
+	  *z = vz;
+	  *m = vm;
+	  break;
+      default:
+	  return 0;
+      };
+    return 1;
+}
+
+GAIAGEO_DECLARE int
+gaiaLineSetPoint (gaiaLinestringPtr ln, int v, double x, double y, double z,
+		  double m)
+{
+/* SAFE - setting coords for a vertex in RING */
+    if (!ln)
+	return 0;
+    if (v < 0 || v >= ln->Points)
+	return 0;
+    switch (ln->DimensionModel)
+      {
+      case GAIA_XY:
+	  gaiaSetPoint (ln->Coords, v, x, y);
+	  break;
+      case GAIA_XY_Z:
+	  gaiaSetPointXYZ (ln->Coords, v, x, y, z);
+	  break;
+      case GAIA_XY_M:
+	  gaiaSetPointXYM (ln->Coords, v, x, y, m);
+	  break;
+      case GAIA_XY_Z_M:
+	  gaiaSetPointXYZM (ln->Coords, v, x, y, z, m);
+	  break;
+      default:
+	  return 0;
+      };
+    return 1;
+}
+
+GAIAGEO_DECLARE void
+gaiaCopyLinestringCoords (gaiaLinestringPtr dst, gaiaLinestringPtr src)
+{
+/* 
+/ copying coords from one Linestring to another
+/ maybe, converting from one Dimension Model to a different one
+*/
+    int iv;
+    double x;
+    double y;
+    double z;
+    double m;
+    if (!src)
+	return;
+    if (!dst)
+	return;
+    if (src->Points != dst->Points)
+	return;
+    for (iv = 0; iv < dst->Points; iv++)
+      {
+	  z = 0.0;
+	  m = 0.0;
+	  if (src->DimensionModel == GAIA_XY_Z)
+	    {
+		gaiaGetPointXYZ (src->Coords, iv, &x, &y, &z);
+	    }
+	  else if (src->DimensionModel == GAIA_XY_M)
+	    {
+		gaiaGetPointXYM (src->Coords, iv, &x, &y, &m);
+	    }
+	  else if (src->DimensionModel == GAIA_XY_Z_M)
+	    {
+		gaiaGetPointXYZM (src->Coords, iv, &x, &y, &z, &m);
+	    }
+	  else
+	    {
+		gaiaGetPoint (src->Coords, iv, &x, &y);
+	    }
+	  if (dst->DimensionModel == GAIA_XY_Z)
+	    {
+		gaiaSetPointXYZ (dst->Coords, iv, x, y, z);
+	    }
+	  else if (dst->DimensionModel == GAIA_XY_M)
+	    {
+		gaiaSetPointXYM (dst->Coords, iv, x, y, m);
+	    }
+	  else if (dst->DimensionModel == GAIA_XY_Z_M)
+	    {
+		gaiaSetPointXYZM (dst->Coords, iv, x, y, z, m);
+	    }
+	  else
+	    {
+		gaiaSetPoint (dst->Coords, iv, x, y);
+	    }
+      }
+}
+
 GAIAGEO_DECLARE gaiaLinestringPtr
 gaiaCloneLinestring (gaiaLinestringPtr line)
 {
 /* clones a LINESTRING */
-    int iv;
-    double x;
-    double y;
     gaiaLinestringPtr new_line;
     if (!line)
 	return NULL;
-    new_line = gaiaAllocLinestring (line->Points);
-    for (iv = 0; iv < new_line->Points; iv++)
-      {
-	  gaiaGetPoint (line->Coords, iv, &x, &y);
-	  gaiaSetPoint (new_line->Coords, iv, x, y);
-      }
+    if (line->DimensionModel == GAIA_XY_Z)
+	new_line = gaiaAllocLinestringXYZ (line->Points);
+    else if (line->DimensionModel == GAIA_XY_M)
+	new_line = gaiaAllocLinestringXYM (line->Points);
+    else if (line->DimensionModel == GAIA_XY_Z_M)
+	new_line = gaiaAllocLinestringXYZM (line->Points);
+    else
+	new_line = gaiaAllocLinestring (line->Points);
+    gaiaCopyLinestringCoords (new_line, line);
     return new_line;
 }
 
@@ -131,6 +373,61 @@ gaiaAllocRing (int vert)
     p->MinY = DBL_MAX;
     p->MaxX = -DBL_MAX;
     p->MaxY = -DBL_MAX;
+    p->DimensionModel = GAIA_XY;
+    p->Next = NULL;
+    return p;
+}
+
+GAIAGEO_DECLARE gaiaRingPtr
+gaiaAllocRingXYZ (int vert)
+{
+/* ring object constructor */
+    gaiaRingPtr p = malloc (sizeof (gaiaRing));
+    p->Coords = malloc (sizeof (double) * (vert * 3));
+    p->Points = vert;
+    p->Link = NULL;
+    p->Clockwise = 0;
+    p->MinX = DBL_MAX;
+    p->MinY = DBL_MAX;
+    p->MaxX = -DBL_MAX;
+    p->MaxY = -DBL_MAX;
+    p->DimensionModel = GAIA_XY_Z;
+    p->Next = NULL;
+    return p;
+}
+
+GAIAGEO_DECLARE gaiaRingPtr
+gaiaAllocRingXYM (int vert)
+{
+/* ring object constructor */
+    gaiaRingPtr p = malloc (sizeof (gaiaRing));
+    p->Coords = malloc (sizeof (double) * (vert * 3));
+    p->Points = vert;
+    p->Link = NULL;
+    p->Clockwise = 0;
+    p->MinX = DBL_MAX;
+    p->MinY = DBL_MAX;
+    p->MaxX = -DBL_MAX;
+    p->MaxY = -DBL_MAX;
+    p->DimensionModel = GAIA_XY_M;
+    p->Next = NULL;
+    return p;
+}
+
+GAIAGEO_DECLARE gaiaRingPtr
+gaiaAllocRingXYZM (int vert)
+{
+/* ring object constructor */
+    gaiaRingPtr p = malloc (sizeof (gaiaRing));
+    p->Coords = malloc (sizeof (double) * (vert * 4));
+    p->Points = vert;
+    p->Link = NULL;
+    p->Clockwise = 0;
+    p->MinX = DBL_MAX;
+    p->MinY = DBL_MAX;
+    p->MaxX = -DBL_MAX;
+    p->MaxY = -DBL_MAX;
+    p->DimensionModel = GAIA_XY_Z_M;
     p->Next = NULL;
     return p;
 }
@@ -147,22 +444,157 @@ gaiaFreeRing (gaiaRingPtr ptr)
       }
 }
 
+GAIAGEO_DECLARE int
+gaiaRingGetPoint (gaiaRingPtr rng, int v, double *x, double *y, double *z,
+		  double *m)
+{
+/* SAFE - getting coords for a vertex in RING */
+    double vx;
+    double vy;
+    double vz;
+    double vm;
+    *x = 0.0;
+    *y = 0.0;
+    *z = 0.0;
+    *m = 0.0;
+    if (!rng)
+	return 0;
+    if (v < 0 || v >= rng->Points)
+	return 0;
+    switch (rng->DimensionModel)
+      {
+      case GAIA_XY:
+	  gaiaGetPoint (rng->Coords, v, &vx, &vy);
+	  *x = vx;
+	  *y = vy;
+	  break;
+      case GAIA_XY_Z:
+	  gaiaGetPointXYZ (rng->Coords, v, &vx, &vy, &vz);
+	  *x = vx;
+	  *y = vy;
+	  *z = vz;
+	  break;
+      case GAIA_XY_M:
+	  gaiaGetPointXYM (rng->Coords, v, &vx, &vy, &vm);
+	  *x = vx;
+	  *y = vy;
+	  *m = vm;
+	  break;
+      case GAIA_XY_Z_M:
+	  gaiaGetPointXYZM (rng->Coords, v, &vx, &vy, &vz, &vm);
+	  *x = vx;
+	  *y = vy;
+	  *z = vz;
+	  *m = vm;
+	  break;
+      default:
+	  return 0;
+      };
+    return 1;
+}
+
+GAIAGEO_DECLARE int
+gaiaRingSetPoint (gaiaRingPtr rng, int v, double x, double y, double z,
+		  double m)
+{
+/* SAFE - getting coords for a vertex in RING */
+    if (!rng)
+	return 0;
+    if (v < 0 || v >= rng->Points)
+	return 0;
+    switch (rng->DimensionModel)
+      {
+      case GAIA_XY:
+	  gaiaSetPoint (rng->Coords, v, x, y);
+	  break;
+      case GAIA_XY_Z:
+	  gaiaSetPointXYZ (rng->Coords, v, x, y, z);
+	  break;
+      case GAIA_XY_M:
+	  gaiaSetPointXYM (rng->Coords, v, x, y, m);
+	  break;
+      case GAIA_XY_Z_M:
+	  gaiaSetPointXYZM (rng->Coords, v, x, y, z, m);
+	  break;
+      default:
+	  return 0;
+      };
+    return 1;
+}
+
+GAIAGEO_DECLARE void
+gaiaCopyRingCoords (gaiaRingPtr dst, gaiaRingPtr src)
+{
+/* 
+/ copying coords from one Ring to another
+/ maybe, converting from one Dimension Model to a different one
+*/
+    int iv;
+    double x;
+    double y;
+    double z;
+    double m;
+    if (!src)
+	return;
+    if (!dst)
+	return;
+    if (src->Points != dst->Points)
+	return;
+    for (iv = 0; iv < dst->Points; iv++)
+      {
+	  z = 0.0;
+	  m = 0.0;
+	  if (src->DimensionModel == GAIA_XY_Z)
+	    {
+		gaiaGetPointXYZ (src->Coords, iv, &x, &y, &z);
+	    }
+	  else if (src->DimensionModel == GAIA_XY_M)
+	    {
+		gaiaGetPointXYM (src->Coords, iv, &x, &y, &m);
+	    }
+	  else if (src->DimensionModel == GAIA_XY_Z_M)
+	    {
+		gaiaGetPointXYZM (src->Coords, iv, &x, &y, &z, &m);
+	    }
+	  else
+	    {
+		gaiaGetPoint (src->Coords, iv, &x, &y);
+	    }
+	  if (dst->DimensionModel == GAIA_XY_Z)
+	    {
+		gaiaSetPointXYZ (dst->Coords, iv, x, y, z);
+	    }
+	  else if (dst->DimensionModel == GAIA_XY_M)
+	    {
+		gaiaSetPointXYM (dst->Coords, iv, x, y, m);
+	    }
+	  else if (dst->DimensionModel == GAIA_XY_Z_M)
+	    {
+		gaiaSetPointXYZM (dst->Coords, iv, x, y, z, m);
+	    }
+	  else
+	    {
+		gaiaSetPoint (dst->Coords, iv, x, y);
+	    }
+      }
+}
+
 GAIAGEO_DECLARE gaiaRingPtr
 gaiaCloneRing (gaiaRingPtr ring)
 {
 /* clones a RING */
-    int iv;
-    double x;
-    double y;
     gaiaRingPtr new_ring;
     if (!ring)
 	return NULL;
-    new_ring = gaiaAllocRing (ring->Points);
-    for (iv = 0; iv < new_ring->Points; iv++)
-      {
-	  gaiaGetPoint (ring->Coords, iv, &x, &y);
-	  gaiaSetPoint (new_ring->Coords, iv, x, y);
-      }
+    if (ring->DimensionModel == GAIA_XY_Z)
+	new_ring = gaiaAllocRingXYZ (ring->Points);
+    else if (ring->DimensionModel == GAIA_XY_M)
+	new_ring = gaiaAllocRingXYM (ring->Points);
+    else if (ring->DimensionModel == GAIA_XY_Z_M)
+	new_ring = gaiaAllocRingXYZM (ring->Points);
+    else
+	new_ring = gaiaAllocRing (ring->Points);
+    gaiaCopyRingCoords (new_ring, ring);
     return new_ring;
 }
 
@@ -171,33 +603,29 @@ gaiaClonePolygon (gaiaPolygonPtr polyg)
 {
 /* clones a POLYGON */
     int ib;
-    int iv;
-    double x;
-    double y;
     gaiaPolygonPtr new_polyg;
     gaiaRingPtr i_ring;
     gaiaRingPtr o_ring;
     if (!polyg)
 	return NULL;
     i_ring = polyg->Exterior;
-    new_polyg = gaiaAllocPolygon (i_ring->Points, polyg->NumInteriors);
+    if (polyg->DimensionModel == GAIA_XY_Z)
+	new_polyg = gaiaAllocPolygonXYZ (i_ring->Points, polyg->NumInteriors);
+    else if (polyg->DimensionModel == GAIA_XY_M)
+	new_polyg = gaiaAllocPolygonXYM (i_ring->Points, polyg->NumInteriors);
+    else if (polyg->DimensionModel == GAIA_XY_Z_M)
+	new_polyg = gaiaAllocPolygonXYZM (i_ring->Points, polyg->NumInteriors);
+    else
+	new_polyg = gaiaAllocPolygon (i_ring->Points, polyg->NumInteriors);
     o_ring = new_polyg->Exterior;
-    for (iv = 0; iv < o_ring->Points; iv++)
-      {
-	  /* copying points for the EXTERIOR RING */
-	  gaiaGetPoint (i_ring->Coords, iv, &x, &y);
-	  gaiaSetPoint (o_ring->Coords, iv, x, y);
-      }
+/* copying points for the EXTERIOR RING */
+    gaiaCopyRingCoords (o_ring, i_ring);
     for (ib = 0; ib < new_polyg->NumInteriors; ib++)
       {
 	  /* copying each INTERIOR RING [if any] */
 	  i_ring = polyg->Interiors + ib;
 	  o_ring = gaiaAddInteriorRing (new_polyg, ib, i_ring->Points);
-	  for (iv = 0; iv < o_ring->Points; iv++)
-	    {
-		gaiaGetPoint (i_ring->Coords, iv, &x, &y);
-		gaiaSetPoint (o_ring->Coords, iv, x, y);
-	    }
+	  gaiaCopyRingCoords (o_ring, i_ring);
       }
     return new_polyg;
 }
@@ -230,6 +658,103 @@ gaiaAllocPolygon (int vert, int excl)
     p->MinY = DBL_MAX;
     p->MaxX = -DBL_MAX;
     p->MaxY = -DBL_MAX;
+    p->DimensionModel = GAIA_XY;
+    return p;
+}
+
+GAIAGEO_DECLARE gaiaPolygonPtr
+gaiaAllocPolygonXYZ (int vert, int excl)
+{
+/* POLYGON object constructor */
+    gaiaPolygonPtr p;
+    gaiaRingPtr pP;
+    int ind;
+    p = malloc (sizeof (gaiaPolygon));
+    p->Exterior = gaiaAllocRingXYZ (vert);
+    p->NumInteriors = excl;
+    p->NextInterior = 0;
+    p->Next = NULL;
+    if (excl == 0)
+	p->Interiors = NULL;
+    else
+	p->Interiors = malloc (sizeof (gaiaRing) * excl);
+    for (ind = 0; ind < p->NumInteriors; ind++)
+      {
+	  pP = p->Interiors + ind;
+	  pP->Points = 0;
+	  pP->Coords = NULL;
+	  pP->Next = NULL;
+	  pP->Link = 0;
+      }
+    p->MinX = DBL_MAX;
+    p->MinY = DBL_MAX;
+    p->MaxX = -DBL_MAX;
+    p->MaxY = -DBL_MAX;
+    p->DimensionModel = GAIA_XY_Z;
+    return p;
+}
+
+GAIAGEO_DECLARE gaiaPolygonPtr
+gaiaAllocPolygonXYM (int vert, int excl)
+{
+/* POLYGON object constructor */
+    gaiaPolygonPtr p;
+    gaiaRingPtr pP;
+    int ind;
+    p = malloc (sizeof (gaiaPolygon));
+    p->Exterior = gaiaAllocRingXYM (vert);
+    p->NumInteriors = excl;
+    p->NextInterior = 0;
+    p->Next = NULL;
+    if (excl == 0)
+	p->Interiors = NULL;
+    else
+	p->Interiors = malloc (sizeof (gaiaRing) * excl);
+    for (ind = 0; ind < p->NumInteriors; ind++)
+      {
+	  pP = p->Interiors + ind;
+	  pP->Points = 0;
+	  pP->Coords = NULL;
+	  pP->Next = NULL;
+	  pP->Link = 0;
+      }
+    p->MinX = DBL_MAX;
+    p->MinY = DBL_MAX;
+    p->MaxX = -DBL_MAX;
+    p->MaxY = -DBL_MAX;
+    p->DimensionModel = GAIA_XY_M;
+    return p;
+}
+
+GAIAGEO_DECLARE gaiaPolygonPtr
+gaiaAllocPolygonXYZM (int vert, int excl)
+{
+/* POLYGON object constructor */
+    gaiaPolygonPtr p;
+    gaiaRingPtr pP;
+    int ind;
+    p = malloc (sizeof (gaiaPolygon));
+    p->Exterior = gaiaAllocRingXYZM (vert);
+    p->NumInteriors = excl;
+    p->NextInterior = 0;
+    p->Next = NULL;
+    if (excl == 0)
+	p->Interiors = NULL;
+    else
+	p->Interiors = malloc (sizeof (gaiaRing) * excl);
+    for (ind = 0; ind < p->NumInteriors; ind++)
+      {
+	  pP = p->Interiors + ind;
+	  pP->Points = 0;
+	  pP->Coords = NULL;
+	  pP->Next = NULL;
+	  pP->Link = 0;
+      }
+    p->MinX = DBL_MAX;
+    p->MinY = DBL_MAX;
+    p->MaxX = -DBL_MAX;
+    p->MaxY = -DBL_MAX;
+    p->DimensionModel = GAIA_XY_Z_M;
     return p;
 }
 
@@ -238,22 +763,21 @@ gaiaCreatePolygon (gaiaRingPtr ring)
 {
 /* POLYGON object constructor */
     gaiaPolygonPtr p;
-    int iv;
-    double x;
-    double y;
-    double *coords;
     p = malloc (sizeof (gaiaPolygon));
-    p->Exterior = gaiaAllocRing (ring->Points);
+    p->DimensionModel = ring->DimensionModel;
+    if (ring->DimensionModel == GAIA_XY_Z)
+	p->Exterior = gaiaAllocRingXYZ (ring->Points);
+    else if (ring->DimensionModel == GAIA_XY_M)
+	p->Exterior = gaiaAllocRingXYM (ring->Points);
+    else if (ring->DimensionModel == GAIA_XY_Z_M)
+	p->Exterior = gaiaAllocRingXYZM (ring->Points);
+    else
+	p->Exterior = gaiaAllocRing (ring->Points);
     p->NumInteriors = 0;
     p->NextInterior = 0;
     p->Next = NULL;
     p->Interiors = NULL;
-    coords = p->Exterior->Coords;
-    for (iv = 0; iv < ring->Points; iv++)
-      {
-	  gaiaGetPoint (ring->Coords, iv, &x, &y);
-	  gaiaSetPoint (coords, iv, x, y);
-      }
+    gaiaCopyRingCoords (p->Exterior, ring);
     p->MinX = DBL_MAX;
     p->MinY = DBL_MAX;
     p->MaxX = -DBL_MAX;
@@ -285,9 +809,79 @@ gaiaCloneGeomColl (gaiaGeomCollPtr geom)
 {
 /* clones a GEOMETRYCOLLECTION */
     int ib;
-    int iv;
-    double x;
-    double y;
+    gaiaPointPtr point;
+    gaiaLinestringPtr line;
+    gaiaLinestringPtr new_line;
+    gaiaPolygonPtr polyg;
+    gaiaPolygonPtr new_polyg;
+    gaiaGeomCollPtr new_geom;
+    gaiaRingPtr i_ring;
+    gaiaRingPtr o_ring;
+    if (!geom)
+	return NULL;
+    if (geom->DimensionModel == GAIA_XY_Z)
+	new_geom = gaiaAllocGeomCollXYZ ();
+    else if (geom->DimensionModel == GAIA_XY_M)
+	new_geom = gaiaAllocGeomCollXYM ();
+    else if (geom->DimensionModel == GAIA_XY_Z_M)
+	new_geom = gaiaAllocGeomCollXYZM ();
+    else
+	new_geom = gaiaAllocGeomColl ();
+    new_geom->Srid = geom->Srid;
+    new_geom->DeclaredType = geom->DeclaredType;
+    point = geom->FirstPoint;
+    while (point)
+      {
+	  /* copying POINTs */
+	  if (geom->DimensionModel == GAIA_XY_Z)
+	      gaiaAddPointToGeomCollXYZ (new_geom, point->X, point->Y,
+					 point->Z);
+	  else if (geom->DimensionModel == GAIA_XY_M)
+	      gaiaAddPointToGeomCollXYM (new_geom, point->X, point->Y,
+					 point->M);
+	  else if (geom->DimensionModel == GAIA_XY_Z_M)
+	      gaiaAddPointToGeomCollXYZM (new_geom, point->X, point->Y,
+					  point->Z, point->M);
+	  else
+	      gaiaAddPointToGeomColl (new_geom, point->X, point->Y);
+	  point = point->Next;
+      }
+    line = geom->FirstLinestring;
+    while (line)
+      {
+	  /* copying LINESTRINGs */
+	  new_line = gaiaAddLinestringToGeomColl (new_geom, line->Points);
+	  gaiaCopyLinestringCoords (new_line, line);
+	  line = line->Next;
+      }
+    polyg = geom->FirstPolygon;
+    while (polyg)
+      {
+	  /* copying POLYGONs */
+	  i_ring = polyg->Exterior;
+	  new_polyg =
+	      gaiaAddPolygonToGeomColl (new_geom, i_ring->Points,
+					polyg->NumInteriors);
+	  o_ring = new_polyg->Exterior;
+	  /* copying points for the EXTERIOR RING */
+	  gaiaCopyRingCoords (o_ring, i_ring);
+	  for (ib = 0; ib < new_polyg->NumInteriors; ib++)
+	    {
+		/* copying each INTERIOR RING [if any] */
+		i_ring = polyg->Interiors + ib;
+		o_ring = gaiaAddInteriorRing (new_polyg, ib, i_ring->Points);
+		gaiaCopyRingCoords (o_ring, i_ring);
+	    }
+	  polyg = polyg->Next;
+      }
+    return new_geom;
+}
+
+GAIAGEO_DECLARE gaiaGeomCollPtr
+gaiaCastGeomCollToXY (gaiaGeomCollPtr geom)
+{
+/* clones a GEOMETRYCOLLECTION converting to XY-dimensions */
+    int ib;
     gaiaPointPtr point;
     gaiaLinestringPtr line;
     gaiaLinestringPtr new_line;
@@ -300,6 +894,7 @@ gaiaCloneGeomColl (gaiaGeomCollPtr geom)
 	return NULL;
     new_geom = gaiaAllocGeomColl ();
     new_geom->Srid = geom->Srid;
+    new_geom->DeclaredType = geom->DeclaredType;
     point = geom->FirstPoint;
     while (point)
       {
@@ -312,11 +907,7 @@ gaiaCloneGeomColl (gaiaGeomCollPtr geom)
       {
 	  /* copying LINESTRINGs */
 	  new_line = gaiaAddLinestringToGeomColl (new_geom, line->Points);
-	  for (iv = 0; iv < new_line->Points; iv++)
-	    {
-		gaiaGetPoint (line->Coords, iv, &x, &y);
-		gaiaSetPoint (new_line->Coords, iv, x, y);
-	    }
+	  gaiaCopyLinestringCoords (new_line, line);
 	  line = line->Next;
       }
     polyg = geom->FirstPolygon;
@@ -328,22 +919,183 @@ gaiaCloneGeomColl (gaiaGeomCollPtr geom)
 	      gaiaAddPolygonToGeomColl (new_geom, i_ring->Points,
 					polyg->NumInteriors);
 	  o_ring = new_polyg->Exterior;
-	  for (iv = 0; iv < o_ring->Points; iv++)
-	    {
-		/* copying points for the EXTERIOR RING */
-		gaiaGetPoint (i_ring->Coords, iv, &x, &y);
-		gaiaSetPoint (o_ring->Coords, iv, x, y);
-	    }
+	  /* copying points for the EXTERIOR RING */
+	  gaiaCopyRingCoords (o_ring, i_ring);
 	  for (ib = 0; ib < new_polyg->NumInteriors; ib++)
 	    {
 		/* copying each INTERIOR RING [if any] */
 		i_ring = polyg->Interiors + ib;
 		o_ring = gaiaAddInteriorRing (new_polyg, ib, i_ring->Points);
-		for (iv = 0; iv < o_ring->Points; iv++)
-		  {
-		      gaiaGetPoint (i_ring->Coords, iv, &x, &y);
-		      gaiaSetPoint (o_ring->Coords, iv, x, y);
-		  }
+		gaiaCopyRingCoords (o_ring, i_ring);
+	    }
+	  polyg = polyg->Next;
+      }
+    return new_geom;
+}
+
+GAIAGEO_DECLARE gaiaGeomCollPtr
+gaiaCastGeomCollToXYZ (gaiaGeomCollPtr geom)
+{
+/* clones a GEOMETRYCOLLECTION converting to XYZ-dimensions */
+    int ib;
+    gaiaPointPtr point;
+    gaiaLinestringPtr line;
+    gaiaLinestringPtr new_line;
+    gaiaPolygonPtr polyg;
+    gaiaPolygonPtr new_polyg;
+    gaiaGeomCollPtr new_geom;
+    gaiaRingPtr i_ring;
+    gaiaRingPtr o_ring;
+    if (!geom)
+	return NULL;
+    new_geom = gaiaAllocGeomCollXYZ ();
+    new_geom->Srid = geom->Srid;
+    new_geom->DeclaredType = geom->DeclaredType;
+    point = geom->FirstPoint;
+    while (point)
+      {
+	  /* copying POINTs */
+	  gaiaAddPointToGeomCollXYZ (new_geom, point->X, point->Y, point->Z);
+	  point = point->Next;
+      }
+    line = geom->FirstLinestring;
+    while (line)
+      {
+	  /* copying LINESTRINGs */
+	  new_line = gaiaAddLinestringToGeomColl (new_geom, line->Points);
+	  gaiaCopyLinestringCoords (new_line, line);
+	  line = line->Next;
+      }
+    polyg = geom->FirstPolygon;
+    while (polyg)
+      {
+	  /* copying POLYGONs */
+	  i_ring = polyg->Exterior;
+	  new_polyg =
+	      gaiaAddPolygonToGeomColl (new_geom, i_ring->Points,
+					polyg->NumInteriors);
+	  o_ring = new_polyg->Exterior;
+	  /* copying points for the EXTERIOR RING */
+	  gaiaCopyRingCoords (o_ring, i_ring);
+	  for (ib = 0; ib < new_polyg->NumInteriors; ib++)
+	    {
+		/* copying each INTERIOR RING [if any] */
+		i_ring = polyg->Interiors + ib;
+		o_ring = gaiaAddInteriorRing (new_polyg, ib, i_ring->Points);
+		gaiaCopyRingCoords (o_ring, i_ring);
+	    }
+	  polyg = polyg->Next;
+      }
+    return new_geom;
+}
+
+GAIAGEO_DECLARE gaiaGeomCollPtr
+gaiaCastGeomCollToXYM (gaiaGeomCollPtr geom)
+{
+/* clones a GEOMETRYCOLLECTION converting to XYM-dimensions */
+    int ib;
+    gaiaPointPtr point;
+    gaiaLinestringPtr line;
+    gaiaLinestringPtr new_line;
+    gaiaPolygonPtr polyg;
+    gaiaPolygonPtr new_polyg;
+    gaiaGeomCollPtr new_geom;
+    gaiaRingPtr i_ring;
+    gaiaRingPtr o_ring;
+    if (!geom)
+	return NULL;
+    new_geom = gaiaAllocGeomCollXYM ();
+    new_geom->Srid = geom->Srid;
+    new_geom->DeclaredType = geom->DeclaredType;
+    point = geom->FirstPoint;
+    while (point)
+      {
+	  /* copying POINTs */
+	  gaiaAddPointToGeomCollXYM (new_geom, point->X, point->Y, point->M);
+	  point = point->Next;
+      }
+    line = geom->FirstLinestring;
+    while (line)
+      {
+	  /* copying LINESTRINGs */
+	  new_line = gaiaAddLinestringToGeomColl (new_geom, line->Points);
+	  gaiaCopyLinestringCoords (new_line, line);
+	  line = line->Next;
+      }
+    polyg = geom->FirstPolygon;
+    while (polyg)
+      {
+	  /* copying POLYGONs */
+	  i_ring = polyg->Exterior;
+	  new_polyg =
+	      gaiaAddPolygonToGeomColl (new_geom, i_ring->Points,
+					polyg->NumInteriors);
+	  o_ring = new_polyg->Exterior;
+	  /* copying points for the EXTERIOR RING */
+	  gaiaCopyRingCoords (o_ring, i_ring);
+	  for (ib = 0; ib < new_polyg->NumInteriors; ib++)
+	    {
+		/* copying each INTERIOR RING [if any] */
+		i_ring = polyg->Interiors + ib;
+		o_ring = gaiaAddInteriorRing (new_polyg, ib, i_ring->Points);
+		gaiaCopyRingCoords (o_ring, i_ring);
+	    }
+	  polyg = polyg->Next;
+      }
+    return new_geom;
+}
+
+GAIAGEO_DECLARE gaiaGeomCollPtr
+gaiaCastGeomCollToXYZM (gaiaGeomCollPtr geom)
+{
+/* clones a GEOMETRYCOLLECTION converting to XYZM-dimensions */
+    int ib;
+    gaiaPointPtr point;
+    gaiaLinestringPtr line;
+    gaiaLinestringPtr new_line;
+    gaiaPolygonPtr polyg;
+    gaiaPolygonPtr new_polyg;
+    gaiaGeomCollPtr new_geom;
+    gaiaRingPtr i_ring;
+    gaiaRingPtr o_ring;
+    if (!geom)
+	return NULL;
+    new_geom = gaiaAllocGeomCollXYZM ();
+    new_geom->Srid = geom->Srid;
+    new_geom->DeclaredType = geom->DeclaredType;
+    point = geom->FirstPoint;
+    while (point)
+      {
+	  /* copying POINTs */
+	  gaiaAddPointToGeomCollXYZM (new_geom, point->X, point->Y, point->Z,
+				      point->M);
+	  point = point->Next;
+      }
+    line = geom->FirstLinestring;
+    while (line)
+      {
+	  /* copying LINESTRINGs */
+	  new_line = gaiaAddLinestringToGeomColl (new_geom, line->Points);
+	  gaiaCopyLinestringCoords (new_line, line);
+	  line = line->Next;
+      }
+    polyg = geom->FirstPolygon;
+    while (polyg)
+      {
+	  /* copying POLYGONs */
+	  i_ring = polyg->Exterior;
+	  new_polyg =
+	      gaiaAddPolygonToGeomColl (new_geom, i_ring->Points,
+					polyg->NumInteriors);
+	  o_ring = new_polyg->Exterior;
+	  /* copying points for the EXTERIOR RING */
+	  gaiaCopyRingCoords (o_ring, i_ring);
+	  for (ib = 0; ib < new_polyg->NumInteriors; ib++)
+	    {
+		/* copying each INTERIOR RING [if any] */
+		i_ring = polyg->Interiors + ib;
+		o_ring = gaiaAddInteriorRing (new_polyg, ib, i_ring->Points);
+		gaiaCopyRingCoords (o_ring, i_ring);
 	    }
 	  polyg = polyg->Next;
       }
@@ -368,7 +1120,81 @@ gaiaAllocGeomColl ()
     p->MinY = DBL_MAX;
     p->MaxX = -DBL_MAX;
     p->MaxY = -DBL_MAX;
+    p->DimensionModel = GAIA_XY;
     p->DeclaredType = GAIA_UNKNOWN;
+    p->Next = NULL;
+    return p;
+}
+
+GAIAGEO_DECLARE gaiaGeomCollPtr
+gaiaAllocGeomCollXYZ ()
+{
+/* GEOMETRYCOLLECTION object constructor */
+    gaiaGeomCollPtr p = malloc (sizeof (gaiaGeomColl));
+    p->Srid = -1;
+    p->endian = ' ';
+    p->offset = 0;
+    p->FirstPoint = NULL;
+    p->LastPoint = NULL;
+    p->FirstLinestring = NULL;
+    p->LastLinestring = NULL;
+    p->FirstPolygon = NULL;
+    p->LastPolygon = NULL;
+    p->MinX = DBL_MAX;
+    p->MinY = DBL_MAX;
+    p->MaxX = -DBL_MAX;
+    p->MaxY = -DBL_MAX;
+    p->DimensionModel = GAIA_XY_Z;
+    p->DeclaredType = GAIA_UNKNOWN;
+    p->Next = NULL;
+    return p;
+}
+
+GAIAGEO_DECLARE gaiaGeomCollPtr
+gaiaAllocGeomCollXYM ()
+{
+/* GEOMETRYCOLLECTION object constructor */
+    gaiaGeomCollPtr p = malloc (sizeof (gaiaGeomColl));
+    p->Srid = -1;
+    p->endian = ' ';
+    p->offset = 0;
+    p->FirstPoint = NULL;
+    p->LastPoint = NULL;
+    p->FirstLinestring = NULL;
+    p->LastLinestring = NULL;
+    p->FirstPolygon = NULL;
+    p->LastPolygon = NULL;
+    p->MinX = DBL_MAX;
+    p->MinY = DBL_MAX;
+    p->MaxX = -DBL_MAX;
+    p->MaxY = -DBL_MAX;
+    p->DimensionModel = GAIA_XY_M;
+    p->DeclaredType = GAIA_UNKNOWN;
+    p->Next = NULL;
+    return p;
+}
+
+GAIAGEO_DECLARE gaiaGeomCollPtr
+gaiaAllocGeomCollXYZM ()
+{
+/* GEOMETRYCOLLECTION object constructor */
+    gaiaGeomCollPtr p = malloc (sizeof (gaiaGeomColl));
+    p->Srid = -1;
+    p->endian = ' ';
+    p->offset = 0;
+    p->FirstPoint = NULL;
+    p->LastPoint = NULL;
+    p->FirstLinestring = NULL;
+    p->LastLinestring = NULL;
+    p->FirstPolygon = NULL;
+    p->LastPolygon = NULL;
+    p->MinX = DBL_MAX;
+    p->MinY = DBL_MAX;
+    p->MaxX = -DBL_MAX;
+    p->MaxY = -DBL_MAX;
+    p->DimensionModel = GAIA_XY_Z_M;
+    p->DeclaredType = GAIA_UNKNOWN;
+    p->Next = NULL;
     return p;
 }
 
@@ -420,11 +1246,56 @@ gaiaAddPointToGeomColl (gaiaGeomCollPtr p, double x, double y)
     p->LastPoint = point;
 }
 
+GAIAGEO_DECLARE void
+gaiaAddPointToGeomCollXYZ (gaiaGeomCollPtr p, double x, double y, double z)
+{
+/* adding a POINT to this GEOMETRYCOLLECTION */
+    gaiaPointPtr point = gaiaAllocPointXYZ (x, y, z);
+    if (p->FirstPoint == NULL)
+	p->FirstPoint = point;
+    if (p->LastPoint != NULL)
+	p->LastPoint->Next = point;
+    p->LastPoint = point;
+}
+
+GAIAGEO_DECLARE void
+gaiaAddPointToGeomCollXYM (gaiaGeomCollPtr p, double x, double y, double m)
+{
+/* adding a POINT to this GEOMETRYCOLLECTION */
+    gaiaPointPtr point = gaiaAllocPointXYM (x, y, m);
+    if (p->FirstPoint == NULL)
+	p->FirstPoint = point;
+    if (p->LastPoint != NULL)
+	p->LastPoint->Next = point;
+    p->LastPoint = point;
+}
+
+GAIAGEO_DECLARE void
+gaiaAddPointToGeomCollXYZM (gaiaGeomCollPtr p, double x, double y, double z,
+			    double m)
+{
+/* adding a POINT to this GEOMETRYCOLLECTION */
+    gaiaPointPtr point = gaiaAllocPointXYZM (x, y, z, m);
+    if (p->FirstPoint == NULL)
+	p->FirstPoint = point;
+    if (p->LastPoint != NULL)
+	p->LastPoint->Next = point;
+    p->LastPoint = point;
+}
+
 GAIAGEO_DECLARE gaiaLinestringPtr
 gaiaAddLinestringToGeomColl (gaiaGeomCollPtr p, int vert)
 {
 /* adding a LINESTRING to this GEOMETRYCOLLECTION */
-    gaiaLinestringPtr line = gaiaAllocLinestring (vert);
+    gaiaLinestringPtr line;
+    if (p->DimensionModel == GAIA_XY_Z)
+	line = gaiaAllocLinestringXYZ (vert);
+    else if (p->DimensionModel == GAIA_XY_M)
+	line = gaiaAllocLinestringXYM (vert);
+    else if (p->DimensionModel == GAIA_XY_Z_M)
+	line = gaiaAllocLinestringXYZM (vert);
+    else
+	line = gaiaAllocLinestring (vert);
     if (p->FirstLinestring == NULL)
 	p->FirstLinestring = line;
     if (p->LastLinestring != NULL)
@@ -448,7 +1319,15 @@ GAIAGEO_DECLARE gaiaPolygonPtr
 gaiaAddPolygonToGeomColl (gaiaGeomCollPtr p, int vert, int interiors)
 {
 /* adding a POLYGON to this GEOMETRYCOLLECTION */
-    gaiaPolygonPtr polyg = gaiaAllocPolygon (vert, interiors);
+    gaiaPolygonPtr polyg;
+    if (p->DimensionModel == GAIA_XY_Z)
+	polyg = gaiaAllocPolygonXYZ (vert, interiors);
+    else if (p->DimensionModel == GAIA_XY_M)
+	polyg = gaiaAllocPolygonXYM (vert, interiors);
+    else if (p->DimensionModel == GAIA_XY_Z_M)
+	polyg = gaiaAllocPolygonXYZM (vert, interiors);
+    else
+	polyg = gaiaAllocPolygon (vert, interiors);
     if (p->FirstPolygon == NULL)
 	p->FirstPolygon = polyg;
     if (p->LastPolygon != NULL)
@@ -466,6 +1345,7 @@ gaiaInsertPolygonInGeomColl (gaiaGeomCollPtr p, gaiaRingPtr ring)
     polyg->Exterior = ring;
     polyg->NumInteriors = 0;
     polyg->NextInterior = 0;
+    polyg->DimensionModel = ring->DimensionModel;
     polyg->Next = NULL;
     polyg->Interiors = NULL;
     polyg->MinX = DBL_MAX;
@@ -486,7 +1366,15 @@ gaiaAddInteriorRing (gaiaPolygonPtr p, int pos, int vert)
 /* adding an interior ring to some polygon */
     gaiaRingPtr pP = p->Interiors + pos;
     pP->Points = vert;
-    pP->Coords = malloc (sizeof (double) * (vert * 2));
+    pP->DimensionModel = p->DimensionModel;
+    if (pP->DimensionModel == GAIA_XY_Z)
+	pP->Coords = malloc (sizeof (double) * (vert * 3));
+    else if (pP->DimensionModel == GAIA_XY_M)
+	pP->Coords = malloc (sizeof (double) * (vert * 3));
+    else if (pP->DimensionModel == GAIA_XY_Z_M)
+	pP->Coords = malloc (sizeof (double) * (vert * 4));
+    else
+	pP->Coords = malloc (sizeof (double) * (vert * 2));
     return pP;
 }
 
@@ -494,10 +1382,7 @@ GAIAGEO_DECLARE void
 gaiaInsertInteriorRing (gaiaPolygonPtr p, gaiaRingPtr ring)
 {
 /* adding an interior ring to some polygon */
-    int iv;
     gaiaRingPtr hole;
-    double x;
-    double y;
     if (p->NumInteriors == 0)
       {
 	  /* this one is the first interior ring */
@@ -516,13 +1401,16 @@ gaiaInsertInteriorRing (gaiaPolygonPtr p, gaiaRingPtr ring)
 	  p->NumInteriors++;
       }
     hole->Points = ring->Points;
-    hole->Coords = malloc (sizeof (double) * (hole->Points * 2));
-    for (iv = 0; iv < ring->Points; iv++)
-      {
-	  /* copying points */
-	  gaiaGetPoint (ring->Coords, iv, &x, &y);
-	  gaiaSetPoint (hole->Coords, iv, x, y);
-      }
+    hole->DimensionModel = p->DimensionModel;
+    if (hole->DimensionModel == GAIA_XY_Z)
+	hole->Coords = malloc (sizeof (double) * (hole->Points * 3));
+    else if (hole->DimensionModel == GAIA_XY_M)
+	hole->Coords = malloc (sizeof (double) * (hole->Points * 3));
+    else if (hole->DimensionModel == GAIA_XY_Z_M)
+	hole->Coords = malloc (sizeof (double) * (hole->Points * 4));
+    else
+	hole->Coords = malloc (sizeof (double) * (hole->Points * 2));
+    gaiaCopyRingCoords (hole, ring);
 }
 
 GAIAGEO_DECLARE void
@@ -829,13 +1717,30 @@ gaiaMbrLinestring (gaiaLinestringPtr line)
     int iv;
     double x;
     double y;
+    double z;
+    double m;
     line->MinX = DBL_MAX;
     line->MinY = DBL_MAX;
     line->MaxX = -DBL_MAX;
     line->MaxY = -DBL_MAX;
     for (iv = 0; iv < line->Points; iv++)
       {
-	  gaiaGetPoint (line->Coords, iv, &x, &y);
+	  if (line->DimensionModel == GAIA_XY_Z)
+	    {
+		gaiaGetPointXYZ (line->Coords, iv, &x, &y, &z);
+	    }
+	  else if (line->DimensionModel == GAIA_XY_M)
+	    {
+		gaiaGetPointXYM (line->Coords, iv, &x, &y, &m);
+	    }
+	  else if (line->DimensionModel == GAIA_XY_Z_M)
+	    {
+		gaiaGetPointXYZM (line->Coords, iv, &x, &y, &z, &m);
+	    }
+	  else
+	    {
+		gaiaGetPoint (line->Coords, iv, &x, &y);
+	    }
 	  if (x < line->MinX)
 	      line->MinX = x;
 	  if (y < line->MinY)
@@ -854,13 +1759,30 @@ gaiaMbrRing (gaiaRingPtr rng)
     int iv;
     double x;
     double y;
+    double z;
+    double m;
     rng->MinX = DBL_MAX;
     rng->MinY = DBL_MAX;
     rng->MaxX = -DBL_MAX;
     rng->MaxY = -DBL_MAX;
     for (iv = 0; iv < rng->Points; iv++)
       {
-	  gaiaGetPoint (rng->Coords, iv, &x, &y);
+	  if (rng->DimensionModel == GAIA_XY_Z)
+	    {
+		gaiaGetPointXYZ (rng->Coords, iv, &x, &y, &z);
+	    }
+	  else if (rng->DimensionModel == GAIA_XY_M)
+	    {
+		gaiaGetPointXYM (rng->Coords, iv, &x, &y, &m);
+	    }
+	  else if (rng->DimensionModel == GAIA_XY_Z_M)
+	    {
+		gaiaGetPointXYZM (rng->Coords, iv, &x, &y, &z, &m);
+	    }
+	  else
+	    {
+		gaiaGetPoint (rng->Coords, iv, &x, &y);
+	    }
 	  if (x < rng->MinX)
 	      rng->MinX = x;
 	  if (y < rng->MinY)
@@ -947,6 +1869,304 @@ gaiaMbrGeometry (gaiaGeomCollPtr geom)
       }
 }
 
+GAIAGEO_DECLARE void
+gaiaMRangeLinestring (gaiaLinestringPtr line, double *min, double *max)
+{
+/* computes the M-range [min/max] for this linestring */
+    int iv;
+    double x;
+    double y;
+    double z;
+    double m;
+    *min = DBL_MAX;
+    *max = -DBL_MAX;
+    for (iv = 0; iv < line->Points; iv++)
+      {
+	  m = 0.0;
+	  if (line->DimensionModel == GAIA_XY_Z)
+	    {
+		gaiaGetPointXYZ (line->Coords, iv, &x, &y, &z);
+	    }
+	  else if (line->DimensionModel == GAIA_XY_M)
+	    {
+		gaiaGetPointXYM (line->Coords, iv, &x, &y, &m);
+	    }
+	  else if (line->DimensionModel == GAIA_XY_Z_M)
+	    {
+		gaiaGetPointXYZM (line->Coords, iv, &x, &y, &z, &m);
+	    }
+	  else
+	    {
+		gaiaGetPoint (line->Coords, iv, &x, &y);
+	    }
+	  if (m < *min)
+	      *min = m;
+	  if (m > *max)
+	      *max = m;
+      }
+}
+
+GAIAGEO_DECLARE void
+gaiaMRangeRing (gaiaRingPtr rng, double *min, double *max)
+{
+/* computes the M-range [min/max] for this ring */
+    int iv;
+    double x;
+    double y;
+    double z;
+    double m;
+    *min = DBL_MAX;
+    *max = -DBL_MAX;
+    for (iv = 0; iv < rng->Points; iv++)
+      {
+	  m = 0.0;
+	  if (rng->DimensionModel == GAIA_XY_Z)
+	    {
+		gaiaGetPointXYZ (rng->Coords, iv, &x, &y, &z);
+	    }
+	  else if (rng->DimensionModel == GAIA_XY_M)
+	    {
+		gaiaGetPointXYM (rng->Coords, iv, &x, &y, &m);
+	    }
+	  else if (rng->DimensionModel == GAIA_XY_Z_M)
+	    {
+		gaiaGetPointXYZM (rng->Coords, iv, &x, &y, &z, &m);
+	    }
+	  else
+	    {
+		gaiaGetPoint (rng->Coords, iv, &x, &y);
+	    }
+	  if (m < *min)
+	      *min = m;
+	  if (m > *max)
+	      *max = m;
+      }
+}
+
+GAIAGEO_DECLARE void
+gaiaMRangePolygon (gaiaPolygonPtr polyg, double *min, double *max)
+{
+/* computes the M-range [min/max] for this polygon */
+    gaiaRingPtr rng;
+    int ib;
+    double r_min;
+    double r_max;
+    *min = DBL_MAX;
+    *max = -DBL_MAX;
+    rng = polyg->Exterior;
+    gaiaMRangeRing (rng, &r_min, &r_max);
+    if (r_min < *min)
+	*min = r_min;
+    if (r_max > *max)
+	*max = r_max;
+    for (ib = 0; ib < polyg->NumInteriors; ib++)
+      {
+	  rng = polyg->Interiors + ib;
+	  gaiaMRangeRing (rng, &r_min, &r_max);
+	  if (r_min < *min)
+	      *min = r_min;
+	  if (r_max > *max)
+	      *max = r_max;
+      }
+}
+
+GAIAGEO_DECLARE void
+gaiaMRangeGeometry (gaiaGeomCollPtr geom, double *min, double *max)
+{
+/* computes the M-range [min/max] for this geometry */
+    gaiaPointPtr point = NULL;
+    gaiaLinestringPtr line = NULL;
+    gaiaPolygonPtr polyg = NULL;
+    double m;
+    double r_min;
+    double r_max;
+    *min = DBL_MAX;
+    *max = -DBL_MAX;
+    point = geom->FirstPoint;
+    while (point)
+      {
+	  m = 0.0;
+	  if (point->DimensionModel == GAIA_XY_M
+	      || point->DimensionModel == GAIA_XY_Z_M)
+	      m = point->M;
+	  if (m < *min)
+	      *min = m;
+	  if (m > *max)
+	      *max = m;
+	  point = point->Next;
+      }
+    line = geom->FirstLinestring;
+    while (line)
+      {
+	  gaiaMRangeLinestring (line, &r_min, &r_max);
+	  if (r_min < *min)
+	      *min = r_min;
+	  if (r_max > *max)
+	      *max = r_max;
+	  line = line->Next;
+      }
+    polyg = geom->FirstPolygon;
+    while (polyg)
+      {
+	  gaiaMRangePolygon (polyg, &r_min, &r_max);
+	  if (r_min < *min)
+	      *min = r_min;
+	  if (r_max > *max)
+	      *max = r_max;
+	  polyg = polyg->Next;
+      }
+}
+
+GAIAGEO_DECLARE void
+gaiaZRangeLinestring (gaiaLinestringPtr line, double *min, double *max)
+{
+/* computes the Z-range [min/max] for this linestring */
+    int iv;
+    double x;
+    double y;
+    double z;
+    double m;
+    *min = DBL_MAX;
+    *max = -DBL_MAX;
+    for (iv = 0; iv < line->Points; iv++)
+      {
+	  z = 0.0;
+	  m = 0.0;
+	  if (line->DimensionModel == GAIA_XY_Z)
+	    {
+		gaiaGetPointXYZ (line->Coords, iv, &x, &y, &z);
+	    }
+	  else if (line->DimensionModel == GAIA_XY_M)
+	    {
+		gaiaGetPointXYM (line->Coords, iv, &x, &y, &m);
+	    }
+	  else if (line->DimensionModel == GAIA_XY_Z_M)
+	    {
+		gaiaGetPointXYZM (line->Coords, iv, &x, &y, &z, &m);
+	    }
+	  else
+	    {
+		gaiaGetPoint (line->Coords, iv, &x, &y);
+	    }
+	  if (z < *min)
+	      *min = z;
+	  if (z > *max)
+	      *max = z;
+      }
+}
+
+GAIAGEO_DECLARE void
+gaiaZRangeRing (gaiaRingPtr rng, double *min, double *max)
+{
+/* computes the Z-range [min/max] for this ring */
+    int iv;
+    double x;
+    double y;
+    double z;
+    double m;
+    *min = DBL_MAX;
+    *max = -DBL_MAX;
+    for (iv = 0; iv < rng->Points; iv++)
+      {
+	  z = 0.0;
+	  m = 0.0;
+	  if (rng->DimensionModel == GAIA_XY_Z)
+	    {
+		gaiaGetPointXYZ (rng->Coords, iv, &x, &y, &z);
+	    }
+	  else if (rng->DimensionModel == GAIA_XY_M)
+	    {
+		gaiaGetPointXYM (rng->Coords, iv, &x, &y, &m);
+	    }
+	  else if (rng->DimensionModel == GAIA_XY_Z_M)
+	    {
+		gaiaGetPointXYZM (rng->Coords, iv, &x, &y, &z, &m);
+	    }
+	  else
+	    {
+		gaiaGetPoint (rng->Coords, iv, &x, &y);
+	    }
+	  if (m < *min)
+	      *min = m;
+	  if (m > *max)
+	      *max = m;
+      }
+}
+
+GAIAGEO_DECLARE void
+gaiaZRangePolygon (gaiaPolygonPtr polyg, double *min, double *max)
+{
+/* computes the Z-range [min/max] for this polygon */
+    gaiaRingPtr rng;
+    int ib;
+    double r_min;
+    double r_max;
+    *min = DBL_MAX;
+    *max = -DBL_MAX;
+    rng = polyg->Exterior;
+    gaiaZRangeRing (rng, &r_min, &r_max);
+    if (r_min < *min)
+	*min = r_min;
+    if (r_max > *max)
+	*max = r_max;
+    for (ib = 0; ib < polyg->NumInteriors; ib++)
+      {
+	  rng = polyg->Interiors + ib;
+	  gaiaZRangeRing (rng, &r_min, &r_max);
+	  if (r_min < *min)
+	      *min = r_min;
+	  if (r_max > *max)
+	      *max = r_max;
+      }
+}
+
+GAIAGEO_DECLARE void
+gaiaZRangeGeometry (gaiaGeomCollPtr geom, double *min, double *max)
+{
+/* computes the Z-range [min/max] for this geometry */
+    gaiaPointPtr point = NULL;
+    gaiaLinestringPtr line = NULL;
+    gaiaPolygonPtr polyg = NULL;
+    double z;
+    double r_min;
+    double r_max;
+    *min = DBL_MAX;
+    *max = -DBL_MAX;
+    point = geom->FirstPoint;
+    while (point)
+      {
+	  z = 0.0;
+	  if (point->DimensionModel == GAIA_XY_Z
+	      || point->DimensionModel == GAIA_XY_Z_M)
+	      z = point->Z;
+	  if (z < *min)
+	      *min = z;
+	  if (z > *max)
+	      *max = z;
+	  point = point->Next;
+      }
+    line = geom->FirstLinestring;
+    while (line)
+      {
+	  gaiaZRangeLinestring (line, &r_min, &r_max);
+	  if (r_min < *min)
+	      *min = r_min;
+	  if (r_max > *max)
+	      *max = r_max;
+	  line = line->Next;
+      }
+    polyg = geom->FirstPolygon;
+    while (polyg)
+      {
+	  gaiaZRangePolygon (polyg, &r_min, &r_max);
+	  if (r_min < *min)
+	      *min = r_min;
+	  if (r_max > *max)
+	      *max = r_max;
+	  polyg = polyg->Next;
+      }
+}
+
 GAIAGEO_DECLARE int
 gaiaDimension (gaiaGeomCollPtr geom)
 {
@@ -996,9 +2216,12 @@ gaiaGeometryType (gaiaGeomCollPtr geom)
     gaiaPointPtr point;
     gaiaLinestringPtr line;
     gaiaPolygonPtr polyg;
+    gaiaRingPtr ring;
+    int ib;
     int n_points = 0;
     int n_linestrings = 0;
     int n_polygons = 0;
+    int dm = GAIA_XY;
     if (!geom)
 	return GAIA_UNKNOWN;
     point = geom->FirstPoint;
@@ -1006,6 +2229,22 @@ gaiaGeometryType (gaiaGeomCollPtr geom)
       {
 	  /* counts how many points are there */
 	  n_points++;
+	  if (point->DimensionModel == GAIA_XY_Z)
+	    {
+		if (dm == GAIA_XY)
+		    dm = GAIA_XY_Z;
+		else if (dm == GAIA_XY_M)
+		    dm = GAIA_XY_Z_M;
+	    }
+	  else if (point->DimensionModel == GAIA_XY_M)
+	    {
+		if (dm == GAIA_XY)
+		    dm = GAIA_XY_M;
+		else if (dm == GAIA_XY_Z)
+		    dm = GAIA_XY_Z_M;
+	    }
+	  else if (point->DimensionModel == GAIA_XY_Z_M)
+	      dm = GAIA_XY_Z_M;
 	  point = point->Next;
       }
     line = geom->FirstLinestring;
@@ -1013,6 +2252,22 @@ gaiaGeometryType (gaiaGeomCollPtr geom)
       {
 	  /* counts how many linestrings are there */
 	  n_linestrings++;
+	  if (line->DimensionModel == GAIA_XY_Z)
+	    {
+		if (dm == GAIA_XY)
+		    dm = GAIA_XY_Z;
+		else if (dm == GAIA_XY_M)
+		    dm = GAIA_XY_Z_M;
+	    }
+	  else if (line->DimensionModel == GAIA_XY_M)
+	    {
+		if (dm == GAIA_XY)
+		    dm = GAIA_XY_M;
+		else if (dm == GAIA_XY_Z)
+		    dm = GAIA_XY_Z_M;
+	    }
+	  else if (line->DimensionModel == GAIA_XY_Z_M)
+	      dm = GAIA_XY_Z_M;
 	  line = line->Next;
       }
     polyg = geom->FirstPolygon;
@@ -1020,6 +2275,43 @@ gaiaGeometryType (gaiaGeomCollPtr geom)
       {
 	  /* counts how many polygons are there */
 	  n_polygons++;
+	  ring = polyg->Exterior;
+	  if (ring->DimensionModel == GAIA_XY_Z)
+	    {
+		if (dm == GAIA_XY)
+		    dm = GAIA_XY_Z;
+		else if (dm == GAIA_XY_M)
+		    dm = GAIA_XY_Z_M;
+	    }
+	  else if (ring->DimensionModel == GAIA_XY_M)
+	    {
+		if (dm == GAIA_XY)
+		    dm = GAIA_XY_M;
+		else if (dm == GAIA_XY_Z)
+		    dm = GAIA_XY_Z_M;
+	    }
+	  else if (ring->DimensionModel == GAIA_XY_Z_M)
+	      dm = GAIA_XY_Z_M;
+	  for (ib = 0; ib < polyg->NumInteriors; ib++)
+	    {
+		ring = polyg->Interiors + ib;
+		if (ring->DimensionModel == GAIA_XY_Z)
+		  {
+		      if (dm == GAIA_XY)
+			  dm = GAIA_XY_Z;
+		      else if (dm == GAIA_XY_M)
+			  dm = GAIA_XY_Z_M;
+		  }
+		else if (ring->DimensionModel == GAIA_XY_M)
+		  {
+		      if (dm == GAIA_XY)
+			  dm = GAIA_XY_M;
+		      else if (dm == GAIA_XY_Z)
+			  dm = GAIA_XY_Z_M;
+		  }
+		else if (ring->DimensionModel == GAIA_XY_Z_M)
+		    dm = GAIA_XY_Z_M;
+	    }
 	  polyg = polyg->Next;
       }
     if (n_points == 0 && n_linestrings == 0 && n_polygons == 0)
@@ -1027,52 +2319,194 @@ gaiaGeometryType (gaiaGeomCollPtr geom)
     if (n_points == 1 && n_linestrings == 0 && n_polygons == 0)
       {
 	  if (geom->DeclaredType == GAIA_MULTIPOINT)
-	      return GAIA_MULTIPOINT;
+	    {
+		if (dm == GAIA_XY_Z)
+		    return GAIA_MULTIPOINTZ;
+		if (dm == GAIA_XY_M)
+		    return GAIA_MULTIPOINTM;
+		if (dm == GAIA_XY_Z_M)
+		    return GAIA_MULTIPOINTZM;
+		else
+		    return GAIA_MULTIPOINT;
+	    }
 	  else if (geom->DeclaredType == GAIA_GEOMETRYCOLLECTION)
-	      return GAIA_GEOMETRYCOLLECTION;
+	    {
+		if (dm == GAIA_XY_Z)
+		    return GAIA_GEOMETRYCOLLECTIONZ;
+		if (dm == GAIA_XY_M)
+		    return GAIA_GEOMETRYCOLLECTIONM;
+		if (dm == GAIA_XY_Z_M)
+		    return GAIA_GEOMETRYCOLLECTIONZM;
+		else
+		    return GAIA_GEOMETRYCOLLECTION;
+	    }
 	  else
-	      return GAIA_POINT;
+	    {
+		if (dm == GAIA_XY_Z)
+		    return GAIA_POINTZ;
+		if (dm == GAIA_XY_M)
+		    return GAIA_POINTM;
+		if (dm == GAIA_XY_Z_M)
+		    return GAIA_POINTZM;
+		else
+		    return GAIA_POINT;
+	    }
       }
     if (n_points > 0 && n_linestrings == 0 && n_polygons == 0)
       {
 	  if (geom->DeclaredType == GAIA_GEOMETRYCOLLECTION)
-	      return GAIA_GEOMETRYCOLLECTION;
+	    {
+		if (dm == GAIA_XY_Z)
+		    return GAIA_GEOMETRYCOLLECTIONZ;
+		if (dm == GAIA_XY_M)
+		    return GAIA_GEOMETRYCOLLECTIONM;
+		if (dm == GAIA_XY_Z_M)
+		    return GAIA_GEOMETRYCOLLECTIONZM;
+		else
+		    return GAIA_GEOMETRYCOLLECTION;
+	    }
 	  else
-	      return GAIA_MULTIPOINT;
+	    {
+		if (dm == GAIA_XY_Z)
+		    return GAIA_MULTIPOINTZ;
+		if (dm == GAIA_XY_M)
+		    return GAIA_MULTIPOINTM;
+		if (dm == GAIA_XY_Z_M)
+		    return GAIA_MULTIPOINTZM;
+		else
+		    return GAIA_MULTIPOINT;
+	    }
       }
     if (n_points == 0 && n_linestrings == 1 && n_polygons == 0)
       {
 	  if (geom->DeclaredType == GAIA_MULTILINESTRING)
-	      return GAIA_MULTILINESTRING;
+	    {
+		if (dm == GAIA_XY_Z)
+		    return GAIA_MULTILINESTRINGZ;
+		if (dm == GAIA_XY_M)
+		    return GAIA_MULTILINESTRINGM;
+		if (dm == GAIA_XY_Z_M)
+		    return GAIA_MULTILINESTRINGZM;
+		else
+		    return GAIA_MULTILINESTRING;
+	    }
 	  else if (geom->DeclaredType == GAIA_GEOMETRYCOLLECTION)
-	      return GAIA_GEOMETRYCOLLECTION;
+	    {
+		if (dm == GAIA_XY_Z)
+		    return GAIA_GEOMETRYCOLLECTIONZ;
+		if (dm == GAIA_XY_M)
+		    return GAIA_GEOMETRYCOLLECTIONM;
+		if (dm == GAIA_XY_Z_M)
+		    return GAIA_GEOMETRYCOLLECTIONZM;
+		else
+		    return GAIA_GEOMETRYCOLLECTION;
+	    }
 	  else
-	      return GAIA_LINESTRING;
+	    {
+		if (dm == GAIA_XY_Z)
+		    return GAIA_LINESTRINGZ;
+		if (dm == GAIA_XY_M)
+		    return GAIA_LINESTRINGM;
+		if (dm == GAIA_XY_Z_M)
+		    return GAIA_LINESTRINGZM;
+		else
+		    return GAIA_LINESTRING;
+	    }
       }
     if (n_points == 0 && n_linestrings > 0 && n_polygons == 0)
       {
 	  if (geom->DeclaredType == GAIA_GEOMETRYCOLLECTION)
-	      return GAIA_GEOMETRYCOLLECTION;
+	    {
+		if (dm == GAIA_XY_Z)
+		    return GAIA_GEOMETRYCOLLECTIONZ;
+		if (dm == GAIA_XY_M)
+		    return GAIA_GEOMETRYCOLLECTIONM;
+		if (dm == GAIA_XY_Z_M)
+		    return GAIA_GEOMETRYCOLLECTIONZM;
+		else
+		    return GAIA_GEOMETRYCOLLECTION;
+	    }
 	  else
-	      return GAIA_MULTILINESTRING;
+	    {
+		if (dm == GAIA_XY_Z)
+		    return GAIA_MULTILINESTRINGZ;
+		if (dm == GAIA_XY_M)
+		    return GAIA_MULTILINESTRINGM;
+		if (dm == GAIA_XY_Z_M)
+		    return GAIA_MULTILINESTRINGZM;
+		else
+		    return GAIA_MULTILINESTRING;
+	    }
       }
     if (n_points == 0 && n_linestrings == 0 && n_polygons == 1)
       {
 	  if (geom->DeclaredType == GAIA_MULTIPOLYGON)
-	      return GAIA_MULTIPOLYGON;
+	    {
+		if (dm == GAIA_XY_Z)
+		    return GAIA_MULTIPOLYGONZ;
+		if (dm == GAIA_XY_M)
+		    return GAIA_MULTIPOLYGONM;
+		if (dm == GAIA_XY_Z_M)
+		    return GAIA_MULTIPOLYGONZM;
+		else
+		    return GAIA_MULTIPOLYGON;
+	    }
 	  else if (geom->DeclaredType == GAIA_GEOMETRYCOLLECTION)
-	      return GAIA_GEOMETRYCOLLECTION;
+	    {
+		if (dm == GAIA_XY_Z)
+		    return GAIA_GEOMETRYCOLLECTIONZ;
+		if (dm == GAIA_XY_M)
+		    return GAIA_GEOMETRYCOLLECTIONM;
+		if (dm == GAIA_XY_Z_M)
+		    return GAIA_GEOMETRYCOLLECTIONZM;
+		else
+		    return GAIA_GEOMETRYCOLLECTION;
+	    }
 	  else
-	      return GAIA_POLYGON;
+	    {
+		if (dm == GAIA_XY_Z)
+		    return GAIA_POLYGONZ;
+		if (dm == GAIA_XY_M)
+		    return GAIA_POLYGONM;
+		if (dm == GAIA_XY_Z_M)
+		    return GAIA_POLYGONZM;
+		else
+		    return GAIA_POLYGON;
+	    }
       }
     if (n_points == 0 && n_linestrings == 0 && n_polygons > 0)
       {
 	  if (geom->DeclaredType == GAIA_GEOMETRYCOLLECTION)
-	      return GAIA_GEOMETRYCOLLECTION;
+	    {
+		if (dm == GAIA_XY_Z)
+		    return GAIA_GEOMETRYCOLLECTIONZ;
+		if (dm == GAIA_XY_M)
+		    return GAIA_GEOMETRYCOLLECTIONM;
+		if (dm == GAIA_XY_Z_M)
+		    return GAIA_GEOMETRYCOLLECTIONZM;
+		else
+		    return GAIA_GEOMETRYCOLLECTION;
+	    }
 	  else
-	      return GAIA_MULTIPOLYGON;
+	    {
+		if (dm == GAIA_XY_Z)
+		    return GAIA_MULTIPOLYGONZ;
+		if (dm == GAIA_XY_M)
+		    return GAIA_MULTIPOLYGONM;
+		if (dm == GAIA_XY_Z_M)
+		    return GAIA_MULTIPOLYGONZM;
+		else
+		    return GAIA_MULTIPOLYGON;
+	    }
       }
-    return GAIA_GEOMETRYCOLLECTION;
+    if (dm == GAIA_XY_Z)
+	return GAIA_GEOMETRYCOLLECTIONZ;
+    if (dm == GAIA_XY_M)
+	return GAIA_GEOMETRYCOLLECTIONM;
+    if (dm == GAIA_XY_Z_M)
+	return GAIA_GEOMETRYCOLLECTIONZM;
+    else
+	return GAIA_GEOMETRYCOLLECTION;
 }
 
 GAIAGEO_DECLARE int
@@ -1110,12 +2544,54 @@ gaiaGeometryAliasType (gaiaGeomCollPtr geom)
       }
     if (n_points == 0 && n_linestrings == 0 && n_polygons == 0)
 	return GAIA_UNKNOWN;
-    if (n_points > 0 && n_linestrings == 0 && n_polygons == 0)
-	return GAIA_MULTIPOINT;
-    if (n_points == 0 && n_linestrings > 0 && n_polygons == 0)
-	return GAIA_MULTILINESTRING;
-    if (n_points == 0 && n_linestrings == 0 && n_polygons > 0)
-	return GAIA_MULTIPOLYGON;
+    if (n_points == 1 && n_linestrings == 0 && n_polygons == 0)
+      {
+	  if (geom->DeclaredType == GAIA_MULTIPOINT)
+	      return GAIA_MULTIPOINT;
+	  else if (geom->DeclaredType == GAIA_GEOMETRYCOLLECTION)
+	      return GAIA_GEOMETRYCOLLECTION;
+	  else
+	      return GAIA_POINT;
+      }
+    if (n_points >= 1 && n_linestrings == 0 && n_polygons == 0)
+      {
+	  if (geom->DeclaredType == GAIA_GEOMETRYCOLLECTION)
+	      return GAIA_GEOMETRYCOLLECTION;
+	  else
+	      return GAIA_MULTIPOINT;
+      }
+    if (n_points == 0 && n_linestrings == 1 && n_polygons == 0)
+      {
+	  if (geom->DeclaredType == GAIA_MULTILINESTRING)
+	      return GAIA_MULTILINESTRING;
+	  else if (geom->DeclaredType == GAIA_GEOMETRYCOLLECTION)
+	      return GAIA_GEOMETRYCOLLECTION;
+	  else
+	      return GAIA_LINESTRING;
+      }
+    if (n_points == 0 && n_linestrings >= 1 && n_polygons == 0)
+      {
+	  if (geom->DeclaredType == GAIA_GEOMETRYCOLLECTION)
+	      return GAIA_GEOMETRYCOLLECTION;
+	  else
+	      return GAIA_MULTILINESTRING;
+      }
+    if (n_points == 0 && n_linestrings == 0 && n_polygons == 1)
+      {
+	  if (geom->DeclaredType == GAIA_MULTIPOLYGON)
+	      return GAIA_MULTIPOLYGON;
+	  else if (geom->DeclaredType == GAIA_GEOMETRYCOLLECTION)
+	      return GAIA_GEOMETRYCOLLECTION;
+	  else
+	      return GAIA_POLYGON;
+      }
+    if (n_points == 0 && n_linestrings == 0 && n_polygons >= 1)
+      {
+	  if (geom->DeclaredType == GAIA_GEOMETRYCOLLECTION)
+	      return GAIA_GEOMETRYCOLLECTION;
+	  else
+	      return GAIA_MULTIPOLYGON;
+      }
     return GAIA_GEOMETRYCOLLECTION;
 }
 
@@ -1151,12 +2627,44 @@ gaiaIsClosed (gaiaLinestringPtr line)
     double y0;
     double x1;
     double y1;
+    double z;
+    double m;
     if (!line)
 	return 0;
     if (line->Points < 3)
 	return 0;
-    gaiaGetPoint (line->Coords, 0, &x0, &y0);
-    gaiaGetPoint (line->Coords, (line->Points - 1), &x1, &y1);
+    if (line->DimensionModel == GAIA_XY_Z)
+      {
+	  gaiaGetPointXYZ (line->Coords, 0, &x0, &y0, &z);
+      }
+    else if (line->DimensionModel == GAIA_XY_M)
+      {
+	  gaiaGetPointXYM (line->Coords, 0, &x0, &y0, &m);
+      }
+    else if (line->DimensionModel == GAIA_XY_Z_M)
+      {
+	  gaiaGetPointXYZM (line->Coords, 0, &x0, &y0, &z, &m);
+      }
+    else
+      {
+	  gaiaGetPoint (line->Coords, 0, &x0, &y0);
+      }
+    if (line->DimensionModel == GAIA_XY_Z)
+      {
+	  gaiaGetPointXYZ (line->Coords, (line->Points - 1), &x1, &y1, &z);
+      }
+    else if (line->DimensionModel == GAIA_XY_M)
+      {
+	  gaiaGetPointXYM (line->Coords, (line->Points - 1), &x1, &y1, &m);
+      }
+    else if (line->DimensionModel == GAIA_XY_Z_M)
+      {
+	  gaiaGetPointXYZM (line->Coords, (line->Points - 1), &x1, &y1, &z, &m);
+      }
+    else
+      {
+	  gaiaGetPoint (line->Coords, (line->Points - 1), &x1, &y1);
+      }
     if (x0 == x1 && y0 == y1)
 	return 1;
     return 0;
@@ -1633,4 +3141,622 @@ gaiaGetMbrMaxY (const unsigned char *blob, unsigned int size, double *maxy)
 	return 0;		/* unknown encoding; nor litte-endian neither big-endian */
     *maxy = gaiaImport64 (blob + 30, little_endian, endian_arch);
     return 1;
+}
+
+GAIAGEO_DECLARE gaiaGeomCollPtr
+gaiaSanitize (gaiaGeomCollPtr geom)
+{
+/* 
+/ sanitizes a GEOMETRYCOLLECTION:
+/ - repeated vertices are omitted
+/ - ring closure is enforced anyway  
+*/
+    int iv;
+    int ib;
+    double x = 0.0;
+    double y = 0.0;
+    double z = 0.0;
+    double m = 0.0;
+    double first_x;
+    double first_y;
+    double first_z;
+    double first_m;
+    double last_x = 0.0;
+    double last_y = 0.0;
+    double last_z = 0.0;
+    double last_m = 0.0;
+    int points;
+    gaiaPointPtr point;
+    gaiaLinestringPtr line;
+    gaiaLinestringPtr new_line;
+    gaiaPolygonPtr polyg;
+    gaiaPolygonPtr new_polyg;
+    gaiaGeomCollPtr new_geom;
+    gaiaRingPtr i_ring;
+    gaiaRingPtr o_ring;
+    if (!geom)
+	return NULL;
+    if (geom->DimensionModel == GAIA_XY_Z)
+	new_geom = gaiaAllocGeomCollXYZ ();
+    else if (geom->DimensionModel == GAIA_XY_M)
+	new_geom = gaiaAllocGeomCollXYM ();
+    else if (geom->DimensionModel == GAIA_XY_Z_M)
+	new_geom = gaiaAllocGeomCollXYZM ();
+    else
+	new_geom = gaiaAllocGeomColl ();
+    new_geom->Srid = geom->Srid;
+    new_geom->DeclaredType = geom->DeclaredType;
+    point = geom->FirstPoint;
+    while (point)
+      {
+	  /* copying POINTs */
+	  gaiaAddPointToGeomCollXYZM (new_geom, point->X, point->Y, point->Z,
+				      point->M);
+	  point = point->Next;
+      }
+    line = geom->FirstLinestring;
+    while (line)
+      {
+	  /* sanitizing LINESTRINGs */
+	  points = 0;
+	  for (iv = 0; iv < line->Points; iv++)
+	    {
+		/* PASS I - checking points */
+		z = 0.0;
+		m = 0.0;
+		if (line->DimensionModel == GAIA_XY_Z)
+		  {
+		      gaiaGetPointXYZ (line->Coords, iv, &x, &y, &z);
+		  }
+		else if (line->DimensionModel == GAIA_XY_M)
+		  {
+		      gaiaGetPointXYM (line->Coords, iv, &x, &y, &m);
+		  }
+		else if (line->DimensionModel == GAIA_XY_Z_M)
+		  {
+		      gaiaGetPointXYZM (line->Coords, iv, &x, &y, &z, &m);
+		  }
+		else
+		  {
+		      gaiaGetPoint (line->Coords, iv, &x, &y);
+		  }
+		if (iv > 0)
+		  {
+		      if (last_x == x && last_y == y && last_z == z)
+			  ;
+		      else
+			  points++;
+		  }
+		else
+		    points++;
+		last_x = x;
+		last_y = y;
+		last_z = z;
+		last_m = m;
+	    }
+	  if (points < 2)
+	    {
+		/* illegal LINESTRING - copying the original one */
+		new_line = gaiaAddLinestringToGeomColl (new_geom, line->Points);
+		gaiaCopyLinestringCoords (new_line, line);
+	    }
+	  else
+	    {
+		/* valid LINESTRING - sanitizing */
+		new_line = gaiaAddLinestringToGeomColl (new_geom, points);
+		points = 0;
+		for (iv = 0; iv < line->Points; iv++)
+		  {
+		      /* PASS II - inserting points */
+		      z = 0.0;
+		      m = 0.0;
+		      if (line->DimensionModel == GAIA_XY_Z)
+			{
+			    gaiaGetPointXYZ (line->Coords, iv, &x, &y, &z);
+			}
+		      else if (line->DimensionModel == GAIA_XY_M)
+			{
+			    gaiaGetPointXYM (line->Coords, iv, &x, &y, &m);
+			}
+		      else if (line->DimensionModel == GAIA_XY_Z_M)
+			{
+			    gaiaGetPointXYZM (line->Coords, iv, &x, &y, &z, &m);
+			}
+		      else
+			{
+			    gaiaGetPoint (line->Coords, iv, &x, &y);
+			}
+		      if (iv > 0)
+			{
+			    if (last_x == x && last_y == y && last_z == z)
+				;
+			    else
+			      {
+				  if (new_line->DimensionModel == GAIA_XY_Z)
+				    {
+					gaiaSetPointXYZ (new_line->Coords,
+							 points, x, y, z);
+				    }
+				  else if (new_line->DimensionModel ==
+					   GAIA_XY_M)
+				    {
+					gaiaSetPointXYM (new_line->Coords,
+							 points, x, y, m);
+				    }
+				  else if (new_line->DimensionModel ==
+					   GAIA_XY_Z_M)
+				    {
+					gaiaSetPointXYZM (new_line->Coords,
+							  points, x, y, z, m);
+				    }
+				  else
+				    {
+					gaiaSetPoint (new_line->Coords, points,
+						      x, y);
+				    }
+				  points++;
+			      }
+			}
+		      else
+			{
+			    if (new_line->DimensionModel == GAIA_XY_Z)
+			      {
+				  gaiaSetPointXYZ (new_line->Coords, points, x,
+						   y, z);
+			      }
+			    else if (new_line->DimensionModel == GAIA_XY_M)
+			      {
+				  gaiaSetPointXYM (new_line->Coords, points, x,
+						   y, m);
+			      }
+			    else if (new_line->DimensionModel == GAIA_XY_Z_M)
+			      {
+				  gaiaSetPointXYZM (new_line->Coords, points, x,
+						    y, z, m);
+			      }
+			    else
+			      {
+				  gaiaSetPoint (new_line->Coords, points, x, y);
+			      }
+			    points++;
+			}
+		      last_x = x;
+		      last_y = y;
+		      last_z = z;
+		      last_m = m;
+		  }
+	    }
+	  line = line->Next;
+      }
+    polyg = geom->FirstPolygon;
+    while (polyg)
+      {
+	  /* copying POLYGONs */
+	  i_ring = polyg->Exterior;
+	  /* sanitizing EXTERIOR RING */
+	  points = 0;
+	  for (iv = 0; iv < i_ring->Points; iv++)
+	    {
+		/* PASS I - checking points */
+		z = 0.0;
+		m = 0.0;
+		if (i_ring->DimensionModel == GAIA_XY_Z)
+		  {
+		      gaiaGetPointXYZ (i_ring->Coords, iv, &x, &y, &z);
+		  }
+		else if (i_ring->DimensionModel == GAIA_XY_M)
+		  {
+		      gaiaGetPointXYM (i_ring->Coords, iv, &x, &y, &m);
+		  }
+		else if (i_ring->DimensionModel == GAIA_XY_Z_M)
+		  {
+		      gaiaGetPointXYZM (i_ring->Coords, iv, &x, &y, &z, &m);
+		  }
+		else
+		  {
+		      gaiaGetPoint (i_ring->Coords, iv, &x, &y);
+		  }
+		if (iv > 0)
+		  {
+		      if (last_x == x && last_y == y && last_z == z)
+			  ;
+		      else
+			  points++;
+		  }
+		else
+		  {
+		      first_x = x;
+		      first_y = y;
+		      first_z = z;
+		      first_m = m;
+		      points++;
+		  }
+		last_x = x;
+		last_y = y;
+		last_z = z;
+		last_m = m;
+	    }
+	  if (last_x == x && last_y == y && last_z == z)
+	      ;
+	  else
+	    {
+		/* forcing RING closure */
+		points++;
+	    }
+	  if (points < 4)
+	    {
+		/* illegal RING - copying the original one */
+		new_polyg =
+		    gaiaAddPolygonToGeomColl (new_geom, i_ring->Points,
+					      polyg->NumInteriors);
+		o_ring = new_polyg->Exterior;
+		gaiaCopyRingCoords (o_ring, i_ring);
+	    }
+	  else
+	    {
+		/* valid RING - sanitizing */
+		new_polyg =
+		    gaiaAddPolygonToGeomColl (new_geom, points,
+					      polyg->NumInteriors);
+		o_ring = new_polyg->Exterior;
+		points = 0;
+		for (iv = 0; iv < i_ring->Points; iv++)
+		  {
+		      /* PASS II - inserting points */
+		      z = 0.0;
+		      m = 0.0;
+		      if (i_ring->DimensionModel == GAIA_XY_Z)
+			{
+			    gaiaGetPointXYZ (i_ring->Coords, iv, &x, &y, &z);
+			}
+		      else if (i_ring->DimensionModel == GAIA_XY_M)
+			{
+			    gaiaGetPointXYM (i_ring->Coords, iv, &x, &y, &m);
+			}
+		      else if (i_ring->DimensionModel == GAIA_XY_Z_M)
+			{
+			    gaiaGetPointXYZM (i_ring->Coords, iv, &x, &y, &z,
+					      &m);
+			}
+		      else
+			{
+			    gaiaGetPoint (i_ring->Coords, iv, &x, &y);
+			}
+		      if (iv > 0)
+			{
+			    if (last_x == x && last_y == y && last_z == z)
+				;
+			    else
+			      {
+				  if (o_ring->DimensionModel == GAIA_XY_Z)
+				    {
+					gaiaSetPointXYZ (o_ring->Coords, points,
+							 x, y, z);
+				    }
+				  else if (o_ring->DimensionModel == GAIA_XY_M)
+				    {
+					gaiaSetPointXYM (o_ring->Coords, points,
+							 x, y, m);
+				    }
+				  else if (o_ring->DimensionModel ==
+					   GAIA_XY_Z_M)
+				    {
+					gaiaSetPointXYZM (o_ring->Coords,
+							  points, x, y, z, m);
+				    }
+				  else
+				    {
+					gaiaSetPoint (o_ring->Coords, points, x,
+						      y);
+				    }
+				  points++;
+			      }
+			}
+		      else
+			{
+			    if (o_ring->DimensionModel == GAIA_XY_Z)
+			      {
+				  gaiaSetPointXYZ (o_ring->Coords, points, x,
+						   y, z);
+			      }
+			    else if (o_ring->DimensionModel == GAIA_XY_M)
+			      {
+				  gaiaSetPointXYM (o_ring->Coords, points, x,
+						   y, m);
+			      }
+			    else if (o_ring->DimensionModel == GAIA_XY_Z_M)
+			      {
+				  gaiaSetPointXYZM (o_ring->Coords, points, x,
+						    y, z, m);
+			      }
+			    else
+			      {
+				  gaiaSetPoint (o_ring->Coords, points, x, y);
+			      }
+			    points++;
+			}
+		      last_x = x;
+		      last_y = y;
+		      last_z = z;
+		      last_m = m;
+		  }
+	    }
+	  /* PASS III - forcing RING closure */
+	  z = 0.0;
+	  m = 0.0;
+	  if (i_ring->DimensionModel == GAIA_XY_Z)
+	    {
+		gaiaGetPointXYZ (i_ring->Coords, 0, &x, &y, &z);
+	    }
+	  else if (i_ring->DimensionModel == GAIA_XY_M)
+	    {
+		gaiaGetPointXYM (i_ring->Coords, 0, &x, &y, &m);
+	    }
+	  else if (i_ring->DimensionModel == GAIA_XY_Z_M)
+	    {
+		gaiaGetPointXYZM (i_ring->Coords, 0, &x, &y, &z, &m);
+	    }
+	  else
+	    {
+		gaiaGetPoint (i_ring->Coords, 0, &x, &y);
+	    }
+	  points = o_ring->Points - 1;
+	  if (o_ring->DimensionModel == GAIA_XY_Z)
+	    {
+		gaiaSetPointXYZ (o_ring->Coords, points, x, y, z);
+	    }
+	  else if (o_ring->DimensionModel == GAIA_XY_M)
+	    {
+		gaiaSetPointXYM (o_ring->Coords, points, x, y, m);
+	    }
+	  else if (o_ring->DimensionModel == GAIA_XY_Z_M)
+	    {
+		gaiaSetPointXYZM (o_ring->Coords, points, x, y, z, m);
+	    }
+	  else
+	    {
+		gaiaSetPoint (o_ring->Coords, points, x, y);
+	    }
+	  for (ib = 0; ib < new_polyg->NumInteriors; ib++)
+	    {
+		/* copying each INTERIOR RING [if any] */
+		i_ring = polyg->Interiors + ib;
+		/* sanitizing an INTERIOR RING */
+		points = 0;
+		for (iv = 0; iv < i_ring->Points; iv++)
+		  {
+		      /* PASS I - checking points */
+		      z = 0.0;
+		      m = 0.0;
+		      if (i_ring->DimensionModel == GAIA_XY_Z)
+			{
+			    gaiaGetPointXYZ (i_ring->Coords, iv, &x, &y, &z);
+			}
+		      else if (i_ring->DimensionModel == GAIA_XY_M)
+			{
+			    gaiaGetPointXYM (i_ring->Coords, iv, &x, &y, &m);
+			}
+		      else if (i_ring->DimensionModel == GAIA_XY_Z_M)
+			{
+			    gaiaGetPointXYZM (i_ring->Coords, iv, &x, &y, &z,
+					      &m);
+			}
+		      else
+			{
+			    gaiaGetPoint (i_ring->Coords, iv, &x, &y);
+			}
+		      if (iv > 0)
+			{
+			    if (last_x == x && last_y == y && last_z == z)
+				;
+			    else
+				points++;
+			}
+		      else
+			{
+			    first_x = x;
+			    first_y = y;
+			    first_z = z;
+			    first_m = m;
+			    points++;
+			}
+		      last_x = x;
+		      last_y = y;
+		      last_z = z;
+		      last_m = m;
+		  }
+		if (last_x == x && last_y == y && last_z == z)
+		    ;
+		else
+		  {
+		      /* forcing RING closure */
+		      points++;
+		  }
+		if (points < 4)
+		  {
+		      /* illegal RING - copying the original one */
+		      o_ring =
+			  gaiaAddInteriorRing (new_polyg, ib, i_ring->Points);
+		      gaiaCopyRingCoords (o_ring, i_ring);
+		  }
+		else
+		  {
+		      /* valid RING - sanitizing */
+		      o_ring = gaiaAddInteriorRing (new_polyg, ib, points);
+		      points = 0;
+		      for (iv = 0; iv < i_ring->Points; iv++)
+			{
+			    /* PASS II - inserting points */
+			    z = 0.0;
+			    m = 0.0;
+			    if (i_ring->DimensionModel == GAIA_XY_Z)
+			      {
+				  gaiaGetPointXYZ (i_ring->Coords, iv, &x, &y,
+						   &z);
+			      }
+			    else if (i_ring->DimensionModel == GAIA_XY_M)
+			      {
+				  gaiaGetPointXYM (i_ring->Coords, iv, &x, &y,
+						   &m);
+			      }
+			    else if (i_ring->DimensionModel == GAIA_XY_Z_M)
+			      {
+				  gaiaGetPointXYZM (i_ring->Coords, iv, &x, &y,
+						    &z, &m);
+			      }
+			    else
+			      {
+				  gaiaGetPoint (i_ring->Coords, iv, &x, &y);
+			      }
+			    if (iv > 0)
+			      {
+				  if (last_x == x && last_y == y && last_z == z)
+				      ;
+				  else
+				    {
+					if (o_ring->DimensionModel == GAIA_XY_Z)
+					  {
+					      gaiaSetPointXYZ (o_ring->Coords,
+							       points, x, y, z);
+					  }
+					else if (o_ring->DimensionModel ==
+						 GAIA_XY_M)
+					  {
+					      gaiaSetPointXYM (o_ring->Coords,
+							       points, x, y, m);
+					  }
+					else if (o_ring->DimensionModel ==
+						 GAIA_XY_Z_M)
+					  {
+					      gaiaSetPointXYZM (o_ring->Coords,
+								points, x, y, z,
+								m);
+					  }
+					else
+					  {
+					      gaiaSetPoint (o_ring->Coords,
+							    points, x, y);
+					  }
+					points++;
+				    }
+			      }
+			    else
+			      {
+				  if (o_ring->DimensionModel == GAIA_XY_Z)
+				    {
+					gaiaSetPointXYZ (o_ring->Coords, points,
+							 x, y, z);
+				    }
+				  else if (o_ring->DimensionModel == GAIA_XY_M)
+				    {
+					gaiaSetPointXYM (o_ring->Coords, points,
+							 x, y, m);
+				    }
+				  else if (o_ring->DimensionModel ==
+					   GAIA_XY_Z_M)
+				    {
+					gaiaSetPointXYZM (o_ring->Coords,
+							  points, x, y, z, m);
+				    }
+				  else
+				    {
+					gaiaSetPoint (o_ring->Coords, points, x,
+						      y);
+				    }
+				  points++;
+			      }
+			    last_x = x;
+			    last_y = y;
+			    last_z = z;
+			    last_m = m;
+			}
+		      /* PASS III - forcing RING closure */
+		      z = 0.0;
+		      m = 0.0;
+		      if (i_ring->DimensionModel == GAIA_XY_Z)
+			{
+			    gaiaGetPointXYZ (i_ring->Coords, 0, &x, &y, &z);
+			}
+		      else if (i_ring->DimensionModel == GAIA_XY_M)
+			{
+			    gaiaGetPointXYM (i_ring->Coords, 0, &x, &y, &m);
+			}
+		      else if (i_ring->DimensionModel == GAIA_XY_Z_M)
+			{
+			    gaiaGetPointXYZM (i_ring->Coords, 0, &x, &y, &z,
+					      &m);
+			}
+		      else
+			{
+			    gaiaGetPoint (i_ring->Coords, 0, &x, &y);
+			}
+		      points = o_ring->Points - 1;
+		      if (o_ring->DimensionModel == GAIA_XY_Z)
+			{
+			    gaiaSetPointXYZ (o_ring->Coords, points, x, y, z);
+			}
+		      else if (o_ring->DimensionModel == GAIA_XY_M)
+			{
+			    gaiaSetPointXYM (o_ring->Coords, points, x, y, m);
+			}
+		      else if (o_ring->DimensionModel == GAIA_XY_Z_M)
+			{
+			    gaiaSetPointXYZM (o_ring->Coords, points, x, y, z,
+					      m);
+			}
+		      else
+			{
+			    gaiaSetPoint (o_ring->Coords, points, x, y);
+			}
+		  }
+	    }
+	  polyg = polyg->Next;
+      }
+    return new_geom;
+}
+
+GAIAGEO_DECLARE int
+gaiaIsToxic (gaiaGeomCollPtr geom)
+{
+/* 
+/ identifying toxic geometries 
+/ i.e. geoms making GEOS to crash !!!
+*/
+    int ib;
+    gaiaPointPtr point;
+    gaiaLinestringPtr line;
+    gaiaPolygonPtr polyg;
+    gaiaRingPtr ring;
+    if (!geom)
+	return 0;
+    point = geom->FirstPoint;
+    while (point)
+      {
+	  /* checking POINTs */
+	  point = point->Next;
+      }
+    line = geom->FirstLinestring;
+    while (line)
+      {
+	  /* checking LINESTRINGs */
+	  if (line->Points < 2)
+	      return 1;
+	  line = line->Next;
+      }
+    polyg = geom->FirstPolygon;
+    while (polyg)
+      {
+	  /* checking POLYGONs */
+	  ring = polyg->Exterior;
+	  if (ring->Points < 4)
+	      return 1;
+	  for (ib = 0; ib < polyg->NumInteriors; ib++)
+	    {
+		ring = polyg->Interiors + ib;
+		if (ring->Points < 4)
+		    return 1;
+	    }
+	  polyg = polyg->Next;
+      }
+    return 0;
 }

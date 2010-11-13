@@ -2,7 +2,7 @@
 
  gg_sqlaux.c -- SQL ancillary functions
 
- version 2.3, 2008 October 13
+ version 2.4, 2009 September 17
 
  Author: Sandro Furieri a.furieri@lqt.it
 
@@ -43,12 +43,26 @@ the terms of any one of the MPL, the GPL or the LGPL.
  
 */
 
+#if defined(_WIN32) && !defined(__MINGW32__)
+/* MSVC strictly requires this include [off_t] */
+#include <sys/types.h>
+#endif
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 
+#ifdef SPL_AMALGAMATION	/* spatialite-amalgamation */
 #include <spatialite/sqlite3ext.h>
+#else
+#include <sqlite3ext.h>
+#endif
+
 #include <spatialite/gaiageo.h>
+
+#ifdef _WIN32
+#define strcasecmp	_stricmp
+#endif /* not WIN32 */
 
 GAIAGEO_DECLARE int
 gaiaIllegalSqlName (const char *name)
@@ -93,6 +107,7 @@ gaiaIsReservedSqliteName (const char *name)
 	"AS",
 	"AUTOINCREMENT",
 	"BETWEEN",
+	"BLOB",
 	"BY",
 	"CASE",
 	"CHECK",
@@ -101,10 +116,13 @@ gaiaIsReservedSqliteName (const char *name)
 	"CONSTRAINT",
 	"CREATE",
 	"CROSS",
+	"DATE",
+	"DATETIME",
 	"DEFAULT",
 	"DEFERRABLE",
 	"DELETE",
 	"DISTINCT",
+	"DOUBLE",
 	"DROP",
 	"ELSE",
 	"ESCAPE",
@@ -119,14 +137,17 @@ gaiaIsReservedSqliteName (const char *name)
 	"INDEX",
 	"INNER",
 	"INSERT",
+	"INTEGER",
 	"INTERSECT",
 	"INTO",
 	"IS",
 	"ISNULL",
 	"JOIN",
+	"KEY",
 	"LEFT",
 	"LIKE",
 	"LIMIT",
+	"MATCH",
 	"NATURAL",
 	"NOT",
 	"NOTNULL",
@@ -135,14 +156,20 @@ gaiaIsReservedSqliteName (const char *name)
 	"OR",
 	"ORDER",
 	"OUTER",
+	"PRAGMA",
 	"PRIMARY",
 	"REFERENCES",
+	"REPLACE",
 	"RIGHT",
 	"ROLLBACK",
 	"SELECT",
 	"SET",
 	"TABLE",
+	"TEMP",
+	"TEMPORARY",
 	"THEN",
+	"TEXT",
+	"TIMESTAMP",
 	"TO",
 	"TRANSACTION",
 	"UNION",
@@ -150,6 +177,7 @@ gaiaIsReservedSqliteName (const char *name)
 	"UPDATE",
 	"USING",
 	"VALUES",
+	"VIEW",
 	"WHEN",
 	"WHERE",
 	NULL
