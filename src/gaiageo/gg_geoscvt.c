@@ -43,11 +43,7 @@ the terms of any one of the MPL, the GPL or the LGPL.
  
 */
 
-#if defined(_WIN32) && !defined(__MINGW32__)
-/* MSVC strictly requires this include [off_t] */
 #include <sys/types.h>
-#endif
-
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -55,7 +51,7 @@ the terms of any one of the MPL, the GPL or the LGPL.
 #include <geos_c.h>
 #endif
 
-#ifdef SPL_AMALGAMATION	/* spatialite-amalgamation */
+#ifdef SPL_AMALGAMATION		/* spatialite-amalgamation */
 #include <spatialite/sqlite3ext.h>
 #else
 #include <sqlite3ext.h>
@@ -494,7 +490,9 @@ fromGeosGeometry (const GEOSGeometry * geos, const int dimension_model)
     int iv;
     int ib;
     int it;
+    int sub_it;
     int nItems;
+    int nSubItems;
     int holes;
     unsigned int points;
     double x;
@@ -503,6 +501,7 @@ fromGeosGeometry (const GEOSGeometry * geos, const int dimension_model)
     const GEOSCoordSequence *cs;
     const GEOSGeometry *geos_ring;
     const GEOSGeometry *geos_item;
+    const GEOSGeometry *geos_sub_item;
     gaiaGeomCollPtr gaia = NULL;
     gaiaLinestringPtr ln;
     gaiaPolygonPtr pg;
@@ -772,6 +771,53 @@ fromGeosGeometry (const GEOSGeometry * geos, const int dimension_model)
 			    else
 			      {
 				  gaiaSetPoint (ln->Coords, iv, x, y);
+			      }
+			}
+		      break;
+		  case GEOS_MULTILINESTRING:
+		      nSubItems = GEOSGetNumGeometries (geos_item);
+		      for (sub_it = 0; sub_it < nSubItems; sub_it++)
+			{
+			    /* looping on elementaty geometries */
+			    geos_sub_item =
+				GEOSGetGeometryN (geos_item, sub_it);
+			    cs = GEOSGeom_getCoordSeq (geos_sub_item);
+			    GEOSCoordSeq_getDimensions (cs, &dims);
+			    GEOSCoordSeq_getSize (cs, &points);
+			    ln = gaiaAddLinestringToGeomColl (gaia, points);
+			    for (iv = 0; iv < (int) points; iv++)
+			      {
+				  if (dims == 3)
+				    {
+					GEOSCoordSeq_getX (cs, iv, &x);
+					GEOSCoordSeq_getY (cs, iv, &y);
+					GEOSCoordSeq_getZ (cs, iv, &z);
+				    }
+				  else
+				    {
+					GEOSCoordSeq_getX (cs, iv, &x);
+					GEOSCoordSeq_getY (cs, iv, &y);
+					z = 0.0;
+				    }
+				  if (dimension_model == GAIA_XY_Z)
+				    {
+					gaiaSetPointXYZ (ln->Coords, iv, x, y,
+							 z);
+				    }
+				  else if (dimension_model == GAIA_XY_M)
+				    {
+					gaiaSetPointXYM (ln->Coords, iv, x, y,
+							 0.0);
+				    }
+				  else if (dimension_model == GAIA_XY_Z_M)
+				    {
+					gaiaSetPointXYZM (ln->Coords, iv, x, y,
+							  z, 0.0);
+				    }
+				  else
+				    {
+					gaiaSetPoint (ln->Coords, iv, x, y);
+				    }
 			      }
 			}
 		      break;
