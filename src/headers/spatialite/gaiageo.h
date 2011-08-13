@@ -1,7 +1,7 @@
 /* 
  gaiageo.h -- Gaia common support for geometries
   
- version 2.4, 2009 September 17
+ version 3.0, 2011 July 20
 
  Author: Sandro Furieri a.furieri@lqt.it
 
@@ -123,6 +123,16 @@ extern "C"
 #define GAIA_CLOSED		10
 #define GAIA_COMMA		11
 #define GAIA_SPACE		12
+
+
+/* constants that defines GEOS-WKB 3D CLASSes */
+#define GAIA_GEOSWKB_POINTZ			-2147483647
+#define GAIA_GEOSWKB_LINESTRINGZ		-2147483646
+#define GAIA_GEOSWKB_POLYGONZ			-2147483645
+#define GAIA_GEOSWKB_MULTIPOINTZ		-2147483644
+#define GAIA_GEOSWKB_MULTILINESTRINGZ		-2147483643
+#define GAIA_GEOSWKB_MULTIPOLYGONZ		-2147483642
+#define GAIA_GEOSWKB_GEOMETRYCOLLECTIONZ	-2147483641
 
 /* constants that defines multitype values */
 #define GAIA_NULL_VALUE		0
@@ -788,12 +798,44 @@ extern "C"
 					  const char *path,
 					  const char *charFrom,
 					  const char *charTo);
-    GAIAGEO_DECLARE int gaiaReadDbfEntity (gaiaDbfPtr shp, int current_row,
+    GAIAGEO_DECLARE void gaiaOpenDbfWrite (gaiaDbfPtr dbf,
+					   const char *path,
+					   const char *charFrom,
+					   const char *charTo);
+    GAIAGEO_DECLARE int gaiaReadDbfEntity (gaiaDbfPtr dbf, int current_row,
 					   int *deleted);
+    GAIAGEO_DECLARE int gaiaWriteDbfEntity (gaiaDbfPtr dbf,
+					    gaiaDbfListPtr entity);
+    GAIAGEO_DECLARE void gaiaFlushDbfHeader (gaiaDbfPtr dbf);
     GAIAGEO_DECLARE gaiaGeomCollPtr gaiaParseWkt (const unsigned char
 						  *dirty_buffer, short type);
+
+    GAIAGEO_DECLARE void gaiaToEWKB (gaiaOutBufferPtr out_buf,
+				     gaiaGeomCollPtr geom);
+    GAIAGEO_DECLARE gaiaGeomCollPtr gaiaFromEWKB (const unsigned char
+						  *in_buffer);
+    GAIAGEO_DECLARE gaiaGeomCollPtr gaiaParseEWKT (const unsigned char
+						   *in_buffer);
+    GAIAGEO_DECLARE void gaiaToEWKT (gaiaOutBufferPtr out_buf,
+				     gaiaGeomCollPtr geom);
+    GAIAGEO_DECLARE gaiaGeomCollPtr gaiaParseGeoJSON (const unsigned char
+						      *in_buffer);
+    GAIAGEO_DECLARE gaiaGeomCollPtr gaiaParseKml (const unsigned char
+						  *in_buffer);
+    GAIAGEO_DECLARE gaiaGeomCollPtr gaiaParseGml (const unsigned char
+						  *in_buffer,
+						  sqlite3 * sqlite_handle);
+
+    GAIAGEO_DECLARE void gaiaOutPointZ (gaiaOutBufferPtr out_buf,
+					gaiaPointPtr point);
+    GAIAGEO_DECLARE void gaiaOutLinestringZ (gaiaOutBufferPtr out_buf,
+					     gaiaLinestringPtr linestring);
+    GAIAGEO_DECLARE void gaiaOutPolygonZ (gaiaOutBufferPtr out_buf,
+					  gaiaPolygonPtr polygon);
     GAIAGEO_DECLARE void gaiaOutWkt (gaiaOutBufferPtr out_buf,
 				     gaiaGeomCollPtr geom);
+    GAIAGEO_DECLARE void gaiaOutWktStrict (gaiaOutBufferPtr out_buf,
+					   gaiaGeomCollPtr geom, int precision);
     GAIAGEO_DECLARE void gaiaOutSvg (gaiaOutBufferPtr out_buf,
 				     gaiaGeomCollPtr geom, int relative,
 				     int precision);
@@ -804,6 +846,9 @@ extern "C"
 					 gaiaGeomCollPtr geom, int precision);
     GAIAGEO_DECLARE void gaiaOutGml (gaiaOutBufferPtr out_buf, int version,
 				     int precision, gaiaGeomCollPtr geom);
+    GAIAGEO_DECLARE void gaiaOutGeoJSON (gaiaOutBufferPtr out_buf,
+					 gaiaGeomCollPtr geom, int precision,
+					 int options);
     GAIAGEO_DECLARE gaiaGeomCollPtr gaiaFromFgf (const unsigned char *blob,
 						 unsigned int size);
     GAIAGEO_DECLARE void gaiaToFgf (gaiaGeomCollPtr geom,
@@ -920,6 +965,15 @@ extern "C"
     GAIAGEO_DECLARE gaiaGeomCollPtr gaiaLinearize (gaiaGeomCollPtr geom,
 						   int force_multi);
 
+    GAIAGEO_DECLARE gaiaGeomCollPtr gaiaDissolveSegments (gaiaGeomCollPtr geom);
+    GAIAGEO_DECLARE gaiaGeomCollPtr gaiaDissolvePoints (gaiaGeomCollPtr geom);
+    GAIAGEO_DECLARE gaiaGeomCollPtr
+	gaiaExtractPointsFromGeomColl (gaiaGeomCollPtr geom);
+    GAIAGEO_DECLARE gaiaGeomCollPtr
+	gaiaExtractLinestringsFromGeomColl (gaiaGeomCollPtr geom);
+    GAIAGEO_DECLARE gaiaGeomCollPtr
+	gaiaExtractPolygonsFromGeomColl (gaiaGeomCollPtr geom);
+
 #ifndef OMIT_PROJ		/* including PROJ.4 */
 
     GAIAGEO_DECLARE double gaiaRadsToDegs (double rads);
@@ -1013,6 +1067,21 @@ extern "C"
 					    gaiaGeomCollPtr geom2);
     GAIAGEO_DECLARE int gaiaGeomCollCoveredBy (gaiaGeomCollPtr geom1,
 					       gaiaGeomCollPtr geom2);
+    GAIAGEO_DECLARE gaiaGeomCollPtr gaiaLineInterpolatePoint (gaiaGeomCollPtr
+							      ln_geom,
+							      double fraction);
+    GAIAGEO_DECLARE double gaiaLineLocatePoint (gaiaGeomCollPtr ln_geom,
+						gaiaGeomCollPtr pt_geom);
+    GAIAGEO_DECLARE gaiaGeomCollPtr gaiaLineSubstring (gaiaGeomCollPtr ln_geom,
+						       double start_fraction,
+						       double end_fraction);
+    GAIAGEO_DECLARE gaiaGeomCollPtr gaiaShortestLine (gaiaGeomCollPtr geom1,
+						      gaiaGeomCollPtr geom2);
+    GAIAGEO_DECLARE gaiaGeomCollPtr gaiaSnap (gaiaGeomCollPtr geom1,
+					      gaiaGeomCollPtr geom2,
+					      double tolerance);
+    GAIAGEO_DECLARE gaiaGeomCollPtr gaiaLineMerge (gaiaGeomCollPtr geom);
+    GAIAGEO_DECLARE gaiaGeomCollPtr gaiaUnaryUnion (gaiaGeomCollPtr geom);
 #endif				/* end GEOS advanced and experimental features */
 
 #endif				/* end including GEOS */

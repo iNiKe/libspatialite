@@ -2,7 +2,7 @@
 
  virtualspatialindex.c -- SQLite3 extension [VIRTUAL TABLE RTree metahandler]
 
- version 2.4, 2011 March 9
+ version 3.0, 2011 July 20
 
  Author: Sandro Furieri a.furieri@lqt.it
 
@@ -47,6 +47,7 @@ the terms of any one of the MPL, the GPL or the LGPL.
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
 
 #ifdef SPL_AMALGAMATION		/* spatialite-amalgamation */
 #include <spatialite/sqlite3.h>
@@ -431,6 +432,12 @@ vspidx_filter (sqlite3_vtab_cursor * pCursor, int idxNum, const char *idxStr,
     int exists;
     int ret;
     sqlite3_stmt *stmt;
+    float minx;
+    float miny;
+    float maxx;
+    float maxy;
+    double tic;
+    double tic2;
     VirtualSpatialIndexCursorPtr cursor =
 	(VirtualSpatialIndexCursorPtr) pCursor;
     VirtualSpatialIndexPtr spidx = (VirtualSpatialIndexPtr) cursor->pVtab;
@@ -508,10 +515,27 @@ vspidx_filter (sqlite3_vtab_cursor * pCursor, int idxNum, const char *idxStr,
 	goto stop;
 /* binding stmt params [MBR] */
     gaiaMbrGeometry (geom);
-    sqlite3_bind_double (stmt, 1, geom->MaxX);
-    sqlite3_bind_double (stmt, 2, geom->MinX);
-    sqlite3_bind_double (stmt, 3, geom->MaxY);
-    sqlite3_bind_double (stmt, 4, geom->MinY);
+
+/* adjusting the MBR so to compensate for DOUBLE/FLOAT truncations */
+    minx = geom->MinX;
+    miny = geom->MinY;
+    maxx = geom->MaxX;
+    maxy = geom->MaxY;
+    tic = fabs (geom->MinX - minx);
+    tic2 = fabs (geom->MinY - miny);
+    if (tic2 > tic)
+	tic = tic2;
+    tic2 = fabs (geom->MaxX - maxx);
+    if (tic2 > tic)
+	tic = tic2;
+    tic2 = fabs (geom->MaxY - maxy);
+    if (tic2 > tic)
+	tic = tic2;
+    tic *= 2.0;
+    sqlite3_bind_double (stmt, 1, geom->MaxX + tic);
+    sqlite3_bind_double (stmt, 2, geom->MinX - tic);
+    sqlite3_bind_double (stmt, 3, geom->MaxY + tic);
+    sqlite3_bind_double (stmt, 4, geom->MinY - tic);
     cursor->stmt = stmt;
     cursor->eof = 0;
 /* fetching the first ResultSet's row */

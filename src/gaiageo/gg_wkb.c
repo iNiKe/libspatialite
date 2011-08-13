@@ -2,7 +2,7 @@
 
  gg_wkb.c -- Gaia common support for WKB encoded geometries
   
- version 2.4, 2009 September 17
+ version 3.0, 2011 July 20
 
  Author: Sandro Furieri a.furieri@lqt.it
 
@@ -47,8 +47,9 @@ the terms of any one of the MPL, the GPL or the LGPL.
 #include <stdlib.h>
 #include <stdio.h>
 #include <float.h>
+#include <string.h>
 
-#ifdef SPL_AMALGAMATION	/* spatialite-amalgamation */
+#ifdef SPL_AMALGAMATION		/* spatialite-amalgamation */
 #include <spatialite/sqlite3ext.h>
 #else
 #include <sqlite3ext.h>
@@ -994,6 +995,7 @@ ParseWkbGeometry (gaiaGeomCollPtr geo)
 		ParseWkbPoint (geo);
 		break;
 	    case GAIA_POINTZ:
+	    case GAIA_GEOSWKB_POINTZ:
 		ParseWkbPointZ (geo);
 		break;
 	    case GAIA_POINTM:
@@ -1006,6 +1008,7 @@ ParseWkbGeometry (gaiaGeomCollPtr geo)
 		ParseWkbLine (geo);
 		break;
 	    case GAIA_LINESTRINGZ:
+	    case GAIA_GEOSWKB_LINESTRINGZ:
 		ParseWkbLineZ (geo);
 		break;
 	    case GAIA_LINESTRINGM:
@@ -1018,6 +1021,7 @@ ParseWkbGeometry (gaiaGeomCollPtr geo)
 		ParseWkbPolygon (geo);
 		break;
 	    case GAIA_POLYGONZ:
+	    case GAIA_GEOSWKB_POLYGONZ:
 		ParseWkbPolygonZ (geo);
 		break;
 	    case GAIA_POLYGONM:
@@ -2196,7 +2200,6 @@ gaiaToSpatiaLiteBlobWkb (gaiaGeomCollPtr geom, unsigned char **result,
 			      }
 			}
 		  }
-		*ptr = GAIA_MARK_END;	/* END signature */
 		polyg = polyg->Next;
 	    }
 	  *ptr = GAIA_MARK_END;	/* END signature */
@@ -3187,7 +3190,7 @@ gaiaToCompressedBlobWkb (gaiaGeomCollPtr geom, unsigned char **result,
 			}
 		      else
 			{
-			    /* compressing any other intermeditate vertex */
+			    /* compressing any other intermediate vertex */
 			    fx = (float) (x - last_x);
 			    fy = (float) (y - last_y);
 			    gaiaExportF32 (ptr, fx, 1, endian_arch);	/* X */
@@ -3204,7 +3207,7 @@ gaiaToCompressedBlobWkb (gaiaGeomCollPtr geom, unsigned char **result,
 			      }
 			    else
 			      {
-				  /* compressing any other intermeditate vertex */
+				  /* compressing any other intermediate vertex */
 				  fz = (float) (z - last_z);
 				  gaiaExportF32 (ptr, fz, 1, endian_arch);	/* Z */
 				  ptr += 4;
@@ -3225,7 +3228,7 @@ gaiaToCompressedBlobWkb (gaiaGeomCollPtr geom, unsigned char **result,
 			      }
 			    else
 			      {
-				  /* compressing any other intermeditate vertex */
+				  /* compressing any other intermediate vertex */
 				  fz = (float) (z - last_z);
 				  gaiaExportF32 (ptr, fz, 1, endian_arch);	/* Z */
 				  ptr += 4;
@@ -3284,7 +3287,7 @@ gaiaToCompressedBlobWkb (gaiaGeomCollPtr geom, unsigned char **result,
 			}
 		      else
 			{
-			    /* compressing any other intermeditate vertex */
+			    /* compressing any other intermediate vertex */
 			    fx = (float) (x - last_x);
 			    fy = (float) (y - last_y);
 			    gaiaExportF32 (ptr, fx, 1, endian_arch);	/* X */
@@ -3301,7 +3304,7 @@ gaiaToCompressedBlobWkb (gaiaGeomCollPtr geom, unsigned char **result,
 			      }
 			    else
 			      {
-				  /* compressing any other intermeditate vertex */
+				  /* compressing any other intermediate vertex */
 				  fz = (float) (z - last_z);
 				  gaiaExportF32 (ptr, fz, 1, endian_arch);	/* Z */
 				  ptr += 4;
@@ -3322,7 +3325,7 @@ gaiaToCompressedBlobWkb (gaiaGeomCollPtr geom, unsigned char **result,
 			      }
 			    else
 			      {
-				  /* compressing any other intermeditate vertex */
+				  /* compressing any other intermediate vertex */
 				  fz = (float) (z - last_z);
 				  gaiaExportF32 (ptr, fz, 1, endian_arch);	/* Z */
 				  ptr += 4;
@@ -3341,8 +3344,8 @@ gaiaToCompressedBlobWkb (gaiaGeomCollPtr geom, unsigned char **result,
 		      ptr += 4;
 		      for (iv = 0; iv < rng->Points; iv++)
 			{
-			    m = 0.0;
 			    z = 0.0;
+			    m = 0.0;
 			    if (geom->DimensionModel == GAIA_XY_Z)
 			      {
 				  gaiaGetPointXYZ (rng->Coords, iv, &x, &y, &z);
@@ -3353,8 +3356,8 @@ gaiaToCompressedBlobWkb (gaiaGeomCollPtr geom, unsigned char **result,
 			      }
 			    else if (geom->DimensionModel == GAIA_XY_Z_M)
 			      {
-				  gaiaGetPointXYZM (rng->Coords, iv, &x, &y,
-						    &z, &m);
+				  gaiaGetPointXYZM (rng->Coords, iv, &x, &y, &z,
+						    &m);
 			      }
 			    else
 			      {
@@ -3369,7 +3372,7 @@ gaiaToCompressedBlobWkb (gaiaGeomCollPtr geom, unsigned char **result,
 			      }
 			    else
 			      {
-				  /* compressing any other intermeditate vertex */
+				  /* compressing any other intermediate vertex */
 				  fx = (float) (x - last_x);
 				  fy = (float) (y - last_y);
 				  gaiaExportF32 (ptr, fx, 1, endian_arch);	/* X */
@@ -3386,7 +3389,7 @@ gaiaToCompressedBlobWkb (gaiaGeomCollPtr geom, unsigned char **result,
 				    }
 				  else
 				    {
-					/* compressing any other intermeditate vertex */
+					/* compressing any other intermediate vertex */
 					fz = (float) (z - last_z);
 					gaiaExportF32 (ptr, fz, 1, endian_arch);	/* Z */
 					ptr += 4;
@@ -3407,12 +3410,12 @@ gaiaToCompressedBlobWkb (gaiaGeomCollPtr geom, unsigned char **result,
 				    }
 				  else
 				    {
-					/* compressing any other intermeditate vertex */
+					/* compressing any other intermediate vertex */
 					fz = (float) (z - last_z);
 					gaiaExportF32 (ptr, fz, 1, endian_arch);	/* Z */
 					ptr += 4;
 				    }
-				  gaiaExport64 (ptr + 8, m, 1, endian_arch);	/* M */
+				  gaiaExport64 (ptr, m, 1, endian_arch);	/* M */
 				  ptr += 8;
 			      }
 			    last_x = x;
@@ -3420,7 +3423,6 @@ gaiaToCompressedBlobWkb (gaiaGeomCollPtr geom, unsigned char **result,
 			    last_z = z;
 			}
 		  }
-		*ptr = GAIA_MARK_END;	/* END signature */
 		polyg = polyg->Next;
 	    }
 	  *ptr = GAIA_MARK_END;	/* END signature */
@@ -3444,7 +3446,12 @@ gaiaFromWkb (const unsigned char *blob, unsigned int size)
     type = gaiaImport32 (blob + 1, little_endian, endian_arch);
     if (type == GAIA_POINTZ || type == GAIA_LINESTRINGZ || type == GAIA_POLYGONZ
 	|| type == GAIA_MULTIPOINTZ || type == GAIA_MULTILINESTRINGZ
-	|| type == GAIA_MULTIPOLYGONZ || type == GAIA_GEOMETRYCOLLECTIONZ)
+	|| type == GAIA_MULTIPOLYGONZ || type == GAIA_GEOMETRYCOLLECTIONZ
+	|| type == GAIA_GEOSWKB_POINTZ || type == GAIA_GEOSWKB_LINESTRINGZ
+	|| type == GAIA_GEOSWKB_POLYGONZ || type == GAIA_GEOSWKB_MULTIPOINTZ
+	|| type == GAIA_GEOSWKB_MULTILINESTRINGZ
+	|| type == GAIA_GEOSWKB_MULTIPOLYGONZ
+	|| type == GAIA_GEOSWKB_GEOMETRYCOLLECTIONZ)
 	geo = gaiaAllocGeomCollXYZ ();
     else if (type == GAIA_POINTM || type == GAIA_LINESTRINGM
 	     || type == GAIA_POLYGONM || type == GAIA_MULTIPOINTM
@@ -3470,6 +3477,7 @@ gaiaFromWkb (const unsigned char *blob, unsigned int size)
 	  ParseWkbPoint (geo);
 	  break;
       case GAIA_POINTZ:
+      case GAIA_GEOSWKB_POINTZ:
 	  ParseWkbPointZ (geo);
 	  break;
       case GAIA_POINTM:
@@ -3482,6 +3490,7 @@ gaiaFromWkb (const unsigned char *blob, unsigned int size)
 	  ParseWkbLine (geo);
 	  break;
       case GAIA_LINESTRINGZ:
+      case GAIA_GEOSWKB_LINESTRINGZ:
 	  ParseWkbLineZ (geo);
 	  break;
       case GAIA_LINESTRINGM:
@@ -3494,6 +3503,7 @@ gaiaFromWkb (const unsigned char *blob, unsigned int size)
 	  ParseWkbPolygon (geo);
 	  break;
       case GAIA_POLYGONZ:
+      case GAIA_GEOSWKB_POLYGONZ:
 	  ParseWkbPolygonZ (geo);
 	  break;
       case GAIA_POLYGONM:
@@ -3510,6 +3520,10 @@ gaiaFromWkb (const unsigned char *blob, unsigned int size)
       case GAIA_MULTILINESTRINGZ:
       case GAIA_MULTIPOLYGONZ:
       case GAIA_GEOMETRYCOLLECTIONZ:
+      case GAIA_GEOSWKB_MULTIPOINTZ:
+      case GAIA_GEOSWKB_MULTILINESTRINGZ:
+      case GAIA_GEOSWKB_MULTIPOLYGONZ:
+      case GAIA_GEOSWKB_GEOMETRYCOLLECTIONZ:
       case GAIA_MULTIPOINTM:
       case GAIA_MULTILINESTRINGM:
       case GAIA_MULTIPOLYGONM:
@@ -3528,42 +3542,49 @@ gaiaFromWkb (const unsigned char *blob, unsigned int size)
       {
       case GAIA_POINT:
       case GAIA_POINTZ:
+      case GAIA_GEOSWKB_POINTZ:
       case GAIA_POINTM:
       case GAIA_POINTZM:
 	  geo->DeclaredType = GAIA_POINT;
 	  break;
       case GAIA_LINESTRING:
       case GAIA_LINESTRINGZ:
+      case GAIA_GEOSWKB_LINESTRINGZ:
       case GAIA_LINESTRINGM:
       case GAIA_LINESTRINGZM:
 	  geo->DeclaredType = GAIA_LINESTRING;
 	  break;
       case GAIA_POLYGON:
       case GAIA_POLYGONZ:
+      case GAIA_GEOSWKB_POLYGONZ:
       case GAIA_POLYGONM:
       case GAIA_POLYGONZM:
 	  geo->DeclaredType = GAIA_POLYGON;
 	  break;
       case GAIA_MULTIPOINT:
       case GAIA_MULTIPOINTZ:
+      case GAIA_GEOSWKB_MULTIPOINTZ:
       case GAIA_MULTIPOINTM:
       case GAIA_MULTIPOINTZM:
 	  geo->DeclaredType = GAIA_MULTIPOINT;
 	  break;
       case GAIA_MULTILINESTRING:
       case GAIA_MULTILINESTRINGZ:
+      case GAIA_GEOSWKB_MULTILINESTRINGZ:
       case GAIA_MULTILINESTRINGM:
       case GAIA_MULTILINESTRINGZM:
 	  geo->DeclaredType = GAIA_MULTILINESTRING;
 	  break;
       case GAIA_MULTIPOLYGON:
       case GAIA_MULTIPOLYGONZ:
+      case GAIA_GEOSWKB_MULTIPOLYGONZ:
       case GAIA_MULTIPOLYGONM:
       case GAIA_MULTIPOLYGONZM:
 	  geo->DeclaredType = GAIA_MULTIPOLYGON;
 	  break;
       case GAIA_GEOMETRYCOLLECTION:
       case GAIA_GEOMETRYCOLLECTIONZ:
+      case GAIA_GEOSWKB_GEOMETRYCOLLECTIONZ:
       case GAIA_GEOMETRYCOLLECTIONM:
       case GAIA_GEOMETRYCOLLECTIONZM:
 	  geo->DeclaredType = GAIA_GEOMETRYCOLLECTION;
@@ -4202,6 +4223,1110 @@ gaiaToWkb (gaiaGeomCollPtr geom, unsigned char **result, int *size)
 	    }
 	  polyg = polyg->Next;
       }
+}
+
+static int
+ewkbGetPoint (gaiaGeomCollPtr geom, unsigned char *blob,
+	      int offset, int blob_size, int endian, int endian_arch, int dims)
+{
+/* decodes a POINT from PostGIS EWKB binary GEOMETRY */
+    double x;
+    double y;
+    double z;
+    double m;
+    switch (dims)
+      {
+      case GAIA_XY_Z_M:
+	  if (blob_size < offset + 32)
+	      return -1;
+	  break;
+      case GAIA_XY_Z:
+      case GAIA_XY_M:
+	  if (blob_size < offset + 24)
+	      return -1;
+	  break;
+      default:
+	  if (blob_size < offset + 16)
+	      return -1;
+	  break;
+      }
+    x = gaiaImport64 (blob + offset, endian, endian_arch);
+    offset += 8;
+    y = gaiaImport64 (blob + offset, endian, endian_arch);
+    offset += 8;
+    if (dims == GAIA_XY_Z_M)
+      {
+	  z = gaiaImport64 (blob + offset, endian, endian_arch);
+	  offset += 8;
+	  m = gaiaImport64 (blob + offset, endian, endian_arch);
+	  offset += 8;
+	  gaiaAddPointToGeomCollXYZM (geom, x, y, z, m);
+      }
+    else if (dims == GAIA_XY_Z)
+      {
+	  z = gaiaImport64 (blob + offset, endian, endian_arch);
+	  offset += 8;
+	  gaiaAddPointToGeomCollXYZ (geom, x, y, z);
+      }
+    else if (dims == GAIA_XY_M)
+      {
+	  m = gaiaImport64 (blob + offset, endian, endian_arch);
+	  offset += 8;
+	  gaiaAddPointToGeomCollXYM (geom, x, y, m);
+      }
+    else
+	gaiaAddPointToGeomColl (geom, x, y);
+    return offset;
+}
+
+static int
+ewkbGetLinestring (gaiaGeomCollPtr geom, unsigned char *blob,
+		   int offset, int blob_size, int endian,
+		   int endian_arch, int dims)
+{
+/* decodes a LINESTRING from PostGIS binary GEOMETRY */
+    int npoints;
+    int iv;
+    double x;
+    double y;
+    double z;
+    double m;
+    gaiaLinestringPtr ln;
+    if (blob_size < offset + 4)
+	return -1;
+    npoints = gaiaImport32 (blob + offset, endian, endian_arch);
+    offset += 4;
+    switch (dims)
+      {
+      case GAIA_XY_Z_M:
+	  if (blob_size < offset + (32 * npoints))
+	      return -1;
+	  break;
+      case GAIA_XY_Z:
+      case GAIA_XY_M:
+	  if (blob_size < offset + (24 * npoints))
+	      return -1;
+	  break;
+      default:
+	  if (blob_size < offset + (16 * npoints))
+	      return -1;
+	  break;
+      }
+    ln = gaiaAddLinestringToGeomColl (geom, npoints);
+    for (iv = 0; iv < npoints; iv++)
+      {
+	  x = gaiaImport64 (blob + offset, endian, endian_arch);
+	  offset += 8;
+	  y = gaiaImport64 (blob + offset, endian, endian_arch);
+	  offset += 8;
+	  if (dims == GAIA_XY_Z_M)
+	    {
+		z = gaiaImport64 (blob + offset, endian, endian_arch);
+		offset += 8;
+		m = gaiaImport64 (blob + offset, endian, endian_arch);
+		offset += 8;
+		gaiaSetPointXYZM (ln->Coords, iv, x, y, z, m);
+	    }
+	  else if (dims == GAIA_XY_Z)
+	    {
+		z = gaiaImport64 (blob + offset, endian, endian_arch);
+		offset += 8;
+		gaiaSetPointXYZ (ln->Coords, iv, x, y, z);
+	    }
+	  else if (dims == GAIA_XY_M)
+	    {
+		m = gaiaImport64 (blob + offset, endian, endian_arch);
+		offset += 8;
+		gaiaSetPointXYM (ln->Coords, iv, x, y, m);
+	    }
+	  else
+	      gaiaSetPoint (ln->Coords, iv, x, y);
+      }
+    return offset;
+}
+
+static int
+ewkbGetPolygon (gaiaGeomCollPtr geom, unsigned char *blob,
+		int offset, int blob_size, int endian,
+		int endian_arch, int dims)
+{
+/* decodes a POLYGON from PostGIS binary GEOMETRY */
+    int rings;
+    int npoints;
+    int iv;
+    int ib;
+    double x;
+    double y;
+    double z;
+    double m;
+    gaiaPolygonPtr polyg = NULL;
+    gaiaRingPtr rng;
+    if (blob_size < offset + 4)
+	return -1;
+    rings = gaiaImport32 (blob + offset, endian, endian_arch);
+    offset += 4;
+    for (ib = 0; ib < rings; ib++)
+      {
+	  if (blob_size < offset + 4)
+	      return -1;
+	  npoints = gaiaImport32 (blob + offset, endian, endian_arch);
+	  offset += 4;
+	  switch (dims)
+	    {
+	    case GAIA_XY_Z_M:
+		if (blob_size < offset + (32 * npoints))
+		    return -1;
+		break;
+	    case GAIA_XY_Z:
+	    case GAIA_XY_M:
+		if (blob_size < offset + (24 * npoints))
+		    return -1;
+		break;
+	    default:
+		if (blob_size < offset + (16 * npoints))
+		    return -1;
+		break;
+	    }
+	  if (ib == 0)
+	    {
+		polyg = gaiaAddPolygonToGeomColl (geom, npoints, rings - 1);
+		rng = polyg->Exterior;
+	    }
+	  else
+	      rng = gaiaAddInteriorRing (polyg, ib - 1, npoints);
+	  for (iv = 0; iv < npoints; iv++)
+	    {
+		x = gaiaImport64 (blob + offset, endian, endian_arch);
+		offset += 8;
+		y = gaiaImport64 (blob + offset, endian, endian_arch);
+		offset += 8;
+		if (dims == GAIA_XY_Z_M)
+		  {
+		      z = gaiaImport64 (blob + offset, endian, endian_arch);
+		      offset += 8;
+		      m = gaiaImport64 (blob + offset, endian, endian_arch);
+		      offset += 8;
+		      gaiaSetPointXYZM (rng->Coords, iv, x, y, z, m);
+		  }
+		else if (dims == GAIA_XY_Z)
+		  {
+		      z = gaiaImport64 (blob + offset, endian, endian_arch);
+		      offset += 8;
+		      gaiaSetPointXYZ (rng->Coords, iv, x, y, z);
+		  }
+		else if (dims == GAIA_XY_M)
+		  {
+		      m = gaiaImport64 (blob + offset, endian, endian_arch);
+		      offset += 8;
+		      gaiaSetPointXYM (rng->Coords, iv, x, y, m);
+		  }
+		else
+		    gaiaSetPoint (rng->Coords, iv, x, y);
+	    }
+      }
+    return offset;
+}
+
+static int
+ewkbGetMultiGeometry (gaiaGeomCollPtr geom, unsigned char *blob,
+		      int offset, int blob_size, int endian,
+		      int endian_arch, int dims)
+{
+/* decodes a MultiGeometry from PostGIS EWKB binary GEOMETRY */
+    int entities;
+    int type;
+    unsigned char xtype[4];
+    int ie;
+    int off;
+    if (blob_size < offset + 4)
+	return -1;
+    entities = gaiaImport32 (blob + offset, endian, endian_arch);
+    offset += 4;
+    for (ie = 0; ie < entities; ie++)
+      {
+	  if (blob_size < offset + 5)
+	      return -1;
+	  memcpy (xtype, blob + offset + 1, 4);
+	  if (endian)
+	      xtype[3] = 0x00;
+	  else
+	      xtype[0] = 0x00;
+	  type = gaiaImport32 (xtype, endian, endian_arch);
+	  offset += 5;
+	  switch (type)
+	    {
+	    case GAIA_POINT:
+		off =
+		    ewkbGetPoint (geom, blob, offset, blob_size, endian,
+				  endian_arch, dims);
+		if (off < 0)
+		    return -1;
+		offset += off;
+		break;
+	    case GAIA_LINESTRING:
+		off =
+		    ewkbGetLinestring (geom, blob, offset, blob_size, endian,
+				       endian_arch, dims);
+		if (off < 0)
+		    return -1;
+		offset += off;
+		break;
+	    case GAIA_POLYGON:
+		off =
+		    ewkbGetPolygon (geom, blob, offset, blob_size, endian,
+				    endian_arch, dims);
+		if (off < 0)
+		    return -1;
+		offset += off;
+	    };
+      }
+    return offset;
+}
+
+static int
+parseHexEwkbByte (const unsigned char high, const unsigned char low,
+		  unsigned char *byte)
+{
+/* parsing an Hexadecimal byte */
+    unsigned char hex;
+    switch (high)
+      {
+      case '0':
+	  hex = 16 * 0;
+	  break;
+      case '1':
+	  hex = 16 * 1;
+	  break;
+      case '2':
+	  hex = 16 * 2;
+	  break;
+      case '3':
+	  hex = 16 * 3;
+	  break;
+      case '4':
+	  hex = 16 * 4;
+	  break;
+      case '5':
+	  hex = 16 * 5;
+	  break;
+      case '6':
+	  hex = 16 * 6;
+	  break;
+      case '7':
+	  hex = 16 * 7;
+	  break;
+      case '8':
+	  hex = 16 * 8;
+	  break;
+      case '9':
+	  hex = 16 * 9;
+	  break;
+      case 'A':
+      case 'a':
+	  hex = 16 * 10;
+	  break;
+      case 'B':
+      case 'b':
+	  hex = 16 * 11;
+	  break;
+      case 'C':
+      case 'c':
+	  hex = 16 * 12;
+	  break;
+      case 'D':
+      case 'd':
+	  hex = 16 * 13;
+	  break;
+      case 'E':
+      case 'e':
+	  hex = 16 * 14;
+	  break;
+      case 'F':
+      case 'f':
+	  hex = 16 * 15;
+	  break;
+      default:
+	  return 0;
+      };
+    switch (low)
+      {
+      case '0':
+	  hex += 0;
+	  break;
+      case '1':
+	  hex += 1;
+	  break;
+      case '2':
+	  hex += 2;
+	  break;
+      case '3':
+	  hex += 3;
+	  break;
+      case '4':
+	  hex += 4;
+	  break;
+      case '5':
+	  hex += 5;
+	  break;
+      case '6':
+	  hex += 6;
+	  break;
+      case '7':
+	  hex += 7;
+	  break;
+      case '8':
+	  hex += 8;
+	  break;
+      case '9':
+	  hex += 9;
+	  break;
+      case 'A':
+      case 'a':
+	  hex += 10;
+	  break;
+      case 'B':
+      case 'b':
+	  hex += 11;
+	  break;
+      case 'C':
+      case 'c':
+	  hex += 12;
+	  break;
+      case 'D':
+      case 'd':
+	  hex += 13;
+	  break;
+      case 'E':
+      case 'e':
+	  hex += 14;
+	  break;
+      case 'F':
+      case 'f':
+	  hex += 15;
+	  break;
+      default:
+	  return 0;
+      };
+    *byte = hex;
+    return 1;
+}
+
+static unsigned char *
+parseHexEWKB (const unsigned char *blob_hex, int *blob_size)
+{
+/* parsing an Hexadecimal EWKB Geometry */
+    unsigned char *blob;
+    unsigned char *p_out;
+    const unsigned char *p_in;
+    char high;
+    char low;
+    unsigned char hex;
+    int size;
+    int len = strlen ((const char *) blob_hex);
+    size = len / 2;
+    if (size * 2 != len)
+	return NULL;
+    blob = malloc (size);
+    if (!blob)
+	return NULL;
+    *blob_size = size;
+    p_in = blob_hex;
+    p_out = blob;
+    while (*p_in != '\0')
+      {
+	  high = *p_in++;
+	  low = *p_in++;
+	  if (!parseHexEwkbByte (high, low, &hex))
+	    {
+		free (blob);
+		return NULL;
+	    }
+	  *p_out++ = hex;
+      }
+    *blob_size = size;
+    return blob;
+}
+
+gaiaGeomCollPtr
+gaiaFromEWKB (const unsigned char *in_buffer)
+{
+/* creates a Gaia own Geometry from GEOS/PostGIS EWKB */
+    unsigned char *blob;
+    int blob_size;
+    unsigned char xtype[4];
+    unsigned char xdims;
+    int type;
+    int has_z = 0;
+    int has_m = 0;
+    int dims = GAIA_XY;
+    int srid;
+    int endian;
+    int endian_arch = gaiaEndianArch ();
+    gaiaGeomCollPtr geom = NULL;
+    blob = parseHexEWKB (in_buffer, &blob_size);
+    if (!blob)
+	return NULL;
+    if (blob_size < 9)
+	return NULL;
+    if (*(blob + 0) == 0x01)
+	endian = 1;
+    else
+	endian = 0;
+    memcpy (xtype, blob + 1, 4);
+    if (endian)
+      {
+	  xdims = xtype[3];
+	  xtype[3] = 0x00;
+      }
+    else
+      {
+	  xdims = xtype[0];
+	  xtype[0] = 0x00;
+      }
+    type = gaiaImport32 (xtype, endian, endian_arch);
+    if (xdims & 0x40)
+	has_m = 1;
+    if (xdims & 0x80)
+	has_z = 1;
+    if (has_m && has_z)
+      {
+	  dims = GAIA_XY_Z_M;
+	  geom = gaiaAllocGeomCollXYZM ();
+      }
+    else if (has_m)
+      {
+	  dims = GAIA_XY_M;
+	  geom = gaiaAllocGeomCollXYM ();
+      }
+    else if (has_z)
+      {
+	  dims = GAIA_XY_Z;
+	  geom = gaiaAllocGeomCollXYZ ();
+      }
+    else
+      {
+	  dims = GAIA_XY;
+	  geom = gaiaAllocGeomColl ();
+      }
+    srid = gaiaImport32 (blob + 5, endian, endian_arch);
+    geom->Srid = srid;
+    if (geom->Srid <= 0)
+	geom->Srid = -1;
+    switch (type)
+      {
+      case GAIA_POINT:
+	  ewkbGetPoint (geom, blob, 9, blob_size, endian, endian_arch, dims);
+	  break;
+      case GAIA_LINESTRING:
+	  ewkbGetLinestring (geom, blob, 9, blob_size, endian, endian_arch,
+			     dims);
+	  break;
+      case GAIA_POLYGON:
+	  ewkbGetPolygon (geom, blob, 9, blob_size, endian, endian_arch, dims);
+	  break;
+      default:
+	  ewkbGetMultiGeometry (geom, blob, 9, blob_size, endian, endian_arch,
+				dims);
+	  break;
+      };
+
+    return geom;
+}
+
+GAIAGEO_DECLARE void
+gaiaToEWKB (gaiaOutBufferPtr out_buf, gaiaGeomCollPtr geom)
+{
+/* prints the GEOS/PostGIS EWKB text representation of current geometry */
+    char buf[2048];
+    unsigned char endian_buf[16];
+    char byte[2];
+    char *ptr;
+    int size;
+    int type;
+    int entities = 0;
+    int n_points = 0;
+    int n_linestrings = 0;
+    int n_polygons = 0;
+    int i;
+    int iv;
+    int ib;
+    double x;
+    double y;
+    double z;
+    double m;
+    int endian_arch = gaiaEndianArch ();
+    gaiaPointPtr pt;
+    gaiaLinestringPtr ln;
+    gaiaPolygonPtr pg;
+    gaiaRingPtr rng;
+    gaiaPointPtr point = NULL;
+    gaiaLinestringPtr line = NULL;
+    gaiaPolygonPtr polyg = NULL;
+
+/* precomputing the required size */
+    sprintf (buf, "SRID=%d;", geom->Srid);
+    size = strlen (buf);	/* the header size */
+    size++;			/* terminating '\0' */
+    pt = geom->FirstPoint;
+    while (pt)
+      {
+	  point = pt;
+	  entities++;
+	  n_points++;
+	  pt = pt->Next;
+      }
+    ln = geom->FirstLinestring;
+    while (ln)
+      {
+	  line = ln;
+	  entities++;
+	  n_linestrings++;
+	  ln = ln->Next;
+      }
+    pg = geom->FirstPolygon;
+    while (pg)
+      {
+	  polyg = pg;
+	  entities++;
+	  n_polygons++;
+	  pg = pg->Next;
+      }
+    if (n_points == 0 && n_polygons == 0 && n_linestrings == 0)
+	return;
+/* ok, we can determine the geometry class */
+    if (n_points == 1 && n_linestrings == 0 && n_polygons == 0)
+      {
+	  if (geom->DeclaredType == GAIA_MULTIPOINT)
+	      type = GAIA_MULTIPOINT;
+	  else if (geom->DeclaredType == GAIA_GEOMETRYCOLLECTION)
+	      type = GAIA_GEOMETRYCOLLECTION;
+	  else
+	      type = GAIA_POINT;
+      }
+    else if (n_points > 1 && n_linestrings == 0 && n_polygons == 0)
+      {
+	  if (geom->DeclaredType == GAIA_GEOMETRYCOLLECTION)
+	      type = GAIA_GEOMETRYCOLLECTION;
+	  else
+	      type = GAIA_MULTIPOINT;
+      }
+    else if (n_points == 0 && n_linestrings == 1 && n_polygons == 0)
+      {
+	  if (geom->DeclaredType == GAIA_MULTILINESTRING)
+	      type = GAIA_MULTILINESTRING;
+	  else if (geom->DeclaredType == GAIA_GEOMETRYCOLLECTION)
+	      type = GAIA_GEOMETRYCOLLECTION;
+	  else
+	      type = GAIA_LINESTRING;
+      }
+    else if (n_points == 0 && n_linestrings > 1 && n_polygons == 0)
+      {
+	  if (geom->DeclaredType == GAIA_GEOMETRYCOLLECTION)
+	      type = GAIA_GEOMETRYCOLLECTION;
+	  else
+	      type = GAIA_MULTILINESTRING;
+      }
+    else if (n_points == 0 && n_linestrings == 0 && n_polygons == 1)
+      {
+	  if (geom->DeclaredType == GAIA_MULTIPOLYGON)
+	      type = GAIA_MULTIPOLYGON;
+	  else if (geom->DeclaredType == GAIA_GEOMETRYCOLLECTION)
+	      type = GAIA_GEOMETRYCOLLECTION;
+	  else
+	      type = GAIA_POLYGON;
+      }
+    else if (n_points == 0 && n_linestrings == 0 && n_polygons > 1)
+      {
+	  if (geom->DeclaredType == GAIA_GEOMETRYCOLLECTION)
+	      type = GAIA_GEOMETRYCOLLECTION;
+	  else
+	      type = GAIA_MULTIPOLYGON;
+      }
+    else
+	type = GAIA_GEOMETRYCOLLECTION;
+/* and now we compute the size of EWKB */
+    size += 10;			/* header size */
+    if (type == GAIA_MULTIPOINT || type == GAIA_MULTILINESTRING
+	|| type == GAIA_MULTIPOLYGON || type == GAIA_GEOMETRYCOLLECTION)
+	size += 8;
+    point = geom->FirstPoint;
+    while (point)
+      {
+	  if (type == GAIA_MULTIPOINT || type == GAIA_MULTILINESTRING
+	      || type == GAIA_MULTIPOLYGON || type == GAIA_GEOMETRYCOLLECTION)
+	      size += 10;
+	  if (geom->DimensionModel == GAIA_XY_Z
+	      || geom->DimensionModel == GAIA_XY_M)
+	      size += 48;	/* three doubles for each POINT */
+	  else if (geom->DimensionModel == GAIA_XY_Z_M)
+	      size += 64;	/* four doubles for each POINT */
+	  else
+	      size += 32;	/* two doubles for each POINT */
+	  point = point->Next;
+      }
+    line = geom->FirstLinestring;
+    while (line)
+      {
+	  if (type == GAIA_MULTIPOINT || type == GAIA_MULTILINESTRING
+	      || type == GAIA_MULTIPOLYGON || type == GAIA_GEOMETRYCOLLECTION)
+	      size += 10;
+	  if (geom->DimensionModel == GAIA_XY_Z
+	      || geom->DimensionModel == GAIA_XY_M)
+	      size += 8 + (line->Points * 48);	/* three doubles for each VERTEX */
+	  else if (geom->DimensionModel == GAIA_XY_Z_M)
+	      size += 8 + (line->Points * 64);	/* four doubles for each VERTEX */
+	  else
+	      size += 8 + (line->Points * 32);	/* two doubles for each VERTEX */
+	  line = line->Next;
+      }
+    polyg = geom->FirstPolygon;
+    while (polyg)
+      {
+	  if (type == GAIA_MULTIPOINT || type == GAIA_MULTILINESTRING
+	      || type == GAIA_MULTIPOLYGON || type == GAIA_GEOMETRYCOLLECTION)
+	      size += 10;
+	  rng = polyg->Exterior;
+	  if (geom->DimensionModel == GAIA_XY_Z
+	      || geom->DimensionModel == GAIA_XY_M)
+	      size += 16 + (rng->Points * 48);	/* three doubles for each VERTEX */
+	  else if (geom->DimensionModel == GAIA_XY_Z_M)
+	      size += 16 + (rng->Points * 64);	/* four doubles for each VERTEX */
+	  else
+	      size += 16 + (rng->Points * 32);	/* two doubles for each VERTEX */
+	  for (ib = 0; ib < polyg->NumInteriors; ib++)
+	    {
+		rng = polyg->Interiors + ib;
+		if (geom->DimensionModel == GAIA_XY_Z
+		    || geom->DimensionModel == GAIA_XY_M)
+		    size += 8 + (rng->Points * 48);	/* three doubles for each VERTEX */
+		else if (geom->DimensionModel == GAIA_XY_Z_M)
+		    size += 8 + (rng->Points * 64);	/* four doubles for each VERTEX */
+		else
+		    size += 8 + (rng->Points * 32);	/* two doubles for each VERTEX */
+	    }
+	  polyg = polyg->Next;
+      }
+/* and finally we build the EWKB expression */
+    sprintf (buf, "SRID=%d;", geom->Srid);
+    gaiaAppendToOutBuffer (out_buf, buf);
+    ptr = buf;
+
+    *ptr++ = '0';		/* little endian byte order */
+    *ptr++ = '1';
+    gaiaExport32 (endian_buf, type, 1, endian_arch);	/* the main CLASS TYPE */
+    for (i = 0; i < 3; i++)
+      {
+	  /* CAVEAT: the 4th byte in PostGIS encodes M/Z presence !!!! */
+	  sprintf (byte, "%02X", endian_buf[i]);
+	  *ptr++ = byte[0];
+	  *ptr++ = byte[1];
+      }
+/* marking M/Z presence */
+    if (geom->DimensionModel == GAIA_XY_Z)
+	*ptr++ = '8';
+    else if (geom->DimensionModel == GAIA_XY_M)
+	*ptr++ = '4';
+    else if (geom->DimensionModel == GAIA_XY_Z_M)
+	*ptr++ = 'C';
+    else
+	*ptr++ = '0';
+    *ptr++ = '0';
+    *ptr++ = '\0';
+    gaiaAppendToOutBuffer (out_buf, buf);
+    ptr = buf;
+    if (type == GAIA_MULTIPOINT || type == GAIA_MULTILINESTRING
+	|| type == GAIA_MULTIPOLYGON || type == GAIA_GEOMETRYCOLLECTION)
+      {
+	  gaiaExport32 (endian_buf, entities, 1, endian_arch);	/* it's a collection; # entities */
+	  for (i = 0; i < 4; i++)
+	    {
+		sprintf (byte, "%02X", endian_buf[i]);
+		*ptr++ = byte[0];
+		*ptr++ = byte[1];
+	    }
+      }
+    point = geom->FirstPoint;
+    while (point)
+      {
+	  if ((ptr - buf) > 1024)
+	    {
+		/* flushing the internal buffer */
+		*ptr++ = '\0';
+		gaiaAppendToOutBuffer (out_buf, buf);
+		ptr = buf;
+	    }
+	  if (type == GAIA_MULTIPOINT || type == GAIA_GEOMETRYCOLLECTION)
+	    {
+		*ptr++ = '0';
+		*ptr++ = '1';
+		/* it's a collection: the CLASS TYPE for this element */
+		gaiaExport32 (endian_buf, GAIA_POINT, 1, endian_arch);
+		for (i = 0; i < 3; i++)
+		  {
+		      /* CAVEAT: the 4th byte in PostGIS encodes M/Z presence !!!! */
+		      sprintf (byte, "%02X", endian_buf[i]);
+		      *ptr++ = byte[0];
+		      *ptr++ = byte[1];
+		  }
+		/* marking M/Z presence */
+		if (geom->DimensionModel == GAIA_XY_Z)
+		    *ptr++ = '8';
+		else if (geom->DimensionModel == GAIA_XY_M)
+		    *ptr++ = '4';
+		else if (geom->DimensionModel == GAIA_XY_Z_M)
+		    *ptr++ = 'C';
+		else
+		    *ptr++ = '0';
+		*ptr++ = '0';
+	    }
+	  gaiaExport64 (endian_buf, point->X, 1, endian_arch);	/* X */
+	  for (i = 0; i < 8; i++)
+	    {
+		sprintf (byte, "%02X", endian_buf[i]);
+		*ptr++ = byte[0];
+		*ptr++ = byte[1];
+	    }
+	  gaiaExport64 (endian_buf, point->Y, 1, endian_arch);	/* Y */
+	  for (i = 0; i < 8; i++)
+	    {
+		sprintf (byte, "%02X", endian_buf[i]);
+		*ptr++ = byte[0];
+		*ptr++ = byte[1];
+	    }
+	  if (geom->DimensionModel == GAIA_XY_Z)
+	    {
+		gaiaExport64 (endian_buf, point->Z, 1, endian_arch);	/* Z */
+		for (i = 0; i < 8; i++)
+		  {
+		      sprintf (byte, "%02X", endian_buf[i]);
+		      *ptr++ = byte[0];
+		      *ptr++ = byte[1];
+		  }
+	    }
+	  else if (geom->DimensionModel == GAIA_XY_M)
+	    {
+		gaiaExport64 (endian_buf, point->M, 1, endian_arch);	/* M */
+		for (i = 0; i < 8; i++)
+		  {
+		      sprintf (byte, "%02X", endian_buf[i]);
+		      *ptr++ = byte[0];
+		      *ptr++ = byte[1];
+		  }
+	    }
+	  else if (geom->DimensionModel == GAIA_XY_Z_M)
+	    {
+		gaiaExport64 (endian_buf, point->Z, 1, endian_arch);	/* Z */
+		for (i = 0; i < 8; i++)
+		  {
+		      sprintf (byte, "%02X", endian_buf[i]);
+		      *ptr++ = byte[0];
+		      *ptr++ = byte[1];
+		  }
+		gaiaExport64 (endian_buf, point->M, 1, endian_arch);	/* M */
+		for (i = 0; i < 8; i++)
+		  {
+		      sprintf (byte, "%02X", endian_buf[i]);
+		      *ptr++ = byte[0];
+		      *ptr++ = byte[1];
+		  }
+	    }
+	  point = point->Next;
+      }
+    line = geom->FirstLinestring;
+    while (line)
+      {
+	  if ((ptr - buf) > 1024)
+	    {
+		/* flushing the internal buffer */
+		*ptr++ = '\0';
+		gaiaAppendToOutBuffer (out_buf, buf);
+		ptr = buf;
+	    }
+	  if (type == GAIA_MULTILINESTRING || type == GAIA_GEOMETRYCOLLECTION)
+	    {
+		*ptr++ = '0';
+		*ptr++ = '1';
+		/* it's a collection: the CLASS TYPE for this element */
+		gaiaExport32 (endian_buf, GAIA_LINESTRING, 1, endian_arch);
+		for (i = 0; i < 3; i++)
+		  {
+		      /* CAVEAT: the 4th byte in PostGIS encodes M/Z presence !!!! */
+		      sprintf (byte, "%02X", endian_buf[i]);
+		      *ptr++ = byte[0];
+		      *ptr++ = byte[1];
+		  }
+		/* marking M/Z presence */
+		if (geom->DimensionModel == GAIA_XY_Z)
+		    *ptr++ = '8';
+		else if (geom->DimensionModel == GAIA_XY_M)
+		    *ptr++ = '4';
+		else if (geom->DimensionModel == GAIA_XY_Z_M)
+		    *ptr++ = 'C';
+		else
+		    *ptr++ = '0';
+		*ptr++ = '0';
+	    }
+	  gaiaExport32 (endian_buf, line->Points, 1, endian_arch);	/* # points */
+	  for (i = 0; i < 4; i++)
+	    {
+		sprintf (byte, "%02X", endian_buf[i]);
+		*ptr++ = byte[0];
+		*ptr++ = byte[1];
+	    }
+	  for (iv = 0; iv < line->Points; iv++)
+	    {
+		if ((ptr - buf) > 1024)
+		  {
+		      /* flushing the internal buffer */
+		      *ptr++ = '\0';
+		      gaiaAppendToOutBuffer (out_buf, buf);
+		      ptr = buf;
+		  }
+		gaiaLineGetPoint (line, iv, &x, &y, &z, &m);
+		gaiaExport64 (endian_buf, x, 1, endian_arch);	/* X */
+		for (i = 0; i < 8; i++)
+		  {
+		      sprintf (byte, "%02X", endian_buf[i]);
+		      *ptr++ = byte[0];
+		      *ptr++ = byte[1];
+		  }
+		gaiaExport64 (endian_buf, y, 1, endian_arch);	/* Y */
+		for (i = 0; i < 8; i++)
+		  {
+		      sprintf (byte, "%02X", endian_buf[i]);
+		      *ptr++ = byte[0];
+		      *ptr++ = byte[1];
+		  }
+		if (geom->DimensionModel == GAIA_XY_Z)
+		  {
+		      gaiaExport64 (endian_buf, z, 1, endian_arch);	/* Z */
+		      for (i = 0; i < 8; i++)
+			{
+			    sprintf (byte, "%02X", endian_buf[i]);
+			    *ptr++ = byte[0];
+			    *ptr++ = byte[1];
+			}
+		  }
+		else if (geom->DimensionModel == GAIA_XY_M)
+		  {
+		      gaiaExport64 (endian_buf, m, 1, endian_arch);	/* M */
+		      for (i = 0; i < 8; i++)
+			{
+			    sprintf (byte, "%02X", endian_buf[i]);
+			    *ptr++ = byte[0];
+			    *ptr++ = byte[1];
+			}
+		  }
+		else if (geom->DimensionModel == GAIA_XY_Z_M)
+		  {
+		      gaiaExport64 (endian_buf, z, 1, endian_arch);	/* Z */
+		      for (i = 0; i < 8; i++)
+			{
+			    sprintf (byte, "%02X", endian_buf[i]);
+			    *ptr++ = byte[0];
+			    *ptr++ = byte[1];
+			}
+		      gaiaExport64 (endian_buf, m, 1, endian_arch);	/* M */
+		      for (i = 0; i < 8; i++)
+			{
+			    sprintf (byte, "%02X", endian_buf[i]);
+			    *ptr++ = byte[0];
+			    *ptr++ = byte[1];
+			}
+		  }
+	    }
+	  line = line->Next;
+      }
+    polyg = geom->FirstPolygon;
+    while (polyg)
+      {
+	  if ((ptr - buf) > 1024)
+	    {
+		/* flushing the internal buffer */
+		*ptr++ = '\0';
+		gaiaAppendToOutBuffer (out_buf, buf);
+		ptr = buf;
+	    }
+	  if (type == GAIA_MULTIPOLYGON || type == GAIA_GEOMETRYCOLLECTION)
+	    {
+		*ptr++ = '0';
+		*ptr++ = '1';
+		/* it's a collection: the CLASS TYPE for this element */
+		gaiaExport32 (endian_buf, GAIA_POLYGON, 1, endian_arch);
+		for (i = 0; i < 3; i++)
+		  {
+		      /* CAVEAT: the 4th byte in PostGIS encodes M/Z presence !!!! */
+		      sprintf (byte, "%02X", endian_buf[i]);
+		      *ptr++ = byte[0];
+		      *ptr++ = byte[1];
+		  }
+		/* marking M/Z presence */
+		if (geom->DimensionModel == GAIA_XY_Z)
+		    *ptr++ = '8';
+		else if (geom->DimensionModel == GAIA_XY_M)
+		    *ptr++ = '4';
+		else if (geom->DimensionModel == GAIA_XY_Z_M)
+		    *ptr++ = 'C';
+		else
+		    *ptr++ = '0';
+		*ptr++ = '0';
+	    }
+	  gaiaExport32 (endian_buf, polyg->NumInteriors + 1, 1, endian_arch);	/* # rings */
+	  for (i = 0; i < 4; i++)
+	    {
+		sprintf (byte, "%02X", endian_buf[i]);
+		*ptr++ = byte[0];
+		*ptr++ = byte[1];
+	    }
+	  rng = polyg->Exterior;
+	  gaiaExport32 (endian_buf, rng->Points, 1, endian_arch);	/* # points - exterior ring */
+	  for (i = 0; i < 4; i++)
+	    {
+		sprintf (byte, "%02X", endian_buf[i]);
+		*ptr++ = byte[0];
+		*ptr++ = byte[1];
+	    }
+	  for (iv = 0; iv < rng->Points; iv++)
+	    {
+		if ((ptr - buf) > 1024)
+		  {
+		      /* flushing the internal buffer */
+		      *ptr++ = '\0';
+		      gaiaAppendToOutBuffer (out_buf, buf);
+		      ptr = buf;
+		  }
+		gaiaRingGetPoint (rng, iv, &x, &y, &z, &m);
+		gaiaExport64 (endian_buf, x, 1, endian_arch);	/* X - exterior ring */
+		for (i = 0; i < 8; i++)
+		  {
+		      sprintf (byte, "%02X", endian_buf[i]);
+		      *ptr++ = byte[0];
+		      *ptr++ = byte[1];
+		  }
+		gaiaExport64 (endian_buf, y, 1, endian_arch);	/* Y - exterior ring */
+		for (i = 0; i < 8; i++)
+		  {
+		      sprintf (byte, "%02X", endian_buf[i]);
+		      *ptr++ = byte[0];
+		      *ptr++ = byte[1];
+		  }
+		if (geom->DimensionModel == GAIA_XY_Z)
+		  {
+		      gaiaExport64 (endian_buf, z, 1, endian_arch);	/* Z */
+		      for (i = 0; i < 8; i++)
+			{
+			    sprintf (byte, "%02X", endian_buf[i]);
+			    *ptr++ = byte[0];
+			    *ptr++ = byte[1];
+			}
+		  }
+		else if (geom->DimensionModel == GAIA_XY_M)
+		  {
+		      gaiaExport64 (endian_buf, m, 1, endian_arch);	/* M */
+		      for (i = 0; i < 8; i++)
+			{
+			    sprintf (byte, "%02X", endian_buf[i]);
+			    *ptr++ = byte[0];
+			    *ptr++ = byte[1];
+			}
+		  }
+		else if (geom->DimensionModel == GAIA_XY_Z_M)
+		  {
+		      gaiaExport64 (endian_buf, z, 1, endian_arch);	/* Z */
+		      for (i = 0; i < 8; i++)
+			{
+			    sprintf (byte, "%02X", endian_buf[i]);
+			    *ptr++ = byte[0];
+			    *ptr++ = byte[1];
+			}
+		      gaiaExport64 (endian_buf, m, 1, endian_arch);	/* M */
+		      for (i = 0; i < 8; i++)
+			{
+			    sprintf (byte, "%02X", endian_buf[i]);
+			    *ptr++ = byte[0];
+			    *ptr++ = byte[1];
+			}
+		  }
+	    }
+	  for (ib = 0; ib < polyg->NumInteriors; ib++)
+	    {
+		rng = polyg->Interiors + ib;
+		gaiaExport32 (endian_buf, rng->Points, 1, endian_arch);	/* # points - interior ring */
+		for (i = 0; i < 4; i++)
+		  {
+		      sprintf (byte, "%02X", endian_buf[i]);
+		      *ptr++ = byte[0];
+		      *ptr++ = byte[1];
+		  }
+		for (iv = 0; iv < rng->Points; iv++)
+		  {
+		      if ((ptr - buf) > 1024)
+			{
+			    /* flushing the internal buffer */
+			    *ptr++ = '\0';
+			    gaiaAppendToOutBuffer (out_buf, buf);
+			    ptr = buf;
+			}
+		      gaiaRingGetPoint (rng, iv, &x, &y, &z, &m);
+		      gaiaExport64 (endian_buf, x, 1, endian_arch);	/* X - interior ring */
+		      for (i = 0; i < 8; i++)
+			{
+			    sprintf (byte, "%02X", endian_buf[i]);
+			    *ptr++ = byte[0];
+			    *ptr++ = byte[1];
+			}
+		      gaiaExport64 (endian_buf, y, 1, endian_arch);	/* Y - interior ring */
+		      for (i = 0; i < 8; i++)
+			{
+			    sprintf (byte, "%02X", endian_buf[i]);
+			    *ptr++ = byte[0];
+			    *ptr++ = byte[1];
+			}
+		      if (geom->DimensionModel == GAIA_XY_Z)
+			{
+			    gaiaExport64 (endian_buf, z, 1, endian_arch);	/* Z */
+			    for (i = 0; i < 8; i++)
+			      {
+				  sprintf (byte, "%02X", endian_buf[i]);
+				  *ptr++ = byte[0];
+				  *ptr++ = byte[1];
+			      }
+			}
+		      else if (geom->DimensionModel == GAIA_XY_M)
+			{
+			    gaiaExport64 (endian_buf, m, 1, endian_arch);	/* M */
+			    for (i = 0; i < 8; i++)
+			      {
+				  sprintf (byte, "%02X", endian_buf[i]);
+				  *ptr++ = byte[0];
+				  *ptr++ = byte[1];
+			      }
+			}
+		      else if (geom->DimensionModel == GAIA_XY_Z_M)
+			{
+			    gaiaExport64 (endian_buf, z, 1, endian_arch);	/* Z */
+			    for (i = 0; i < 8; i++)
+			      {
+				  sprintf (byte, "%02X", endian_buf[i]);
+				  *ptr++ = byte[0];
+				  *ptr++ = byte[1];
+			      }
+			    gaiaExport64 (endian_buf, m, 1, endian_arch);	/* M */
+			    for (i = 0; i < 8; i++)
+			      {
+				  sprintf (byte, "%02X", endian_buf[i]);
+				  *ptr++ = byte[0];
+				  *ptr++ = byte[1];
+			      }
+			}
+		  }
+	    }
+	  polyg = polyg->Next;
+      }
+
+/* terminating the EWKB string */
+    *ptr = '\0';
+    gaiaAppendToOutBuffer (out_buf, buf);
 }
 
 static int

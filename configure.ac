@@ -2,8 +2,9 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT(libspatialite, 2.4.0, a.furieri@lqt.it)
+AC_INIT(libspatialite, 3.0.0-beta, a.furieri@lqt.it)
 AC_LANG(C)
+AC_CONFIG_MACRO_DIR([m4])
 
 AM_INIT_AUTOMAKE
 AM_MAINTAINER_MODE
@@ -120,6 +121,19 @@ if test x"$enable_geos" != "xno"; then
   OMIT_GEOS_FLAGS=
   AC_CHECK_HEADERS(geos_c.h,, [AC_MSG_ERROR([cannot find geos_c.h, bailing out])])
   AC_SEARCH_LIBS(GEOSTopologyPreserveSimplify,geos_c,,AC_MSG_ERROR(['libgeos_c' is required but it doesn't seems to be installed on this system.]),-lm -lgeos)
+  #-----------------------------------------------------------------------
+  #   --enable-geosadvanced
+  #
+  AC_ARG_ENABLE(geosadvanced, [AS_HELP_STRING(
+	  [--enable-geosadvanced], [enables GEOS advanced features [default=yes]])],
+	  [], [geosadvanced=yes])
+  if test x"$enable_geosadvanced" != "xno"; then
+	  GEOSADVANCED_FLAGS=-DGEOS_ADVANCED
+	  AC_SEARCH_LIBS(GEOSCoveredBy,geos_c,,AC_MSG_ERROR([obsolete 'libgeos_c' (< v.3.3.0). please retry specifying: --disable-geosadvanced.]),-lm -lgeos)
+  else
+	  GEOSADVANCED_FLAGS=
+  fi
+	  AC_SUBST(GEOSADVANCED_FLAGS)
 else
   OMIT_GEOS_FLAGS=-DOMIT_GEOS
 fi
@@ -144,6 +158,22 @@ else
   OMIT_ICONV_FLAGS=-DOMIT_ICONV
 fi
 AC_SUBST(OMIT_ICONV_FLAGS)
+
+#-----------------------------------------------------------------------
+#   --enable-freexl
+#
+AC_ARG_ENABLE(freexl, [AS_HELP_STRING(
+  [--enable-freexl], [enables FreeXL inclusion [default=yes]])],
+  [], [proj=yes])
+if test x"$enable_freexl" != "xno"; then
+  OMIT_FREEXL_FLAGS=
+  AC_CHECK_HEADERS(freexl.h,, [AC_MSG_ERROR([cannot find freexl.h, bailing out])])
+  AC_SEARCH_LIBS(freexl_open,freexl,,AC_MSG_ERROR(['libfreexl' is required but it doesn't seems to be installed on this system.]),-lm)
+else
+  OMIT_FREEXL_FLAGS=-DOMIT_FREEXL
+fi
+AC_SUBST(OMIT_FREEXL_FLAGS)
+#-----------------------------------------------------------------------
 
 #-----------------------------------------------------------------------
 #   --enable-epsg

@@ -2,7 +2,7 @@
 
  gg_geometries.c -- Gaia geometric objects
   
- version 2.4, 2009 September 17
+ version 3.0, 2011 July 20
 
  Author: Sandro Furieri a.furieri@lqt.it
 
@@ -1545,6 +1545,7 @@ gaiaAddRingToPolyg (gaiaPolygonPtr polyg, gaiaRingPtr ring)
 		  sizeof (gaiaRing));
 	  (polyg->NumInteriors)++;
 	  free (old_interiors);
+	  free (ring);
       }
 }
 
@@ -2900,21 +2901,21 @@ gaiaMbrsDisjoint (gaiaGeomCollPtr mbr1, gaiaGeomCollPtr mbr2)
 / returns 1 if TRUE
 / 0 if FALSE
 */
-    if (mbr1->MinX >= mbr2->MaxX)
+    if (mbr1->MinX > mbr2->MaxX)
 	return 1;
-    if (mbr1->MinY >= mbr2->MaxY)
+    if (mbr1->MinY > mbr2->MaxY)
 	return 1;
-    if (mbr1->MaxX <= mbr2->MinX)
+    if (mbr1->MaxX < mbr2->MinX)
 	return 1;
-    if (mbr1->MaxY <= mbr2->MinY)
+    if (mbr1->MaxY < mbr2->MinY)
 	return 1;
-    if (mbr2->MinX >= mbr1->MaxX)
+    if (mbr2->MinX > mbr1->MaxX)
 	return 1;
-    if (mbr2->MinY >= mbr1->MaxY)
+    if (mbr2->MinY > mbr1->MaxY)
 	return 1;
-    if (mbr2->MaxX <= mbr1->MinX)
+    if (mbr2->MaxX < mbr1->MinX)
 	return 1;
-    if (mbr2->MaxY <= mbr1->MinY)
+    if (mbr2->MaxY < mbr1->MinY)
 	return 1;
     return 0;
 }

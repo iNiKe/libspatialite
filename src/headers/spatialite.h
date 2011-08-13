@@ -1,7 +1,7 @@
 /* 
  spatialite.h -- Gaia spatial support for SQLite 
   
- version 2.4, 2009 September 17
+ version 3.0, 2011 July 20
 
  Author: Sandro Furieri a.furieri@lqt.it
 
@@ -70,6 +70,12 @@ extern "C"
     SPATIALITE_DECLARE int load_dbf (sqlite3 * sqlite, char *shp_path,
 				     char *table, char *charset, int verbose,
 				     int *rows);
+    SPATIALITE_DECLARE int dump_dbf (sqlite3 * sqlite, char *table,
+				     char *charset, char *dbf_path);
+    SPATIALITE_DECLARE void load_XL (sqlite3 * sqlite, const char *path,
+				     const char *table,
+				     unsigned int worksheetIndex,
+				     int first_titles);
     SPATIALITE_DECLARE double math_round (double value);
     SPATIALITE_DECLARE sqlite3_int64 math_llabs (sqlite3_int64 value);
     SPATIALITE_DECLARE int spatial_ref_sys_init (sqlite3 * sqlite, int verbose);
