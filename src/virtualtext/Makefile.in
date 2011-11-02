@@ -201,6 +201,7 @@ AM_CFLAGS = -D_LARGE_FILE=1 -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE=1 \
 INCLUDES = @CFLAGS@ -I$(top_srcdir)/src/headers
 noinst_LTLIBRARIES = libvirtualtext.la
 libvirtualtext_la_SOURCES = virtualtext.c
+MOSTLYCLEANFILES = *.gcna *.gcno *.gcda
 all: all-am
 
 .SUFFIXES:
@@ -383,6 +384,7 @@ install-strip:
 	  `test -z '$(STRIP)' || \
 	    echo "INSTALL_PROGRAM_ENV=STRIPPROG='$(STRIP)'"` install
 mostlyclean-generic:
+	-test -z "$(MOSTLYCLEANFILES)" || rm -f $(MOSTLYCLEANFILES)
 
 clean-generic:
 

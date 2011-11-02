@@ -47,6 +47,7 @@ the terms of any one of the MPL, the GPL or the LGPL.
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <float.h>
 
 #ifndef OMIT_GEOS		/* including GEOS */
 #include <geos_c.h>
@@ -644,6 +645,8 @@ gaiaIsSimple (gaiaGeomCollPtr geom)
     GEOSGeometry *g;
     if (!geom)
 	return -1;
+    if (gaiaIsToxic (geom))
+	return 0;
     g = gaiaToGeos (geom);
     ret = GEOSisSimple (g);
     GEOSGeom_destroy (g);
@@ -836,6 +839,8 @@ gaiaGeomCollBuffer (gaiaGeomCollPtr geom, double radius, int points)
     GEOSGeometry *g1;
     GEOSGeometry *g2;
     if (!geom)
+	return NULL;
+    if (gaiaIsToxic (geom))
 	return NULL;
     g1 = gaiaToGeos (geom);
     g2 = GEOSBuffer (g1, radius, points);
@@ -1380,6 +1385,8 @@ gaiaPolygonize (gaiaGeomCollPtr geom, int force_multi)
     ok = 1;
     while (ok)
       {
+	  if (dummy == 0)
+	      ok = dummy;	/* simply suppressing stupid compiler warnings */
 	  ok = 0;
 	  for (i = 0; i < lns; i++)
 	    {
@@ -1706,6 +1713,117 @@ gaiaOffsetCurve (gaiaGeomCollPtr geom, double radius, int points,
 	return NULL;
     geo->Srid = geom->Srid;
     return geo;
+}
+
+GAIAGEO_DECLARE gaiaGeomCollPtr
+gaiaSingleSidedBuffer (gaiaGeomCollPtr geom, double radius, int points,
+		       int left_right)
+{
+/*
+// builds a geometry that is the SingleSided BUFFER of GEOM 
+// (which is expected to be of the LINESTRING type)
+//
+*/
+    gaiaGeomCollPtr geo;
+    GEOSGeometry *g1;
+    GEOSGeometry *g2;
+    GEOSBufferParams *params = NULL;
+    gaiaPointPtr pt;
+    gaiaLinestringPtr ln;
+    gaiaPolygonPtr pg;
+    int pts = 0;
+    int lns = 0;
+    int pgs = 0;
+    int closed = 0;
+    if (!geom)
+	return NULL;
+
+/* checking the input geometry for validity */
+    pt = geom->FirstPoint;
+    while (pt)
+      {
+	  /* counting how many POINTs are there */
+	  pts++;
+	  pt = pt->Next;
+      }
+    ln = geom->FirstLinestring;
+    while (ln)
+      {
+	  /* counting how many LINESTRINGs are there */
+	  lns++;
+	  if (gaiaIsClosed (ln))
+	      closed++;
+	  ln = ln->Next;
+      }
+    pg = geom->FirstPolygon;
+    while (pg)
+      {
+	  /* counting how many POLYGON are there */
+	  pgs++;
+	  pg = pg->Next;
+      }
+    if (pts > 0 || pgs > 0 || lns > 1 || closed > 0)
+	return NULL;
+
+/* all right: this one simply is a LINESTRING */
+    geom->DeclaredType = GAIA_LINESTRING;
+
+    g1 = gaiaToGeos (geom);
+/* setting up Buffer params */
+    params = GEOSBufferParams_create ();
+    GEOSBufferParams_setJoinStyle (params, GEOSBUF_JOIN_ROUND);
+    GEOSBufferParams_setMitreLimit (params, 5.0);
+    GEOSBufferParams_setQuadrantSegments (params, points);
+    GEOSBufferParams_setSingleSided (params, 1);
+
+/* creating the SingleSided Buffer */
+    if (left_right == 0)
+      {
+	  /* right-sided requires NEGATIVE radius */
+	  radius *= -1.0;
+      }
+    g2 = GEOSBufferWithParams (g1, params, radius);
+    GEOSGeom_destroy (g1);
+    GEOSBufferParams_destroy (params);
+    if (!g2)
+	return NULL;
+    if (geom->DimensionModel == GAIA_XY_Z)
+	geo = gaiaFromGeos_XYZ (g2);
+    else if (geom->DimensionModel == GAIA_XY_M)
+	geo = gaiaFromGeos_XYM (g2);
+    else if (geom->DimensionModel == GAIA_XY_Z_M)
+	geo = gaiaFromGeos_XYZM (g2);
+    else
+	geo = gaiaFromGeos_XY (g2);
+    GEOSGeom_destroy (g2);
+    if (geo == NULL)
+	return NULL;
+    geo->Srid = geom->Srid;
+    return geo;
+}
+
+GAIAGEO_DECLARE int
+gaiaHausdorffDistance (gaiaGeomCollPtr geom1, gaiaGeomCollPtr geom2,
+		       double *xdist)
+{
+/* 
+/ computes the (discrete) Hausdorff distance intercurring 
+/ between GEOM-1 and GEOM-2 
+*/
+    double dist;
+    int ret;
+    GEOSGeometry *g1;
+    GEOSGeometry *g2;
+    if (!geom1 || !geom2)
+	return 0;
+    g1 = gaiaToGeos (geom1);
+    g2 = gaiaToGeos (geom2);
+    ret = GEOSHausdorffDistance (g1, g2, &dist);
+    GEOSGeom_destroy (g1);
+    GEOSGeom_destroy (g2);
+    if (ret)
+	*xdist = dist;
+    return ret;
 }
 
 static gaiaGeomCollPtr
@@ -2495,7 +2613,7 @@ gaiaLineLocatePoint (gaiaGeomCollPtr geom1, gaiaGeomCollPtr geom2)
 	  pgs1++;
 	  pg = pg->Next;
       }
-    if (pts1 == 0 && lns1 == 1 && pgs1 == 0)
+    if (pts1 == 0 && lns1 >= 1 && pgs1 == 0)
 	;
     else
 	return -1.0;
@@ -2635,8 +2753,6 @@ gaiaLineSubstring (gaiaGeomCollPtr geom, double start_fraction,
 
 	  double x0;
 	  double y0;
-	  double z0;
-	  double m0;
 	  switch (ln->DimensionModel)
 	    {
 	    case GAIA_XY_Z:
@@ -2671,8 +2787,6 @@ gaiaLineSubstring (gaiaGeomCollPtr geom, double start_fraction,
 	    }
 	  x0 = x;
 	  y0 = y;
-	  z0 = z;
-	  m0 = m;
       }
     if (i_start < 0 || i_end < 0)
       {
@@ -3540,6 +3654,8 @@ gaiaLineMerge (gaiaGeomCollPtr geom)
     gaiaGeomCollPtr result;
     if (!geom)
 	return NULL;
+    if (gaiaIsToxic (geom))
+	return NULL;
 
     g1 = gaiaToGeos (geom);
     g2 = GEOSLineMerge (g1);
@@ -3570,7 +3686,8 @@ gaiaUnaryUnion (gaiaGeomCollPtr geom)
     gaiaGeomCollPtr result;
     if (!geom)
 	return NULL;
-
+    if (gaiaIsToxic (geom))
+	return NULL;
     g1 = gaiaToGeos (geom);
     g2 = GEOSUnaryUnion (g1);
     GEOSGeom_destroy (g1);

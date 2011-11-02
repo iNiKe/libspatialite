@@ -68,6 +68,7 @@ the terms of any one of the MPL, the GPL or the LGPL.
 
 #ifdef _WIN32
 #define strcasecmp	_stricmp
+#define strncasecmp	_strnicmp
 #endif /* not WIN32 */
 
 #if defined(_WIN32) && !defined(__MINGW32__)
@@ -1433,7 +1434,7 @@ vfdo_convertWKT3D (const char *wkt)
 		extra++;
 		continue;
 	    }
-	  *p++;
+	  p++;
       }
     out = malloc (len + extra + 1);
     o = out;

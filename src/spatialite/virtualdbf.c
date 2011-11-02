@@ -387,9 +387,9 @@ vdbf_open (sqlite3_vtab * pVTab, sqlite3_vtab_cursor ** ppCursor)
     while (1)
       {
 	  vdbf_read_row (cursor, &deleted);
-	  if (!deleted)
-	      break;
 	  if (cursor->eof)
+	      break;
+	  if (!deleted)
 	      break;
       }
     return SQLITE_OK;
@@ -565,27 +565,27 @@ vdbf_eval_constraints (VirtualDbfCursorPtr cursor)
 					  {
 					  case SQLITE_INDEX_CONSTRAINT_EQ:
 					      if (pFld->Value->DblValue ==
-						  pC->dblValue)
+						  pC->intValue)
 						  ok = 1;
 					      break;
 					  case SQLITE_INDEX_CONSTRAINT_GT:
 					      if (pFld->Value->DblValue >
-						  pC->dblValue)
+						  pC->intValue)
 						  ok = 1;
 					      break;
 					  case SQLITE_INDEX_CONSTRAINT_LE:
 					      if (pFld->Value->DblValue <=
-						  pC->dblValue)
+						  pC->intValue)
 						  ok = 1;
 					      break;
 					  case SQLITE_INDEX_CONSTRAINT_LT:
 					      if (pFld->Value->DblValue <
-						  pC->dblValue)
+						  pC->intValue)
 						  ok = 1;
 					      break;
 					  case SQLITE_INDEX_CONSTRAINT_GE:
 					      if (pFld->Value->DblValue >=
-						  pC->dblValue)
+						  pC->intValue)
 						  ok = 1;
 					      break;
 					  };
@@ -638,19 +638,19 @@ vdbf_eval_constraints (VirtualDbfCursorPtr cursor)
 						  ok = 1;
 					      break;
 					  case SQLITE_INDEX_CONSTRAINT_GT:
-					      if (ret == 1)
+					      if (ret > 0)
 						  ok = 1;
 					      break;
 					  case SQLITE_INDEX_CONSTRAINT_LE:
-					      if (ret == -1 || ret == 0)
+					      if (ret <= 0)
 						  ok = 1;
 					      break;
 					  case SQLITE_INDEX_CONSTRAINT_LT:
-					      if (ret == -1)
+					      if (ret < 0)
 						  ok = 1;
 					      break;
 					  case SQLITE_INDEX_CONSTRAINT_GE:
-					      if (ret == 1 || ret == 0)
+					      if (ret >= 0)
 						  ok = 1;
 					      break;
 					  };

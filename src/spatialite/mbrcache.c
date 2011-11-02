@@ -197,7 +197,7 @@ positioning parameters while performing a cache search
     int current_cell_index;
     struct mbr_cache_cell *current_cell;
 /* 
-the stategy to use:
+the strategy to use:
     0 = sequential scan
     1 = find rowid
     2 = spatial search
@@ -430,7 +430,7 @@ cache_get_free_page (struct mbr_cache *p)
     pp = p->first;
     while (pp)
       {
-	  /* scanning the page list in order to discover if there is an exixsting page not yet completly filled */
+	  /* scanning the page list in order to discover if there is an existing page not yet completely filled */
 	  if (pp->bitmap != 0xffffffff)
 	    {
 		p->current = pp;
@@ -472,7 +472,7 @@ cache_insert_cell (struct mbr_cache *p, sqlite3_int64 rowid, double minx,
 	pb->miny = miny;
     if (pb->maxy < maxy)
 	pb->maxy = maxy;
-/* updading the cache page MBR */
+/* updating the cache page MBR */
     if (pp->minx > minx)
 	pp->minx = minx;
     if (pp->maxx < maxx)
@@ -890,7 +890,6 @@ mbrc_create (sqlite3 * db, void *pAux, int argc, const char *const *argv,
     char **results;
     char *err_msg = NULL;
     char sql[4096];
-    int ok_tbl;
     int ok_col;
     MbrCachePtr p_vt;
     char xname[1024];
@@ -962,7 +961,6 @@ mbrc_create (sqlite3 * db, void *pAux, int argc, const char *const *argv,
       }
 /* retrieving the base table columns */
     err = 0;
-    ok_tbl = 0;
     ok_col = 0;
     strcpy (xname, table);
     mbrc_double_quoted_sql (xname);
@@ -975,7 +973,6 @@ mbrc_create (sqlite3 * db, void *pAux, int argc, const char *const *argv,
       }
     if (n_rows > 1)
       {
-	  ok_tbl = 1;
 	  for (i = 1; i <= n_rows; i++)
 	    {
 		col_name = results[(i * n_columns) + 1];

@@ -203,6 +203,7 @@ noinst_LTLIBRARIES = libgaiaaux.la
 libgaiaaux_la_SOURCES = gg_sqlaux.c \
 	gg_utf8.c
 
+MOSTLYCLEANFILES = *.gcna *.gcno *.gcda
 all: all-am
 
 .SUFFIXES:
@@ -386,6 +387,7 @@ install-strip:
 	  `test -z '$(STRIP)' || \
 	    echo "INSTALL_PROGRAM_ENV=STRIPPROG='$(STRIP)'"` install
 mostlyclean-generic:
+	-test -z "$(MOSTLYCLEANFILES)" || rm -f $(MOSTLYCLEANFILES)
 
 clean-generic:
 

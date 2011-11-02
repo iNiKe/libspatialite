@@ -70,8 +70,9 @@ LTLIBRARIES = $(lib_LTLIBRARIES)
 am__DEPENDENCIES_1 =
 libspatialite_la_DEPENDENCIES = ./gaiaaux/libgaiaaux.la \
 	./gaiaexif/libgaiaexif.la ./gaiageo/libgaiageo.la \
-	./spatialite/libsplite.la ./srsinit/libsrsinit.la \
-	./virtualtext/libvirtualtext.la $(am__DEPENDENCIES_1)
+	./spatialite/libsplite.la ./shapefiles/libshapefiles.la \
+	./srsinit/libsrsinit.la ./virtualtext/libvirtualtext.la \
+	$(am__DEPENDENCIES_1)
 am_libspatialite_la_OBJECTS = version.lo
 libspatialite_la_OBJECTS = $(am_libspatialite_la_OBJECTS)
 libspatialite_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
@@ -265,6 +266,7 @@ SUBDIRS = headers \
 	gaiaexif \
 	gaiageo \
 	spatialite \
+	shapefiles \
 	srsinit \
 	virtualtext
 
@@ -273,10 +275,12 @@ lib_LTLIBRARIES = libspatialite.la
 libspatialite_la_SOURCES = versioninfo/version.c
 libspatialite_la_LIBADD = ./gaiaaux/libgaiaaux.la \
 	./gaiaexif/libgaiaexif.la ./gaiageo/libgaiageo.la \
-	./spatialite/libsplite.la ./srsinit/libsrsinit.la \
-	./virtualtext/libvirtualtext.la $(am__append_1)
+	./spatialite/libsplite.la ./shapefiles/libshapefiles.la \
+	./srsinit/libsrsinit.la ./virtualtext/libvirtualtext.la \
+	$(am__append_1)
 @MINGW_FALSE@libspatialite_la_LDFLAGS = -version-info 4:0:0
 @MINGW_TRUE@libspatialite_la_LDFLAGS = -version-info 4:0:0 -no-undefined
+MOSTLYCLEANFILES = *.gcna *.gcno *.gcda
 all: all-recursive
 
 .SUFFIXES:
@@ -603,6 +607,7 @@ install-strip:
 	  `test -z '$(STRIP)' || \
 	    echo "INSTALL_PROGRAM_ENV=STRIPPROG='$(STRIP)'"` install
 mostlyclean-generic:
+	-test -z "$(MOSTLYCLEANFILES)" || rm -f $(MOSTLYCLEANFILES)
 
 clean-generic:
 

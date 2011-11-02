@@ -480,7 +480,6 @@ vtxt_eval_constraints (VirtualTextCursorPtr cursor)
     sqlite3_int64 int_value;
     double dbl_value;
     const char *txt_value;
-    int is_null;
     int is_int;
     int is_dbl;
     int is_txt;
@@ -501,14 +500,13 @@ vtxt_eval_constraints (VirtualTextCursorPtr cursor)
 	  nCol = 1;
 	  for (i = 0; i < text->max_fields; i++)
 	    {
-		is_null = 0;
 		is_int = 0;
 		is_dbl = 0;
 		is_txt = 0;
 		if (nCol == pC->iColumn)
 		  {
 		      if (!gaiaTextReaderFetchField (text, i, &type, &value))
-			  is_null = 1;
+			  ;
 		      else
 			{
 			    if (type == VRTTXT_INTEGER)
@@ -535,8 +533,6 @@ vtxt_eval_constraints (VirtualTextCursorPtr cursor)
 				  txt_value = value;
 				  is_txt = 1;
 			      }
-			    else
-				is_null = 1;
 			}
 		      goto eval;
 		  }
@@ -655,7 +651,7 @@ vtxt_eval_constraints (VirtualTextCursorPtr cursor)
 			};
 		  }
 	    }
-	  if (pC->valueType == 'D')
+	  if (pC->valueType == 'T')
 	    {
 		if (is_txt)
 		  {
@@ -667,19 +663,19 @@ vtxt_eval_constraints (VirtualTextCursorPtr cursor)
 				ok = 1;
 			    break;
 			case SQLITE_INDEX_CONSTRAINT_GT:
-			    if (ret == 1)
+			    if (ret > 0)
 				ok = 1;
 			    break;
 			case SQLITE_INDEX_CONSTRAINT_LE:
-			    if (ret == -1 || ret == 0)
+			    if (ret <= 0)
 				ok = 1;
 			    break;
 			case SQLITE_INDEX_CONSTRAINT_LT:
-			    if (ret == -1)
+			    if (ret < 0)
 				ok = 1;
 			    break;
 			case SQLITE_INDEX_CONSTRAINT_GE:
-			    if (ret == 1 || ret == 0)
+			    if (ret >= 0)
 				ok = 1;
 			    break;
 			};
@@ -753,7 +749,6 @@ vtxt_filter (sqlite3_vtab_cursor * pCursor, int idxNum, const char *idxStr,
     cursor->eof = 0;
     while (1)
       {
-	  cursor->current_row++;
 	  if (!gaiaTextReaderGetRow (text, cursor->current_row))
 	    {
 		cursor->eof = 1;
@@ -761,6 +756,7 @@ vtxt_filter (sqlite3_vtab_cursor * pCursor, int idxNum, const char *idxStr,
 	    }
 	  if (vtxt_eval_constraints (cursor))
 	      break;
+	  cursor->current_row++;
       }
     return SQLITE_OK;
 }
@@ -1298,7 +1294,7 @@ vrttxt_add_line (gaiaTextReaderPtr txt, struct vrttxt_line *line)
       }
     else if (p_block->num_rows >= VRTTXT_BLOCK_MAX)
       {
-	  /* the currect offset Block is full: expanding the list */
+	  /* the current offset Block is full: expanding the list */
 	  p_block = vrttxt_block_alloc ();
 	  if (!p_block)
 	    {
@@ -1422,7 +1418,7 @@ vrttxt_line_push (gaiaTextReaderPtr txt, char c)
       }
     *(txt->line_buffer + txt->current_buf_off) = c;
     txt->current_buf_off++;
-/* ensuring that input buffer will bel null terminated anyway */
+/* ensuring that input buffer will be null terminated anyway */
     *(txt->line_buffer + txt->current_buf_off) = '\0';
 }
 

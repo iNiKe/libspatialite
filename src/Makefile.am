@@ -4,6 +4,7 @@ SUBDIRS = headers \
 	gaiaexif \
 	gaiageo \
 	spatialite \
+	shapefiles \
 	srsinit \
 	virtualtext
 
@@ -18,6 +19,7 @@ libspatialite_la_LIBADD = ./gaiaaux/libgaiaaux.la \
 	./gaiaexif/libgaiaexif.la \
 	./gaiageo/libgaiageo.la \
 	./spatialite/libsplite.la \
+	./shapefiles/libshapefiles.la \
 	./srsinit/libsrsinit.la \
 	./virtualtext/libvirtualtext.la
 
@@ -29,3 +31,4 @@ libspatialite_la_LDFLAGS = -version-info 4:0:0
 libspatialite_la_LIBADD += -lpthread -ldl
 endif
 
+MOSTLYCLEANFILES = *.gcna *.gcno *.gcda
