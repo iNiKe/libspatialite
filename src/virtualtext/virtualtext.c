@@ -2,7 +2,7 @@
 
  virtualtext.c -- SQLite3 extension [VIRTUAL TABLE accessing CSV/TXT]
 
- version 3.0, 2011 July 20
+ version 4.0, 2012 August 6
 
  Author: Sandro Furieri a.furieri@lqt.it
 
@@ -24,7 +24,7 @@ The Original Code is the SpatiaLite library
 
 The Initial Developer of the Original Code is Alessandro Furieri
  
-Portions created by the Initial Developer are Copyright (C) 2008
+Portions created by the Initial Developer are Copyright (C) 2008-2012
 the Initial Developer. All Rights Reserved.
 
 Contributor(s):
@@ -52,11 +52,10 @@ the terms of any one of the MPL, the GPL or the LGPL.
 #include <stdio.h>
 #include <string.h>
 
-#ifdef SPL_AMALGAMATION		/* spatialite-amalgamation */
-#include <spatialite/sqlite3.h>
-#else
-#include <sqlite3.h>
-#endif
+#include "config.h"
+
+#include <spatialite/sqlite.h>
+#include <spatialite/debug.h>
 
 #include <spatialite/spatialite.h>
 #include <spatialite/gaiaaux.h>
@@ -266,8 +265,7 @@ vtxt_create (sqlite3 * db, void *pAux, int argc, const char *const *argv,
     if (!text)
       {
 	  /* something is going the wrong way; creating a stupid default table */
-	  fprintf (stderr, "VirtualText: invalid data source\n");
-	  fflush (stderr);
+	  spatialite_e ("VirtualText: invalid data source\n");
 	  sprintf (sql, "CREATE TABLE %s (ROWNO INTEGER)", vtable);
 	  if (sqlite3_declare_vtab (db, sql) != SQLITE_OK)
 	    {
@@ -342,8 +340,33 @@ static int
 vtxt_best_index (sqlite3_vtab * pVTab, sqlite3_index_info * pIndex)
 {
 /* best index selection */
-    if (pVTab || pIndex)
+    int i;
+    int iArg = 0;
+    char str[2048];
+    char buf[64];
+
+    if (pVTab)
 	pVTab = pVTab;		/* unused arg warning suppression */
+
+    *str = '\0';
+    for (i = 0; i < pIndex->nConstraint; i++)
+      {
+	  if (pIndex->aConstraint[i].usable)
+	    {
+		iArg++;
+		pIndex->aConstraintUsage[i].argvIndex = iArg;
+		pIndex->aConstraintUsage[i].omit = 1;
+		sprintf (buf, "%d:%d,", pIndex->aConstraint[i].iColumn,
+			 pIndex->aConstraint[i].op);
+		strcat (str, buf);
+	    }
+      }
+    if (*str != '\0')
+      {
+	  pIndex->idxStr = sqlite3_mprintf ("%s", str);
+	  pIndex->needToFreeIdxStr = 1;
+      }
+
     return SQLITE_OK;
 }
 
@@ -476,13 +499,13 @@ vtxt_eval_constraints (VirtualTextCursorPtr cursor)
     int i;
     char buf[4096];
     int type;
-    const char *value;
+    const char *value = NULL;
     sqlite3_int64 int_value;
     double dbl_value;
-    const char *txt_value;
-    int is_int;
-    int is_dbl;
-    int is_txt;
+    char *txt_value = NULL;
+    int is_int = 0;
+    int is_dbl = 0;
+    int is_txt = 0;
     gaiaTextReaderPtr text = cursor->pVtab->reader;
     VirtualTextConstraintPtr pC;
     if (text->current_line_ready == 0)
@@ -495,6 +518,7 @@ vtxt_eval_constraints (VirtualTextCursorPtr cursor)
 	    {
 		/* the ROWNO column */
 		int_value = cursor->current_row;
+		is_int = 1;
 		goto eval;
 	    }
 	  nCol = 1;
@@ -505,6 +529,7 @@ vtxt_eval_constraints (VirtualTextCursorPtr cursor)
 		is_txt = 0;
 		if (nCol == pC->iColumn)
 		  {
+
 		      if (!gaiaTextReaderFetchField (text, i, &type, &value))
 			  ;
 		      else
@@ -530,7 +555,7 @@ vtxt_eval_constraints (VirtualTextCursorPtr cursor)
 			      }
 			    else if (type == VRTTXT_TEXT)
 			      {
-				  txt_value = value;
+				  txt_value = (char *) value;
 				  is_txt = 1;
 			      }
 			}
@@ -681,10 +706,17 @@ vtxt_eval_constraints (VirtualTextCursorPtr cursor)
 			};
 		  }
 	    }
+	  if (txt_value)
+	    {
+		free (txt_value);
+		txt_value = NULL;
+	    }
 	  if (!ok)
 	      return 0;
 	  pC = pC->next;
       }
+    if (txt_value)
+	free (txt_value);
     return 1;
 }
 
@@ -1718,7 +1750,11 @@ gaiaTextReaderFetchField (gaiaTextReaderPtr txt, int field_idx, int *type,
 	    txt->field_lens[field_idx]);
     *(txt->field_buffer + txt->field_lens[field_idx]) = '\0';
     *value = txt->field_buffer;
-    if (*value == '\0')
+/* sandro 2012-02-01: fixing CR handling for last column [windows] */
+    if (*(txt->field_buffer) == '\r' && txt->field_lens[field_idx] == 1
+	&& (field_idx + 1) == txt->max_fields)
+	*(txt->field_buffer) = '\0';
+    if (*(txt->field_buffer) == '\0')
 	*type = VRTTXT_NULL;
     else if (*type == VRTTXT_TEXT)
       {

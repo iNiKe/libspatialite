@@ -41,15 +41,19 @@ the provisions above, a recipient may use your version of this file under
 the terms of any one of the MPL, the GPL or the LGPL.
  
 */
+#include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+
+#include "config.h"
 
 #include "sqlite3.h"
 #include "spatialite.h"
 
 int main (int argc, char *argv[])
 {
+#ifndef OMIT_ICONV	/* only if ICONV is supported */
     int ret;
     sqlite3 *handle;
     char *dbfname = __FILE__"test.dbf";
@@ -126,6 +130,7 @@ int main (int argc, char *argv[])
     }
     
     spatialite_cleanup();
-    sqlite3_reset_auto_extension();
+#endif	/* end ICONV conditional */
+
     return 0;
 }

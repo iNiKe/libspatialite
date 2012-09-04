@@ -2,7 +2,7 @@
 
  virtualfdo.c -- SQLite3 extension [VIRTUAL TABLE accessing FDO-OGR tables]
 
- version 3.0, 2011 July 20
+ version 4.0, 2012 August 6
 
  Author: Sandro Furieri a.furieri@lqt.it
 
@@ -24,7 +24,7 @@ The Original Code is the SpatiaLite library
 
 The Initial Developer of the Original Code is Alessandro Furieri
  
-Portions created by the Initial Developer are Copyright (C) 2008
+Portions created by the Initial Developer are Copyright (C) 2008-2012
 the Initial Developer. All Rights Reserved.
 
 Contributor(s):
@@ -49,11 +49,9 @@ the terms of any one of the MPL, the GPL or the LGPL.
 #include <string.h>
 #include <limits.h>
 
-#ifdef SPL_AMALGAMATION		/* spatialite-amalgamation */
-#include <spatialite/sqlite3.h>
-#else
-#include <sqlite3.h>
-#endif
+#include "config.h"
+
+#include <spatialite/sqlite.h>
 
 #include <spatialite/spatialite.h>
 #include <spatialite/gaiaaux.h>
@@ -315,6 +313,8 @@ free_table (VirtualFDOPtr p_vt)
     int i;
     if (!p_vt)
 	return;
+    if (p_vt->table)
+	sqlite3_free (p_vt->table);
     if (p_vt->Column)
       {
 	  for (i = 0; i < p_vt->nColumns; i++)
@@ -1318,7 +1318,11 @@ vfdo_update_row (VirtualFDOPtr p_vt, sqlite3_int64 rowid, int argc,
 		  }
 	    }
 	  if (geom_done)
-	      continue;
+	    {
+		gaiaFreeGeomColl (geom);
+		geom = NULL;
+		continue;
+	    }
 	  switch (sqlite3_value_type (argv[i]))
 	    {
 	    case SQLITE_INTEGER:
@@ -1345,6 +1349,7 @@ vfdo_update_row (VirtualFDOPtr p_vt, sqlite3_int64 rowid, int argc,
 	    };
       }
   error:
+    gaiaFreeGeomColl (geom);
     if (err_geom || geom_constraint_err)
       {
 	  sqlite3_finalize (stmt);
@@ -1518,6 +1523,7 @@ vfdo_read_row (VirtualFDOCursorPtr cursor)
     strcpy (sql, "SELECT ROWID");
     for (ic = 0; ic < cursor->pVtab->nColumns; ic++)
       {
+	  value_set_null (*(cursor->pVtab->Value + ic));
 	  strcpy (xname, *(cursor->pVtab->Column + ic));
 	  vfdo_double_quoted_sql (xname);
 	  sprintf (buf, ",%s", xname);
@@ -1600,11 +1606,15 @@ vfdo_read_row (VirtualFDOCursorPtr cursor)
 								       &xblob,
 								       &size);
 					      if (xblob)
-						  value_set_blob (*
-								  (cursor->
-								   pVtab->
-								   Value + ic),
-								  xblob, size);
+						{
+						    value_set_blob (*
+								    (cursor->
+								     pVtab->
+								     Value +
+								     ic), xblob,
+								    size);
+						    free (xblob);
+						}
 					      else
 						  value_set_null (*
 								  (cursor->
@@ -1640,11 +1650,15 @@ vfdo_read_row (VirtualFDOCursorPtr cursor)
 								       &xblob,
 								       &size);
 					      if (xblob)
-						  value_set_blob (*
-								  (cursor->
-								   pVtab->
-								   Value + ic),
-								  xblob, size);
+						{
+						    value_set_blob (*
+								    (cursor->
+								     pVtab->
+								     Value +
+								     ic), xblob,
+								    size);
+						    free (xblob);
+						}
 					      else
 						  value_set_null (*
 								  (cursor->
@@ -1680,11 +1694,15 @@ vfdo_read_row (VirtualFDOCursorPtr cursor)
 								       &xblob,
 								       &size);
 					      if (xblob)
-						  value_set_blob (*
-								  (cursor->
-								   pVtab->
-								   Value + ic),
-								  xblob, size);
+						{
+						    value_set_blob (*
+								    (cursor->
+								     pVtab->
+								     Value +
+								     ic), xblob,
+								    size);
+						    free (xblob);
+						}
 					      else
 						  value_set_null (*
 								  (cursor->
@@ -1866,11 +1884,11 @@ vfdo_create (sqlite3 * db, void *pAux, int argc, const char *const *argv,
 /* retrieving the base table columns */
     strcpy (sql,
 	    "SELECT f_geometry_column, geometry_type, srid, geometry_format, coord_dimension\n");
-    strcat (sql, "FROM geometry_columns WHERE f_table_name LIKE '");
+    strcat (sql, "FROM geometry_columns WHERE Upper(f_table_name) = Upper('");
     strcpy (xname, table);
     vfdo_clean_sql_string (xname);
     strcat (sql, xname);
-    strcat (sql, "'");
+    strcat (sql, "')");
     ret = sqlite3_get_table (db, sql, &results, &n_rows, &n_columns, NULL);
     if (ret != SQLITE_OK)
 	goto illegal;
@@ -2015,6 +2033,10 @@ static int
 vfdo_close (sqlite3_vtab_cursor * pCursor)
 {
 /* closing the cursor */
+    int ic;
+    VirtualFDOCursorPtr cursor = (VirtualFDOCursorPtr) pCursor;
+    for (ic = 0; ic < cursor->pVtab->nColumns; ic++)
+	value_set_null (*(cursor->pVtab->Value + ic));
     sqlite3_free (pCursor);
     return SQLITE_OK;
 }

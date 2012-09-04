@@ -1,10 +1,4 @@
 
-AM_CFLAGS = -D_LARGE_FILE=1 -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE=1 \
-        -DNDEBUG=1 \
-	@OMIT_GEOS_FLAGS@ @GEOSADVANCED_FLAGS@ @OMIT_PROJ_FLAGS@ \
-	@OMIT_ICONV_FLAGS@ @OMIT_MATHSQL_FLAGS@ \
-	@OMIT_EPSG_FLAGS@ @OMIT_GEOCALLBACKS_FLAGS@ @OMIT_FREEXL_FLAGS@
-
 INCLUDES = @CFLAGS@
 INCLUDES += -I$(top_srcdir)/src/headers
 
@@ -12,11 +6,15 @@ noinst_LTLIBRARIES = libsplite.la
 
 libsplite_la_SOURCES = mbrcache.c \
 	spatialite.c \
+	metatables.c \
+	statistics.c \
 	virtualdbf.c \
 	virtualXL.c \
 	virtualfdo.c \
 	virtualspatialindex.c \
 	virtualnetwork.c \
-	virtualshape.c
+	virtualshape.c 
+
+libsplite_la_CFLAGS = -fvisibility=hidden
 
 MOSTLYCLEANFILES = *.gcna *.gcno *.gcda

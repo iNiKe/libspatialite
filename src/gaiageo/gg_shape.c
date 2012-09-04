@@ -2,7 +2,7 @@
 
  gg_shape.c -- Gaia shapefile handling
   
- version 3.0, 2011 July 20
+ version 4.0, 2012 August 6
 
  Author: Sandro Furieri a.furieri@lqt.it
 
@@ -24,7 +24,7 @@ The Original Code is the SpatiaLite library
 
 The Initial Developer of the Original Code is Alessandro Furieri
  
-Portions created by the Initial Developer are Copyright (C) 2008
+Portions created by the Initial Developer are Copyright (C) 2008-2012
 the Initial Developer. All Rights Reserved.
 
 Contributor(s):
@@ -51,6 +51,8 @@ the terms of any one of the MPL, the GPL or the LGPL.
 #include <float.h>
 #include <errno.h>
 
+#include "config.h"
+
 #if OMIT_ICONV == 0		/* if ICONV is disabled no SHP support is available */
 
 #if defined(__MINGW32__) || defined(_WIN32)
@@ -65,20 +67,16 @@ extern const char *locale_charset (void);
 #include <localcharset.h>
 #endif /* end localcharset */
 #else /* not MINGW32 */
-#ifdef __APPLE__
+#if defined(__APPLE__) || defined(__ANDROID__)
 #include <iconv.h>
 #include <localcharset.h>
-#else /* not Mac OsX */
+#else /* neither Mac OsX nor Android */
 #include <iconv.h>
 #include <langinfo.h>
 #endif
 #endif
 
-#ifdef SPL_AMALGAMATION		/* spatialite-amalgamation */
-#include <spatialite/sqlite3ext.h>
-#else
-#include <sqlite3ext.h>
-#endif
+#include <spatialite/sqlite.h>
 
 #include <spatialite/gaiageo.h>
 
@@ -1160,6 +1158,215 @@ parseDbfField (unsigned char *buf_dbf, void *iconv_obj, gaiaDbfFieldPtr pFld)
     return 1;
 }
 
+struct shp_ring_item
+{
+/* a RING item [to be reassembled into a (Multi)Polygon] */
+    gaiaRingPtr Ring;
+    int IsExterior;
+    gaiaRingPtr Mother;
+    struct shp_ring_item *Next;
+};
+
+struct shp_ring_collection
+{
+/* a collection of RING items */
+    struct shp_ring_item *First;
+    struct shp_ring_item *Last;
+};
+
+static void
+shp_free_rings (struct shp_ring_collection *ringsColl)
+{
+/* memory cleanup: rings collection */
+    struct shp_ring_item *p;
+    struct shp_ring_item *pN;
+    p = ringsColl->First;
+    while (p)
+      {
+	  pN = p->Next;
+	  if (p->Ring)
+	      gaiaFreeRing (p->Ring);
+	  free (p);
+	  p = pN;
+      }
+}
+
+static void
+shp_add_ring (struct shp_ring_collection *ringsColl, gaiaRingPtr ring)
+{
+/* inserting a ring into the rings collection */
+    struct shp_ring_item *p = malloc (sizeof (struct shp_ring_item));
+    p->Ring = ring;
+    gaiaMbrRing (ring);
+    gaiaClockwise (ring);
+/* accordingly to SHP rules interior/exterior depends on direction */
+    p->IsExterior = ring->Clockwise;
+    p->Mother = NULL;
+    p->Next = NULL;
+/* updating the linked list */
+    if (ringsColl->First == NULL)
+	ringsColl->First = p;
+    if (ringsColl->Last != NULL)
+	ringsColl->Last->Next = p;
+    ringsColl->Last = p;
+}
+
+static int
+shp_check_rings (gaiaRingPtr exterior, gaiaRingPtr candidate)
+{
+/* 
+/ speditively checks if the candidate could be an interior Ring
+/ contained into the exterior Ring
+*/
+    double z;
+    double m;
+    double x0;
+    double y0;
+    double x1;
+    double y1;
+    int mid;
+    int ret0;
+    int ret1;
+    if (candidate->DimensionModel == GAIA_XY_Z)
+      {
+	  gaiaGetPointXYZ (candidate->Coords, 0, &x0, &y0, &z);
+      }
+    else if (candidate->DimensionModel == GAIA_XY_M)
+      {
+	  gaiaGetPointXYM (candidate->Coords, 0, &x0, &y0, &m);
+      }
+    else if (candidate->DimensionModel == GAIA_XY_Z_M)
+      {
+	  gaiaGetPointXYZM (candidate->Coords, 0, &x0, &y0, &z, &m);
+      }
+    else
+      {
+	  gaiaGetPoint (candidate->Coords, 0, &x0, &y0);
+      }
+    mid = candidate->Points / 2;
+    if (candidate->DimensionModel == GAIA_XY_Z)
+      {
+	  gaiaGetPointXYZ (candidate->Coords, mid, &x1, &y1, &z);
+      }
+    else if (candidate->DimensionModel == GAIA_XY_M)
+      {
+	  gaiaGetPointXYM (candidate->Coords, mid, &x1, &y1, &m);
+      }
+    else if (candidate->DimensionModel == GAIA_XY_Z_M)
+      {
+	  gaiaGetPointXYZM (candidate->Coords, mid, &x1, &y1, &z, &m);
+      }
+    else
+      {
+	  gaiaGetPoint (candidate->Coords, mid, &x1, &y1);
+      }
+
+/* testing if the first point falls on the exterior ring surface */
+    ret0 = gaiaIsPointOnRingSurface (exterior, x0, y0);
+/* testing if the second point falls on the exterior ring surface */
+    ret1 = gaiaIsPointOnRingSurface (exterior, x1, y1);
+    if (ret0 || ret1)
+	return 1;
+    return 0;
+}
+
+static int
+shp_mbr_contains (gaiaRingPtr r1, gaiaRingPtr r2)
+{
+/* checks if the first Ring contains the second one - MBR based */
+    int ok_1 = 0;
+    int ok_2 = 0;
+    int ok_3 = 0;
+    int ok_4 = 0;
+    if (r2->MinX >= r1->MinX && r2->MinX <= r1->MaxX)
+	ok_1 = 1;
+    if (r2->MaxX >= r1->MinX && r2->MaxX <= r1->MaxX)
+	ok_2 = 1;
+    if (r2->MinY >= r1->MinY && r2->MinY <= r1->MaxY)
+	ok_3 = 1;
+    if (r2->MaxY >= r1->MinY && r2->MaxY <= r1->MaxY)
+	ok_4 = 1;
+    if (ok_1 && ok_2 && ok_3 && ok_4)
+	return 1;
+    return 0;
+}
+
+static void
+shp_arrange_rings (struct shp_ring_collection *ringsColl)
+{
+/* 
+/ arranging Rings so to associate any interior ring
+/ to the containing exterior ring
+*/
+    struct shp_ring_item *pInt;
+    struct shp_ring_item *pExt;
+    pExt = ringsColl->First;
+    while (pExt != NULL)
+      {
+	  /* looping on Exterior Rings */
+	  if (pExt->IsExterior)
+	    {
+		pInt = ringsColl->First;
+		while (pInt != NULL)
+		  {
+		      /* looping on Interior Rings */
+		      if (pInt->IsExterior == 0 && pInt->Mother == NULL
+			  && shp_mbr_contains (pExt->Ring, pInt->Ring))
+			{
+			    /* ok, matches */
+			    if (shp_check_rings (pExt->Ring, pInt->Ring))
+				pInt->Mother = pExt->Ring;
+			}
+		      pInt = pInt->Next;
+		  }
+	    }
+	  pExt = pExt->Next;
+      }
+    pExt = ringsColl->First;
+    while (pExt != NULL)
+      {
+	  if (pExt->IsExterior == 0 && pExt->Mother == NULL)
+	    {
+		/* orphan ring: promoting to Exterior */
+		pExt->IsExterior = 1;
+	    }
+	  pExt = pExt->Next;
+      }
+}
+
+static void
+shp_build_area (struct shp_ring_collection *ringsColl, gaiaGeomCollPtr geom)
+{
+/* building the final (Multi)Polygon Geometry */
+    gaiaPolygonPtr polyg;
+    struct shp_ring_item *pExt;
+    struct shp_ring_item *pInt;
+    pExt = ringsColl->First;
+    while (pExt != NULL)
+      {
+	  if (pExt->IsExterior)
+	    {
+		/* creating a new Polygon */
+		polyg = gaiaInsertPolygonInGeomColl (geom, pExt->Ring);
+		pInt = ringsColl->First;
+		while (pInt != NULL)
+		  {
+		      if (pExt->Ring == pInt->Mother)
+			{
+			    /* adding an interior ring to current POLYGON */
+			    gaiaAddRingToPolyg (polyg, pInt->Ring);
+			    /* releasing Ring ownership */
+			    pInt->Ring = NULL;
+			}
+		      pInt = pInt->Next;
+		  }
+		/* releasing Ring ownership */
+		pExt->Ring = NULL;
+	    }
+	  pExt = pExt->Next;
+      }
+}
+
 GAIAGEO_DECLARE int
 gaiaReadShpEntity (gaiaShapefilePtr shp, int current_row, int srid)
 {
@@ -1192,9 +1399,12 @@ gaiaReadShpEntity (gaiaShapefilePtr shp, int current_row, int srid)
     char errMsg[1024];
     gaiaGeomCollPtr geom = NULL;
     gaiaLinestringPtr line = NULL;
-    gaiaPolygonPtr polyg = NULL;
     gaiaRingPtr ring = NULL;
     gaiaDbfFieldPtr pFld;
+    struct shp_ring_collection ringsColl;
+/* initializing the RING collection */
+    ringsColl.First = NULL;
+    ringsColl.Last = NULL;
 /* positioning and reading the SHX file */
     offset = 100 + (current_row * 8);	/* 100 bytes for the header + current row displacement; each SHX row = 8 bytes */
     skpos = fseek (shp->flShx, offset, SEEK_SET);
@@ -1677,39 +1887,24 @@ gaiaReadShpEntity (gaiaShapefilePtr shp, int current_row, int srid)
 		      start++;
 		      points++;
 		  }
-		if (!geom)
-		  {
-		      /* new geometry - new need to allocate a new POLYGON */
-		      if (shp->EffectiveDims == GAIA_XY_Z)
-			  geom = gaiaAllocGeomCollXYZ ();
-		      else if (shp->EffectiveDims == GAIA_XY_M)
-			  geom = gaiaAllocGeomCollXYM ();
-		      else if (shp->EffectiveDims == GAIA_XY_Z_M)
-			  geom = gaiaAllocGeomCollXYZM ();
-		      else
-			  geom = gaiaAllocGeomColl ();
-		      if (shp->EffectiveType == GAIA_POLYGON)
-			  geom->DeclaredType = GAIA_POLYGON;
-		      else
-			  geom->DeclaredType = GAIA_MULTIPOLYGON;
-		      geom->Srid = srid;
-		      polyg = gaiaInsertPolygonInGeomColl (geom, ring);
-		  }
-		else
-		  {
-		      gaiaClockwise (ring);
-		      if (ring->Clockwise)
-			{
-			    /* this one is a POLYGON exterior ring - we need to allocate e new POLYGON */
-			    polyg = gaiaInsertPolygonInGeomColl (geom, ring);
-			}
-		      else
-			{
-			    /* adding an interior ring to current POLYGON */
-			    gaiaAddRingToPolyg (polyg, ring);
-			}
-		  }
+		shp_add_ring (&ringsColl, ring);
 	    }
+	  shp_arrange_rings (&ringsColl);
+	  /* allocating the final geometry */
+	  if (shp->EffectiveDims == GAIA_XY_Z)
+	      geom = gaiaAllocGeomCollXYZ ();
+	  else if (shp->EffectiveDims == GAIA_XY_M)
+	      geom = gaiaAllocGeomCollXYM ();
+	  else if (shp->EffectiveDims == GAIA_XY_Z_M)
+	      geom = gaiaAllocGeomCollXYZM ();
+	  else
+	      geom = gaiaAllocGeomColl ();
+	  if (shp->EffectiveType == GAIA_POLYGON)
+	      geom->DeclaredType = GAIA_POLYGON;
+	  else
+	      geom->DeclaredType = GAIA_MULTIPOLYGON;
+	  geom->Srid = srid;
+	  shp_build_area (&ringsColl, geom);
       }
     if (shape == GAIA_SHP_POLYGONZ)
       {
@@ -1789,39 +1984,24 @@ gaiaReadShpEntity (gaiaShapefilePtr shp, int current_row, int srid)
 		      start++;
 		      points++;
 		  }
-		if (!geom)
-		  {
-		      /* new geometry - new need to allocate a new POLYGON */
-		      if (shp->EffectiveDims == GAIA_XY_Z)
-			  geom = gaiaAllocGeomCollXYZ ();
-		      else if (shp->EffectiveDims == GAIA_XY_M)
-			  geom = gaiaAllocGeomCollXYM ();
-		      else if (shp->EffectiveDims == GAIA_XY_Z_M)
-			  geom = gaiaAllocGeomCollXYZM ();
-		      else
-			  geom = gaiaAllocGeomColl ();
-		      if (shp->EffectiveType == GAIA_POLYGON)
-			  geom->DeclaredType = GAIA_POLYGON;
-		      else
-			  geom->DeclaredType = GAIA_MULTIPOLYGON;
-		      geom->Srid = srid;
-		      polyg = gaiaInsertPolygonInGeomColl (geom, ring);
-		  }
-		else
-		  {
-		      gaiaClockwise (ring);
-		      if (ring->Clockwise)
-			{
-			    /* this one is a POLYGON exterior ring - we need to allocate e new POLYGON */
-			    polyg = gaiaInsertPolygonInGeomColl (geom, ring);
-			}
-		      else
-			{
-			    /* adding an interior ring to current POLYGON */
-			    gaiaAddRingToPolyg (polyg, ring);
-			}
-		  }
+		shp_add_ring (&ringsColl, ring);
 	    }
+	  shp_arrange_rings (&ringsColl);
+	  /* allocating the final geometry */
+	  if (shp->EffectiveDims == GAIA_XY_Z)
+	      geom = gaiaAllocGeomCollXYZ ();
+	  else if (shp->EffectiveDims == GAIA_XY_M)
+	      geom = gaiaAllocGeomCollXYM ();
+	  else if (shp->EffectiveDims == GAIA_XY_Z_M)
+	      geom = gaiaAllocGeomCollXYZM ();
+	  else
+	      geom = gaiaAllocGeomColl ();
+	  if (shp->EffectiveType == GAIA_POLYGON)
+	      geom->DeclaredType = GAIA_POLYGON;
+	  else
+	      geom->DeclaredType = GAIA_MULTIPOLYGON;
+	  geom->Srid = srid;
+	  shp_build_area (&ringsColl, geom);
       }
     if (shape == GAIA_SHP_POLYGONM)
       {
@@ -1898,39 +2078,24 @@ gaiaReadShpEntity (gaiaShapefilePtr shp, int current_row, int srid)
 		      start++;
 		      points++;
 		  }
-		if (!geom)
-		  {
-		      /* new geometry - new need to allocate a new POLYGON */
-		      if (shp->EffectiveDims == GAIA_XY_Z)
-			  geom = gaiaAllocGeomCollXYZ ();
-		      else if (shp->EffectiveDims == GAIA_XY_M)
-			  geom = gaiaAllocGeomCollXYM ();
-		      else if (shp->EffectiveDims == GAIA_XY_Z_M)
-			  geom = gaiaAllocGeomCollXYZM ();
-		      else
-			  geom = gaiaAllocGeomColl ();
-		      if (shp->EffectiveType == GAIA_POLYGON)
-			  geom->DeclaredType = GAIA_POLYGON;
-		      else
-			  geom->DeclaredType = GAIA_MULTIPOLYGON;
-		      geom->Srid = srid;
-		      polyg = gaiaInsertPolygonInGeomColl (geom, ring);
-		  }
-		else
-		  {
-		      gaiaClockwise (ring);
-		      if (ring->Clockwise)
-			{
-			    /* this one is a POLYGON exterior ring - we need to allocate e new POLYGON */
-			    polyg = gaiaInsertPolygonInGeomColl (geom, ring);
-			}
-		      else
-			{
-			    /* adding an interior ring to current POLYGON */
-			    gaiaAddRingToPolyg (polyg, ring);
-			}
-		  }
+		shp_add_ring (&ringsColl, ring);
 	    }
+	  shp_arrange_rings (&ringsColl);
+	  /* allocating the final geometry */
+	  if (shp->EffectiveDims == GAIA_XY_Z)
+	      geom = gaiaAllocGeomCollXYZ ();
+	  else if (shp->EffectiveDims == GAIA_XY_M)
+	      geom = gaiaAllocGeomCollXYM ();
+	  else if (shp->EffectiveDims == GAIA_XY_Z_M)
+	      geom = gaiaAllocGeomCollXYZM ();
+	  else
+	      geom = gaiaAllocGeomColl ();
+	  if (shp->EffectiveType == GAIA_POLYGON)
+	      geom->DeclaredType = GAIA_POLYGON;
+	  else
+	      geom->DeclaredType = GAIA_MULTIPOLYGON;
+	  geom->Srid = srid;
+	  shp_build_area (&ringsColl, geom);
       }
     if (shape == GAIA_SHP_MULTIPOINT)
       {
@@ -2092,11 +2257,13 @@ gaiaReadShpEntity (gaiaShapefilePtr shp, int current_row, int srid)
     if (shp->LastError)
 	free (shp->LastError);
     shp->LastError = NULL;
+    shp_free_rings (&ringsColl);
     return 1;
   eof:
     if (shp->LastError)
 	free (shp->LastError);
     shp->LastError = NULL;
+    shp_free_rings (&ringsColl);
     return 0;
   error:
     if (shp->LastError)
@@ -2105,6 +2272,7 @@ gaiaReadShpEntity (gaiaShapefilePtr shp, int current_row, int srid)
     len = strlen (errMsg);
     shp->LastError = malloc (len + 1);
     strcpy (shp->LastError, errMsg);
+    shp_free_rings (&ringsColl);
     return 0;
   conversion_error:
     if (shp->LastError)
@@ -2113,6 +2281,7 @@ gaiaReadShpEntity (gaiaShapefilePtr shp, int current_row, int srid)
     len = strlen (errMsg);
     shp->LastError = malloc (len + 1);
     strcpy (shp->LastError, errMsg);
+    shp_free_rings (&ringsColl);
     return 0;
 }
 
@@ -4006,6 +4175,7 @@ gaiaShpAnalyze (gaiaShapefilePtr shp)
     int multi = 0;
     int hasM = 0;
     int current_row = 0;
+
     gaiaRingPtr ring = NULL;
     while (1)
       {
@@ -4064,7 +4234,12 @@ gaiaShpAnalyze (gaiaShapefilePtr shp)
 	      || shape == GAIA_SHP_POLYGONM)
 	    {
 		/* shape polygon */
-		polygons = 0;
+		struct shp_ring_item *pExt;
+		struct shp_ring_collection ringsColl;
+		/* initializing the RING collection */
+		ringsColl.First = NULL;
+		ringsColl.Last = NULL;
+
 		rd = fread (shp->BufShp, sizeof (unsigned char), 32,
 			    shp->flShp);
 		if (rd != 32)
@@ -4105,23 +4280,20 @@ gaiaShpAnalyze (gaiaShapefilePtr shp)
 			    start++;
 			    points++;
 			}
-		      if (!polygons)
-			{
-			    /* this one is the first POLYGON */
-			    polygons = 1;
-			}
-		      else
-			{
-			    gaiaClockwise (ring);
-			    if (ring->Clockwise)
-			      {
-				  /* this one is a different POLYGON exterior ring - we need to allocate e new POLYGON */
-				  polygons++;
-			      }
-			}
-		      gaiaFreeRing (ring);
+		      shp_add_ring (&ringsColl, ring);
 		      ring = NULL;
 		  }
+		shp_arrange_rings (&ringsColl);
+		pExt = ringsColl.First;
+		polygons = 0;
+		while (pExt != NULL)
+		  {
+		      if (pExt->IsExterior)
+			  polygons++;
+		      pExt = pExt->Next;
+		  }
+		shp_free_rings (&ringsColl);
+
 		if (polygons > 1)
 		    multi++;
 		if (shape == GAIA_SHP_POLYGONZ)

@@ -45,11 +45,27 @@ the terms of any one of the MPL, the GPL or the LGPL.
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+
+#ifndef _WIN32
 #include <dirent.h>
 #include <fnmatch.h>
+#endif
+
+#include "config.h"
 
 #include "sqlite3.h"
 #include "spatialite.h"
+
+#ifndef OMIT_GEOS		/* including GEOS */
+#include <geos_c.h>
+#endif
+
+#ifdef _WIN32
+#include "fnmatch4win.h"
+#include "scandir4win.h"
+#include "asprintf4win.h"
+#include "fnmatch_impl4win.h"
+#endif
 
 struct test_data
 {
@@ -73,7 +89,7 @@ int do_one_case (const struct test_data *data)
     int columns;
 
     fprintf(stderr, "Test case: %s\n", data->test_case_name);
-    // This hack checks if the name ends with _RO
+    /* This hack checks if the name ends with _RO */
     if (strncmp("_RO", data->database_name + strlen(data->database_name) - 3, strlen("_RO")) == 0) {
 	fprintf(stderr, "opening read_only\n");
 	ret = sqlite3_open_v2 (data->database_name, &db_handle, SQLITE_OPEN_READONLY, NULL);
@@ -124,7 +140,7 @@ int do_one_case (const struct test_data *data)
 	    return -13;
 	} else if (strncmp(results[i], data->expected_results[i], data->expected_precision[i]) != 0) {
 	    fprintf (stderr, "Unexpected value at %i: %s|\n", i, results[i]);
-	    fprintf (stderr, "Expected value was    : %s|\n", data->expected_results[i]);
+	    fprintf (stderr, "Expected value was   : %s|\n", data->expected_results[i]);
 	    return  -14;
 	}
     }
@@ -141,7 +157,23 @@ int get_clean_line(FILE *f, char ** line)
     ssize_t num_read = 0;
     size_t end = 0;
     char *tmp_line = NULL;
+
+#if !defined(_WIN32) &&!defined(__APPLE__)
+/* expecpting to be on a sane minded platform [linux-like] */
     num_read = getline(&(tmp_line), &len, f);
+#else
+/* neither Windows nor MacOsX support getline() */
+	len = 1024 * 1024;
+	tmp_line = malloc(len);
+	if (fgets(tmp_line, len, f) == NULL)
+	{
+		free(tmp_line);
+		num_read = -1;
+	}
+	else
+		num_read = strlen(tmp_line);
+#endif
+
     if (num_read < 1) {
 	fprintf(stderr, "failed to read at %li: %zi\n", ftell(f), num_read);
 	return -1;
@@ -186,14 +218,12 @@ struct test_data *read_one_case(const char *filepath)
 {
     int num_results;
     int i;
-    size_t len;
-    ssize_t num_read;
     char *tmp;
     FILE *f;
+    struct test_data* data;
 
     f = fopen(filepath, "r");
     
-    struct test_data* data;
     data = malloc(sizeof(struct test_data));
     get_clean_line(f, &(data->test_case_name));
     get_clean_line(f, &(data->database_name));
@@ -233,47 +263,284 @@ void cleanup_test_data(struct test_data *data)
 
 int test_case_filter(const struct dirent *entry)
 {
-    int ret = 0;
     return (fnmatch("*.testcase", entry->d_name, FNM_PERIOD) == 0);
 }
 
-int main (int argc, char *argv[])
+int run_all_testcases()
 {
     struct dirent **namelist;
     int n;
     int i;
     int result = 0;
-
-    spatialite_init (0);
-
+    
     n = scandir("sql_stmt_tests", &namelist, test_case_filter, alphasort);
     if (n < 0) {
 	perror("scandir");
 	return -1;
-    } else {
-	for (i = 0; i < n; ++i) {
-	    struct test_data *data;
-	    char *path;
-	    if (asprintf(&path, "sql_stmt_tests/%s", namelist[i]->d_name) < 0) {
-		result = -1;
-		break;
-	    }
-	    data = read_one_case(path);
-	    free(path);
-	    
-	    result = do_one_case(data);
-	    
-	    cleanup_test_data(data);
-	    if (result != 0) {
-		break;
-	    }
-	    free(namelist[i]);
+    }
+
+    for (i = 0; i < n; ++i) {
+	struct test_data *data;
+	char *path;
+	if (asprintf(&path, "sql_stmt_tests/%s", namelist[i]->d_name) < 0) {
+	    return -1;
 	}
-	free(namelist);
+	data = read_one_case(path);
+	free(path);
+	
+	result = do_one_case(data);
+	
+	cleanup_test_data(data);
+	if (result != 0) {
+	    return result;
+	}
+	free(namelist[i]);
+    }
+    free(namelist);
+
+#ifndef OMIT_MATHSQL	/* only if MATHSQL is supported */
+    n = scandir("sql_stmt_mathsql_tests", &namelist, test_case_filter, alphasort);
+    if (n < 0) {
+	perror("scandir");
+	return -1;
+    }
+
+    for (i = 0; i < n; ++i) {
+	struct test_data *data;
+	char *path;
+	if (asprintf(&path, "sql_stmt_mathsql_tests/%s", namelist[i]->d_name) < 0) {
+	    return -1;
+	}
+	data = read_one_case(path);
+	free(path);
+	
+	result = do_one_case(data);
+	
+	cleanup_test_data(data);
+	if (result != 0) {
+	    return result;
+	}
+	free(namelist[i]);
+    }
+    free(namelist);
+#endif	/* end MATHSQL conditional */
+
+#ifndef OMIT_PROJ	/* only if PROJ is supported */
+    n = scandir("sql_stmt_proj_tests", &namelist, test_case_filter, alphasort);
+    if (n < 0) {
+	perror("scandir");
+	return -1;
+    }
+
+    for (i = 0; i < n; ++i) {
+	struct test_data *data;
+	char *path;
+	if (asprintf(&path, "sql_stmt_proj_tests/%s", namelist[i]->d_name) < 0) {
+	    return -1;
+	}
+	data = read_one_case(path);
+	free(path);
+	
+	result = do_one_case(data);
+	
+	cleanup_test_data(data);
+	if (result != 0) {
+	    return result;
+	}
+	free(namelist[i]);
+    }
+    free(namelist);
+#endif	/* end PROJ conditional */
+
+#ifndef OMIT_GEOS	/* only if GEOS is supported */
+    if (strcmp(GEOSversion (), "3.3") < 0)
+    {
+    /* 
+    /* skipping GEOS tests if some obsolete version is found 
+    /*
+    /* rationale: obsolete versions may return substantially
+    /* different results, thus causing many testcases to fail
+    */
+        fprintf(stderr, "WARNING: skipping GEOS testcases; obsolete version found !!!\n");
+        goto skip_geos;
+    }
+
+    n = scandir("sql_stmt_geos_tests", &namelist, test_case_filter, alphasort);
+    if (n < 0) {
+	perror("scandir");
+	return -1;
+    }
+
+    for (i = 0; i < n; ++i) {
+	struct test_data *data;
+	char *path;
+	if (asprintf(&path, "sql_stmt_geos_tests/%s", namelist[i]->d_name) < 0) {
+	    return -1;
+	}
+	data = read_one_case(path);
+	free(path);
+	
+	result = do_one_case(data);
+	
+	cleanup_test_data(data);
+	if (result != 0) {
+	    return result;
+	}
+	free(namelist[i]);
+    }
+    free(namelist);
+skip_geos:
+#endif	/* end GEOS conditional */
+
+#ifdef GEOS_ADVANCED	/* only if GEOS_ADVANCED is supported */
+    if (strcmp(GEOSversion (), "3.3") < 0)
+    {
+    /* 
+    /* skipping GEOS tests if some obsolete version is found 
+    /*
+    /* rationale: obsolete versions may return substantially
+    /* different results, thus causing many testcases to fail
+    */
+        fprintf(stderr, "WARNING: skipping GEOS_ADVANCED testcases; obsolete version found !!!\n");
+        goto skip_geos_advanced;
+    }
+    n = scandir("sql_stmt_geosadvanced_tests", &namelist, test_case_filter, alphasort);
+    if (n < 0) {
+	perror("scandir");
+	return -1;
+    }
+
+    for (i = 0; i < n; ++i) {
+	struct test_data *data;
+	char *path;
+	if (asprintf(&path, "sql_stmt_geosadvanced_tests/%s", namelist[i]->d_name) < 0) {
+	    return -1;
+	}
+	data = read_one_case(path);
+	free(path);
+	
+	result = do_one_case(data);
+	
+	cleanup_test_data(data);
+	if (result != 0) {
+	    return result;
+	}
+	free(namelist[i]);
+    }
+    free(namelist);
+skip_geos_advanced:
+#endif	/* end GEOS_ADVANCED conditional */
+
+#ifdef GEOS_TRUNK	/* only if GEOS_TRUNK is supported */
+    if (strcmp(GEOSversion (), "3.3") < 0)
+    {
+    /* 
+    /* skipping GEOS tests if some obsolete version is found 
+    /*
+    /* rationale: obsolete versions may return substantially
+    /* different results, thus causing many testcases to fail
+    */
+        fprintf(stderr, "WARNING: skipping GEOS_TRUNK testcases; obsolete version found !!!\n");
+        goto skip_geos_trunk;
+    }
+    n = scandir("sql_stmt_geostrunk_tests", &namelist, test_case_filter, alphasort);
+    if (n < 0) {
+	perror("scandir");
+	return -1;
+    }
+
+    for (i = 0; i < n; ++i) {
+	struct test_data *data;
+	char *path;
+	if (asprintf(&path, "sql_stmt_geostrunk_tests/%s", namelist[i]->d_name) < 0) {
+	    return -1;
+	}
+	data = read_one_case(path);
+	free(path);
+	
+	result = do_one_case(data);
+	
+	cleanup_test_data(data);
+	if (result != 0) {
+	    return result;
+	}
+	free(namelist[i]);
+    }
+    free(namelist);
+skip_geos_trunk:
+#endif	/* end GEOS_TRUNK conditional */
+
+#ifdef ENABLE_LWGEOM	/* only if LWGEOM is supported */
+    n = scandir("sql_stmt_lwgeom_tests", &namelist, test_case_filter, alphasort);
+    if (n < 0) {
+	perror("scandir");
+	return -1;
+    }
+
+    for (i = 0; i < n; ++i) {
+	struct test_data *data;
+	char *path;
+	if (asprintf(&path, "sql_stmt_lwgeom_tests/%s", namelist[i]->d_name) < 0) {
+	    return -1;
+	}
+	data = read_one_case(path);
+	free(path);
+	
+	result = do_one_case(data);
+	
+	cleanup_test_data(data);
+	if (result != 0) {
+	    return result;
+	}
+	free(namelist[i]);
+    }
+    free(namelist);
+#endif	/* end LWGEOM conditional */
+
+    return result;
+}
+
+int run_specified_testcases(int argc, char *argv[])
+{
+    int result = 0;
+    int i = 0;
+    
+    for (i = 1; i < argc; ++i)
+    {
+	struct test_data *data;
+	data = read_one_case(argv[i]);
+	result = do_one_case(data);
+	cleanup_test_data(data);
+	if (result != 0) {
+	    break;
+	}
+    }
+    return result;
+}
+
+int main (int argc, char *argv[])
+{
+    int result = 0;
+
+    spatialite_init (0);
+
+    if (argc == 1)
+    {
+	result = run_all_testcases();
+    }
+    else
+    {
+	result = run_specified_testcases(argc, argv);
+    }
+    if (result != 0)
+    {
+    /* it looks like if MinGW applies some wrong assumption   */ 
+    /* some negative values are incorrectly reported to be OK */
+    /* forcing -1 seems to resolve this issue                 */
+        result = -1;
     }
 
     spatialite_cleanup();
-    sqlite3_reset_auto_extension();
 
     return result;
 }

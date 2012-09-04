@@ -41,16 +41,24 @@ the provisions above, a recipient may use your version of this file under
 the terms of any one of the MPL, the GPL or the LGPL.
  
 */
+#define _GNU_SOURCE
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+
+#include "config.h"
 
 #include "sqlite3.h"
 #include "spatialite.h"
 #include "spatialite/gaiaaux.h"
 
+#ifdef _WIN32
+#include "asprintf4win.h"
+#endif
+
 int main (int argc, char *argv[])
 {
+#ifndef OMIT_ICONV	/* only if ICONV is supported */
     void * converter;
     char *test_str1;
     int err;
@@ -103,6 +111,7 @@ int main (int argc, char *argv[])
 
     /* there is no sane way to test this automatically */
     printf("Local codeset: %s\n", gaiaGetLocaleCharset() );
+#endif	/* end ICONV conditional */
 
     return 0;
 }

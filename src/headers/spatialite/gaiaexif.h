@@ -1,7 +1,7 @@
 /* 
  gaiaexif.h -- Gaia common EXIF Metadata reading functions
   
- version 3.0, 2011 July 20
+ version 4.0, 2012 August 6
 
  Author: Sandro Furieri a.furieri@lqt.it
 
@@ -23,7 +23,7 @@ The Original Code is the SpatiaLite library
 
 The Initial Developer of the Original Code is Alessandro Furieri
  
-Portions created by the Initial Developer are Copyright (C) 2008
+Portions created by the Initial Developer are Copyright (C) 2008-2012
 the Initial Developer. All Rights Reserved.
 
 Contributor(s):
@@ -87,6 +87,8 @@ extern "C"
 #define GAIA_GEOMETRY_BLOB	8
 /** this BLOB does actually contain a TIFF image */
 #define GAIA_TIFF_BLOB		9
+/** this BLOB does actually contain a WebP image */
+#define GAIA_WEBP_BLOB		10
 
 /* constants used for EXIF value types */
 /** unrecognized EXIF value */

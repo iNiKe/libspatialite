@@ -2,7 +2,7 @@
 
  gg_wkt.c -- Gaia common support for WKT encoded geometries
   
- version 3.0, 2011 July 20
+ version 4.0, 2012 August 6
 
  Author: Sandro Furieri a.furieri@lqt.it
 
@@ -24,7 +24,7 @@ The Original Code is the SpatiaLite library
 
 The Initial Developer of the Original Code is Alessandro Furieri
  
-Portions created by the Initial Developer are Copyright (C) 2008
+Portions created by the Initial Developer are Copyright (C) 2008-2012
 the Initial Developer. All Rights Reserved.
 
 Contributor(s):
@@ -49,11 +49,9 @@ the terms of any one of the MPL, the GPL or the LGPL.
 #include <stdio.h>
 #include <string.h>
 
-#ifdef SPL_AMALGAMATION		/* spatialite-amalgamation */
-#include <spatialite/sqlite3ext.h>
-#else
-#include <sqlite3ext.h>
-#endif
+#include "config.h"
+
+#include <spatialite/sqlite.h>
 
 #include <spatialite/gaiageo.h>
 
@@ -71,6 +69,20 @@ gaiaOutClean (char *buffer)
       }
     if (buffer[i] == '.')
 	buffer[i] = '\0';
+    if (strcmp (buffer, "-0") == 0)
+      {
+	  /* avoiding to return embarassing NEGATIVE ZEROes */
+	  strcpy (buffer, "0");
+      }
+
+    if (strcmp (buffer, "-1.#QNAN") == 0
+	|| strcmp (buffer, "1.#QNAN") == 0
+	|| strcmp (buffer, "-1.#IND") == 0 || strcmp (buffer, "1.#IND") == 0)
+      {
+	  /* on Windows a NaN could be represented in "odd" ways */
+	  /* this is intended to restore a consistent behaviour  */
+	  strcpy (buffer, "nan");
+      }
 }
 
 GAIAGEO_DECLARE void
@@ -2354,6 +2366,22 @@ gaiaOutSvg (gaiaOutBufferPtr out_buf, gaiaGeomCollPtr geom, int relative,
 		  }
 	    }
       }
+
+    if (out_buf->Error == 0 && out_buf->WriteOffset > 0)
+      {
+	  /* sandro 2012-02-23 cleaning extra trailing spaces */
+	  int i;
+	  for (i = out_buf->WriteOffset - 1; i >= 0; i--)
+	    {
+		if (*(out_buf->Buffer + i) == ' ')
+		  {
+		      *(out_buf->Buffer + i) = '\0';
+		      out_buf->WriteOffset -= 1;
+		  }
+		else
+		    break;
+	    }
+      }
 }
 
 /* END of Klaus Foerster SVG implementation */
@@ -2834,7 +2862,7 @@ gaiaOutGml (gaiaOutBufferPtr out_buf, int version, int precision,
 	  is_multi = 0;
 	  break;
       case GAIA_MULTIPOINT:
-	  if (geom->Srid == -1)
+	  if (geom->Srid <= 0)
 	      strcpy (buf, "<gml:MultiPoint>");
 	  else
 	      sprintf (buf, "<gml:MultiPoint srsName=\"EPSG:%d\">", geom->Srid);
@@ -2842,7 +2870,7 @@ gaiaOutGml (gaiaOutBufferPtr out_buf, int version, int precision,
       case GAIA_MULTILINESTRING:
 	  if (version == 3)
 	    {
-		if (geom->Srid == -1)
+		if (geom->Srid <= 0)
 		    strcpy (buf, "<gml:MultiCurve>");
 		else
 		    sprintf (buf, "<gml:MultiCurve srsName=\"EPSG:%d\">",
@@ -2850,7 +2878,7 @@ gaiaOutGml (gaiaOutBufferPtr out_buf, int version, int precision,
 	    }
 	  else
 	    {
-		if (geom->Srid == -1)
+		if (geom->Srid <= 0)
 		    strcpy (buf, "<gml:MultiLineString>");
 		else
 		    sprintf (buf,
@@ -2861,7 +2889,7 @@ gaiaOutGml (gaiaOutBufferPtr out_buf, int version, int precision,
       case GAIA_MULTIPOLYGON:
 	  if (version == 3)
 	    {
-		if (geom->Srid == -1)
+		if (geom->Srid <= 0)
 		    strcpy (buf, "<gml:MultiSurface>");
 		else
 		    sprintf (buf, "<gml:MultiSurface srsName=\"EPSG:%d\">",
@@ -2869,7 +2897,7 @@ gaiaOutGml (gaiaOutBufferPtr out_buf, int version, int precision,
 	    }
 	  else
 	    {
-		if (geom->Srid == -1)
+		if (geom->Srid <= 0)
 		    strcpy (buf, "<gml:MultiPolygon>");
 		else
 		    sprintf (buf, "<gml:MultiPolygon srsName=\"EPSG:%d\">",
@@ -2877,7 +2905,7 @@ gaiaOutGml (gaiaOutBufferPtr out_buf, int version, int precision,
 	    }
 	  break;
       default:
-	  if (geom->Srid == -1)
+	  if (geom->Srid <= 0)
 	      strcpy (buf, "<gml:MultiGeometry>");
 	  else
 	      sprintf (buf, "<gml:MultiGeometry srsName=\"EPSG:%d\">",
@@ -2900,7 +2928,7 @@ gaiaOutGml (gaiaOutBufferPtr out_buf, int version, int precision,
 	    }
 	  else
 	    {
-		if (geom->Srid == -1)
+		if (geom->Srid <= 0)
 		    strcpy (buf, "<gml:Point>");
 		else
 		    sprintf (buf, "<gml:Point srsName=\"EPSG:%d\">",
@@ -3009,7 +3037,7 @@ gaiaOutGml (gaiaOutBufferPtr out_buf, int version, int precision,
 	    {
 		if (version == 3)
 		  {
-		      if (geom->Srid == -1)
+		      if (geom->Srid <= 0)
 			  strcpy (buf, "<gml:Curve>");
 		      else
 			  sprintf (buf, "<gml:Curve srsName=\"EPSG:%d\">",
@@ -3024,7 +3052,7 @@ gaiaOutGml (gaiaOutBufferPtr out_buf, int version, int precision,
 		  }
 		else
 		  {
-		      if (geom->Srid == -1)
+		      if (geom->Srid <= 0)
 			  strcpy (buf, "<gml:LineString>");
 		      else
 			  sprintf (buf, "<gml:LineString srsName=\"EPSG:%d\">",
@@ -3182,7 +3210,7 @@ gaiaOutGml (gaiaOutBufferPtr out_buf, int version, int precision,
 	    }
 	  else
 	    {
-		if (geom->Srid == -1)
+		if (geom->Srid <= 0)
 		    strcpy (buf, "<gml:Polygon>");
 		else
 		    sprintf (buf, "<gml:Polygon srsName=\"EPSG:%d\">",
@@ -3491,7 +3519,7 @@ gaiaOutGeoJSON (gaiaOutBufferPtr out_buf, gaiaGeomCollPtr geom, int precision,
       {
 	  *bbox = '\0';
 	  *crs = '\0';
-	  if (geom->Srid != -1)
+	  if (geom->Srid > 0)
 	    {
 		if (options == 2 || options == 3)
 		  {

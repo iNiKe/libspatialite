@@ -42,20 +42,27 @@ the provisions above, a recipient may use your version of this file under
 the terms of any one of the MPL, the GPL or the LGPL.
  
 */
+#define _GNU_SOURCE
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 
+#include "config.h"
+
 #include "sqlite3.h"
 #include "spatialite.h"
 
+#ifdef _WIN32
+#include "asprintf4win.h"
+#endif
+
 int main (int argc, char *argv[])
 {
+#ifndef OMIT_ICONV	/* only if ICONV is supported */
     sqlite3 *db_handle = NULL;
     char *sql_statement;
     int ret;
     char *err_msg = NULL;
-    int i;
     char **results;
     int rows;
     int columns;
@@ -489,7 +496,7 @@ int main (int argc, char *argv[])
     }
     sqlite3_free_table (results);
 
-    asprintf(&sql_statement, "select PKUID, testcase1, testcase2 from dbftest where testcase1 LIKE \"wind\%\";");
+    asprintf(&sql_statement, "select PKUID, testcase1, testcase2 from dbftest where testcase1 LIKE \"wind%%\";");
     ret = sqlite3_get_table (db_handle, sql_statement, &results, &rows, &columns, &err_msg);
     free(sql_statement);
     if (ret != SQLITE_OK) {
@@ -574,7 +581,7 @@ int main (int argc, char *argv[])
 
     sqlite3_close (db_handle);
     spatialite_cleanup();
-    sqlite3_reset_auto_extension();
+#endif	/* end ICONV conditional */
     
     return 0;
 }

@@ -42,9 +42,12 @@ the provisions above, a recipient may use your version of this file under
 the terms of any one of the MPL, the GPL or the LGPL.
  
 */
+#include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+
+#include "config.h"
 
 #include "sqlite3.h"
 #include "spatialite.h"
@@ -67,30 +70,14 @@ void cleanup_shapefile(const char *filename)
     unlink(nam);
 }
 
-int main (int argc, char *argv[])
+int do_test(sqlite3 *handle, int legacy)
 {
+#ifndef OMIT_ICONV	/* only if ICONV is supported */
     int ret;
-    sqlite3 *handle;
     char *dumpname = __FILE__"dump";
     char *err_msg = NULL;
     int row_count;
-
-    spatialite_init (0);
-    ret = sqlite3_open_v2 (":memory:", &handle, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL);
-    if (ret != SQLITE_OK) {
-	fprintf(stderr, "cannot open in-memory database: %s\n", sqlite3_errmsg (handle));
-	sqlite3_close(handle);
-	return -1;
-    }
-    
-    ret = sqlite3_exec (handle, "SELECT InitSpatialMetadata()", NULL, NULL, &err_msg);
-    if (ret != SQLITE_OK) {
-	fprintf (stderr, "InitSpatialMetadata() error: %s\n", err_msg);
-	sqlite3_free(err_msg);
-	sqlite3_close(handle);
-	return -2;
-    }
-    
+	
     ret = load_shapefile (handle, "./shp/gaza/barrier", "barrier", "UTF-8", 4326, 
 			  NULL, 1, 0, 1, 1, &row_count, err_msg);
     if (!ret) {
@@ -156,13 +143,181 @@ int main (int argc, char *argv[])
 	return -14;
     }
 
+    ret = sqlite3_exec (handle, "SELECT DiscardGeometryColumn('route', 'Geometry')", NULL, NULL, &err_msg);
+    if (ret != SQLITE_OK) {
+	fprintf (stderr, "DiscardGeometry route error: %s\n", err_msg);
+	sqlite3_free(err_msg);
+	sqlite3_close(handle);
+	return -15;
+    }
+
+    if (legacy)
+	ret = sqlite3_exec (handle, "INSERT INTO geometry_columns (f_table_name, f_geometry_column, type, coord_dimension, srid, spatial_index_enabled) VALUES ('beta',  'gamma', 'LINESTRING', 'XY', 4326, 0)", NULL, NULL, &err_msg);
+    else
+	ret = sqlite3_exec (handle, "INSERT INTO geometry_columns (f_table_name, f_geometry_column, geometry_type, coord_dimension, srid, spatial_index_enabled) VALUES (Lower('Beta'),  Lower('Gamma'), 2, 2, 4326, 0)", NULL, NULL, &err_msg);
+    if (ret != SQLITE_OK) {
+	fprintf (stderr, "GeometryColumns route error: %s\n", err_msg);
+	sqlite3_free(err_msg);
+	sqlite3_close(handle);
+	return -16;
+    }
+
+    if (legacy)
+        ret = sqlite3_exec (handle, "INSERT INTO views_geometry_columns (view_name, view_geometry, view_rowid, f_table_name, f_geometry_column) VALUES ('route',  'Geometry', 'ROWID', 'beta', 'gamma')", NULL, NULL, &err_msg);
+    else
+        ret = sqlite3_exec (handle, "INSERT INTO views_geometry_columns (view_name, view_geometry, view_rowid, f_table_name, f_geometry_column, read_only) VALUES (Lower('Route'),  Lower('Geometry'), Lower('ROWID'), Lower('Beta'), Lower('gamma'), 1)", NULL, NULL, &err_msg);
+    if (ret != SQLITE_OK) {
+	fprintf (stderr, "ViewsGeometryColumns route error: %s\n", err_msg);
+	sqlite3_free(err_msg);
+	sqlite3_close(handle);
+	return -17;
+    }
+
+    ret = dump_shapefile (handle, "route", "Geometry", dumpname, "UTF-8", NULL, 1, &row_count, err_msg);
+    if (!ret) {
+        fprintf (stderr, "dump_shapefile() error for UTF-8_1 route (2): %s\n", err_msg);
+	sqlite3_close(handle);
+	return -17;
+    }
+    cleanup_shapefile(dumpname);
+    if (row_count != 2) {
+	fprintf (stderr, "unexpected dump row count for UTF-8_1 route LINESTRING (2): %i\n", row_count);
+	sqlite3_close(handle);
+	return -18;
+    }
+	
+    if (legacy)
+    {
+    /* final DB cleanup */
+	ret = sqlite3_exec (handle, "DROP TABLE aeroway", NULL, NULL, &err_msg);
+	if (ret != SQLITE_OK) {
+	    fprintf (stderr, "DROP TABLE aeroway error: %s\n", err_msg);
+	    sqlite3_free(err_msg);
+	    sqlite3_close(handle);
+	    return -19;
+	}
+	ret = sqlite3_exec (handle, "DROP TABLE barrier", NULL, NULL, &err_msg);
+	if (ret != SQLITE_OK) {
+	    fprintf (stderr, "DROP TABLE barrier error: %s\n", err_msg);
+	    sqlite3_free(err_msg);
+	    sqlite3_close(handle);
+	    return -20;
+	}
+	ret = sqlite3_exec (handle, "DROP TABLE route", NULL, NULL, &err_msg);
+	if (ret != SQLITE_OK) {
+	    fprintf (stderr, "DROP TABLE route error: %s\n", err_msg);
+	    sqlite3_free(err_msg);
+	    sqlite3_close(handle);
+	    return -21;
+	}
+	ret = sqlite3_exec (handle, "DROP TABLE idx_route_Geometry", NULL, NULL, &err_msg);
+	if (ret != SQLITE_OK) {
+	    fprintf (stderr, "DROP TABLE idx_route_Geometry error: %s\n", err_msg);
+	    sqlite3_free(err_msg);
+	    sqlite3_close(handle);
+	    return -22;
+	}
+	ret = sqlite3_exec (handle, "DROP TABLE idx_barrier_Geometry", NULL, NULL, &err_msg);
+	if (ret != SQLITE_OK) {
+	    fprintf (stderr, "DROP TABLE idx_barrier_Geometry error: %s\n", err_msg);
+	    sqlite3_free(err_msg);
+	    sqlite3_close(handle);
+	    return -23;
+	}
+	ret = sqlite3_exec (handle, "DELETE FROM geometry_columns", NULL, NULL, &err_msg);
+	if (ret != SQLITE_OK) {
+	    fprintf (stderr, "DELETE FROM geometry_columns error: %s\n", err_msg);
+	    sqlite3_free(err_msg);
+	    sqlite3_close(handle);
+	    return -24;
+	}
+	ret = sqlite3_exec (handle, "DELETE FROM views_geometry_columns", NULL, NULL, &err_msg);
+	if (ret != SQLITE_OK) {
+	    fprintf (stderr, "DELETE FROM views_geometry_columns error: %s\n", err_msg);
+	    sqlite3_free(err_msg);
+	    sqlite3_close(handle);
+	    return -25;
+	}
+	ret = sqlite3_exec (handle, "DELETE FROM spatialite_history WHERE geometry_column IS NOT NULL", NULL, NULL, &err_msg);
+	if (ret != SQLITE_OK) {
+	    fprintf (stderr, "DELETE FROM spatialite_history error: %s\n", err_msg);
+	    sqlite3_free(err_msg);
+	    sqlite3_close(handle);
+	    return -26;
+	}
+	ret = sqlite3_exec (handle, "VACUUM", NULL, NULL, &err_msg);
+	if (ret != SQLITE_OK) {
+	    fprintf (stderr, "VACUUM error: %s\n", err_msg);
+	    sqlite3_free(err_msg);
+	    sqlite3_close(handle);
+	    return -27;
+	}
+    }
+#endif	/* end ICONV conditional */
+
+/* ok, succesfull termination */
+	return 0;
+    
+}
+
+int main (int argc, char *argv[])
+{
+#ifndef OMIT_ICONV	/* only if ICONV is supported */
+    int ret;
+    sqlite3 *handle;
+    char *err_msg = NULL;
+
+/* testing current style metadata layout >= v.4.0.0 */
+    spatialite_init (0);
+    ret = sqlite3_open_v2 (":memory:", &handle, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL);
+    if (ret != SQLITE_OK) {
+	fprintf(stderr, "cannot open in-memory database: %s\n", sqlite3_errmsg (handle));
+	sqlite3_close(handle);
+	return -1;
+    }
+    
+    ret = sqlite3_exec (handle, "SELECT InitSpatialMetadata()", NULL, NULL, &err_msg);
+    if (ret != SQLITE_OK) {
+	fprintf (stderr, "InitSpatialMetadata() error: %s\n", err_msg);
+	sqlite3_free(err_msg);
+	sqlite3_close(handle);
+	return -2;
+    }
+    
+    ret = do_test(handle, 0);
+    if (ret != 0) {
+	fprintf(stderr, "error while testing current style metadata layout\n");
+	return ret;
+    }
+
     ret = sqlite3_close (handle);
     if (ret != SQLITE_OK) {
         fprintf (stderr, "sqlite3_close() error: %s\n", sqlite3_errmsg (handle));
-	return -15;
+	return -19;
     }
-    
-    spatialite_cleanup();
-    sqlite3_reset_auto_extension();
+
+/* testing legacy style metadata layout <= v.3.1.0 */
+    spatialite_init (0);
+    ret = sqlite3_open_v2 ("test-legacy-3.0.1.sqlite", &handle, SQLITE_OPEN_READWRITE, NULL);
+    if (ret != SQLITE_OK) {
+	fprintf(stderr, "cannot open legacy v.3.0.1 database: %s\n", sqlite3_errmsg (handle));
+	sqlite3_close(handle);
+	return -1;
+    }
+	
+    ret = do_test(handle, 1);
+    if (ret != 0) {
+	fprintf(stderr, "error while testing legacy style metadata layout\n");
+	return ret;
+    }
+
+    ret = sqlite3_close (handle);
+    if (ret != SQLITE_OK) {
+        fprintf (stderr, "sqlite3_close() error: %s\n", sqlite3_errmsg (handle));
+	return -19;
+    }
+	
+#endif	/* end ICONV conditional */
+
     return 0;
 }

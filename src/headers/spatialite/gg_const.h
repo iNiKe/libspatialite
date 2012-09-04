@@ -1,7 +1,7 @@
 /*
  gg_const.h -- Gaia common support for geometries: constants
   
- version 3.0, 2011 July 20
+ version 4.0, 2012 August 6
 
  Author: Sandro Furieri a.furieri@lqt.it
 
@@ -23,7 +23,7 @@ The Original Code is the SpatiaLite library
 
 The Initial Developer of the Original Code is Alessandro Furieri
  
-Portions created by the Initial Developer are Copyright (C) 2008
+Portions created by the Initial Developer are Copyright (C) 2008-2012
 the Initial Developer. All Rights Reserved.
 
 Contributor(s):
@@ -353,6 +353,14 @@ extern "C"
 #define GAIA_SHP_POLYGONM	25
 /** SHP shape: MULTIPOINT M */
 #define GAIA_SHP_MULTIPOINTM	28
+
+/* constants used for Clone Special modes */
+/** Clone Special Mode: Same Order as input */
+#define GAIA_SAME_ORDER		0
+/** Clone Special Mode: Reversed Order */
+#define GAIA_REVERSE_ORDER	-1
+/** Clone Special Mode: apply Left Handle Rule to Polygon Rings */
+#define GAIA_LHR_ORDER		-2
 
 /* macros */
 /**

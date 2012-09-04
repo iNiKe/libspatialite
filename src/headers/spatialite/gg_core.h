@@ -1,7 +1,7 @@
 /*
  gg_core.h -- Gaia common support for geometries: core functions
   
- version 3.0, 2011 July 20
+ version 4.0, 2012 August 6
 
  Author: Sandro Furieri a.furieri@lqt.it
 
@@ -23,7 +23,7 @@ The Original Code is the SpatiaLite library
 
 The Initial Developer of the Original Code is Alessandro Furieri
  
-Portions created by the Initial Developer are Copyright (C) 2008
+Portions created by the Initial Developer are Copyright (C) 2008-2012
 the Initial Developer. All Rights Reserved.
 
 Contributor(s):
@@ -65,7 +65,7 @@ extern "C"
 /**
  Safely frees any dynamic memory block allocated by the library itself
 
- \param ptr pointer to dynamicly allocated memory
+ \param ptr pointer to dynamically allocated memory
 
  \note on some platforms (most notably, Microsoft Windows) many different
  runtime libraries may actually support the same process.
@@ -156,7 +156,7 @@ extern "C"
 
  \sa gaiaAllocPoint, gaiaAllocPointXYZ, gaiaAllocPointXYM, gaiaAllocPointXYZM
 
- \note attempting to destroy any POINT object whose ownnership has already
+ \note attempting to destroy any POINT object whose ownership has already
  been transferred to some other (higher order) object is a serious
  error, and will easily cause severe memory corruption.
  */
@@ -250,12 +250,30 @@ extern "C"
  \param dst destination LINESTRING [output]
  \param src origin LINESTRING [input]
 
+ \sa gaiaCopyLinestringCoordsReverse
+
  \note both LINESTRING objects must have exactly the same number of points:
  if dimensions aren't the same for both objects, then the appropriate 
  conversion will be silently applied.
  */
     GAIAGEO_DECLARE void gaiaCopyLinestringCoords (gaiaLinestringPtr dst,
 						   gaiaLinestringPtr src);
+
+/**
+ Copies coordinates between two LINESTRING objects in reverse order
+
+ \param dst destination LINESTRING [output]
+ \param src origin LINESTRING [input]
+
+ \sa gaiaCopyLinestringCoords
+
+ \note both LINESTRING objects must have exactly the same number of points:
+ if dimensions aren't the same for both objects, then the appropriate 
+ conversion will be silently applied.
+ */
+    GAIAGEO_DECLARE void gaiaCopyLinestringCoordsReverse (gaiaLinestringPtr dst,
+							  gaiaLinestringPtr
+							  src);
 
 /**
  Allocates a 2D RING [XY]
@@ -333,23 +351,40 @@ extern "C"
  \sa gaiaAllocRing, gaiaAllocRingXYZ, gaiaAllocRingXYM,
   gaiaAllocRingXYZM
 
- \note attempting to destroy any RING object whose ownnership has already
+ \note attempting to destroy any RING object whose ownership has already
  been transferred to some other (higher order) object is a serious
  error, and will easily cause severe memory corruption.
  */
     GAIAGEO_DECLARE void gaiaFreeRing (gaiaRingPtr ptr);
 
 /**
- Copies coordinates betwee two RING objects
+ Copies coordinates between two RING objects
 
  \param dst destination RING [output]
  \param src origin RING [input]
+
+ \sa gaiaCopyRingCoordsReverse
 
  \note both RING objects must have exactly the same number of points:
  if dimensions aren't the same for both objects, then the appropriate
  conversion will be silently applied.
  */
     GAIAGEO_DECLARE void gaiaCopyRingCoords (gaiaRingPtr dst, gaiaRingPtr src);
+
+/**
+ Copies coordinates between two RING objects in reverse order
+
+ \param dst destination RING [output]
+ \param src origin RING [input]
+
+ \sa gaiaCopyRingCoords
+
+ \note both RING objects must have exactly the same number of points:
+ if dimensions aren't the same for both objects, then the appropriate
+ conversion will be silently applied.
+ */
+    GAIAGEO_DECLARE void gaiaCopyRingCoordsReverse (gaiaRingPtr dst,
+						    gaiaRingPtr src);
 
 /**
  Allocates a 2D POLYGON [XY]
@@ -447,10 +482,10 @@ extern "C"
  \sa gaiaAllocPolygon, gaiaAllocPolygonXYZ, gaiaAllocPolygonXYM,
   gaiaAllocPolygonXYZM, gaiaCreatePolygon
 
- \note attempting to destroy any POLYGON object whose ownnership has already
+ \note attempting to destroy any POLYGON object whose ownership has already
  been transferred to some other (higher order) object is a serious
  error, and will easily cause severe memory corruption.
- \n Ownerhip of each RING object referenced by a POLYGON object alway belongs
+ \n Ownership of each RING object referenced by a POLYGON object always belongs
  to the POLYGON itself, so destroying the POLYGON will surely destroy
  any related RING as well.
  */
@@ -520,11 +555,11 @@ extern "C"
  \sa gaiaAllocGeomColl, gaiaAllocGeomCollXYZ, gaiaAllocGeomCollXYM,
   gaiaAllocGeomCollXYZM
 
- \note attempting to destroy any Geometry object whose ownnership has already
+ \note attempting to destroy any Geometry object whose ownership has already
  been transferred to some other (higher order) object is a serious
  error, and will easily cause severe memory corruption.
- \n Ownerhip of each POINT, LINESTRING or POLYGON object referenced by a
- Geometry object alway belongs to the Geometry itself, so destroying the 
+ \n Ownership of each POINT, LINESTRING or POLYGON object referenced by a
+ Geometry object always belongs to the Geometry itself, so destroying the 
  Geometry will surely destroy any related elementary geometry item as well.
  */
     GAIAGEO_DECLARE void gaiaFreeGeomColl (gaiaGeomCollPtr geom);
@@ -690,7 +725,7 @@ extern "C"
 
  \sa gaiaInsertInteriorRing
 
- \note ownership of the Ring object will be tranferred to the Polygon object.
+ \note ownership of the Ring object will be transferred to the Polygon object.
  \n the newly created Polygon will have the same dimensions as the Ring has.
  \n if required the Polygon's Interior Rings count could be increased.
  */
@@ -706,12 +741,29 @@ extern "C"
 
  \sa gaiaCloneRing, gaiaClonePolygon, gaiaCloneGeomColl,
  gaiaCloneGeomCollPoints, gaiaCloneGeomCollLinestrings, 
- gaiaCloneGeomCollPolygons
+ gaiaCloneGeomCollPolygons, gaiaCloneLinestringSpecial
 
  \note the newly created object is an exact copy of the original one. 
  */
     GAIAGEO_DECLARE gaiaLinestringPtr gaiaCloneLinestring (gaiaLinestringPtr
 							   line);
+/**
+ Duplicates a Linestring object (special)
+
+ \param line pointer to Linestring object [origin].
+ \param mode one of GAIA_SAME_ORDER or GAIA_REVERSE_ORDER.
+
+ \return the pointer to newly created Linestring object: NULL on failure.
+
+ \sa gaiaCloneLinestring, gaiaCloneGeomCollSpecial
+
+ \note if GAIA_REVERSE_ORDER is specified, then any vertex into the newly created
+  object will be in reverse order [first vertex will be last one, and last vertex
+  will be the first one]. In any other case this function will simply default to 
+  gaiaCloneLinestring. 
+ */
+    GAIAGEO_DECLARE gaiaLinestringPtr
+	gaiaCloneLinestringSpecial (gaiaLinestringPtr line, int mode);
 
 /**
  Duplicates a Ring object
@@ -722,11 +774,29 @@ extern "C"
 
  \sa gaiaCloneLinestring, gaiaClonePolygon, gaiaCloneGeomColl,
  gaiaCloneGeomCollPoints, gaiaCloneGeomCollLinestrings, 
- gaiaCloneGeomCollPolygons
+ gaiaCloneGeomCollPolygons, gaiaCloneRingSpecial
 
  \note the newly created object is an exact copy of the original one. 
  */
     GAIAGEO_DECLARE gaiaRingPtr gaiaCloneRing (gaiaRingPtr ring);
+
+/**
+ Duplicates a Ring object (special)
+
+ \param ring pointer to Ring object [origin].
+ \param mode one of GAIA_SAME_ORDER or GAIA_REVERSE_ORDER.
+
+ \return the pointer to newly created Ring object: NULL on failure.
+
+ \sa gaiaCloneRing, gaiaClonePolygonSpecial
+
+ \note if GAIA_REVERSE_ORDER is specified, then any vertex into the newly created
+  object will be in reverse order [first vertex will be last one, and last vertex
+  will be the first one]. In any other case this function will simply default to 
+  gaiaCloneRing. 
+ */
+    GAIAGEO_DECLARE gaiaRingPtr gaiaCloneRingSpecial (gaiaRingPtr ring,
+						      int mode);
 
 /**
  Duplicates a Polygon object
@@ -737,11 +807,30 @@ extern "C"
 
  \sa gaiaCloneLinestring, gaiaCloneRing, gaiaCloneGeomColl,
  gaiaCloneGeomCollPoints, gaiaCloneGeomCollLinestrings, 
- gaiaCloneGeomCollPolygons
+ gaiaCloneGeomCollPolygons, gaiaClonePolygonSpecial
 
  \note the newly created object is an exact copy of the original one. 
  */
     GAIAGEO_DECLARE gaiaPolygonPtr gaiaClonePolygon (gaiaPolygonPtr polyg);
+
+/**
+ Duplicates a Polygon object (special)
+
+ \param polyg pointer to Polygon object [origin].
+ \param mode one of GAIA_SAME_ORDER, GAIA_REVERSE_ORDER or GAIA_LHR_ORDER.
+
+ \return the pointer to newly created Polygon object: NULL on failure.
+
+ \sa gaiaClonePolygon, gaiaCloneGeomCollSpecial
+
+ \note if GAIA_REVERSE_ORDER is specified, then any Ring into the newly created
+  object will be in reverse order. If GAIA_LHR_ORDER is specified instead, any
+  Exterior Ring will have clockwise orientation, and any Interior Ring will have
+  counter-clockwise orientation. In any other case this function will simply 
+  default to gaiaClonePolygon. 
+ */
+    GAIAGEO_DECLARE gaiaPolygonPtr gaiaClonePolygonSpecial (gaiaPolygonPtr
+							    polyg, int mode);
 
 /**
  Duplicates a Geometry object
@@ -755,11 +844,31 @@ extern "C"
  gaiaCloneGeomCollPolygons, gaiaCastGeomCollToXY, gaiaCastGeomCollToXYZ,
  gaiaCastGeomCollToXYM, gaiaCastGeomCollToXYZM, gaiaExtractPointsFromGeomColl,
  gaiaExtractLinestringsFromGeomColl, gaiaExtractPolygonsFromGeomColl,
- gaiaMergeGeometries
+ gaiaMergeGeometries, gaiaCloneGeomCollSpecial
 
  \note the newly created object is an exact copy of the original one. 
  */
     GAIAGEO_DECLARE gaiaGeomCollPtr gaiaCloneGeomColl (gaiaGeomCollPtr geom);
+
+/**
+ Duplicates a Geometry object (special)
+
+ \param geom pointer to Geometry object [origin].
+ \param mode one of GAIA_SAME_ORDER, GAIA_REVERSE_ORDER or GAIA_LHR_ORDER.
+
+ \return the pointer to newly created Geometry object: NULL on failure.
+
+ \sa gaiaCloneLinestringSpecial, gaiaCloneRingSpecial, gaiaClonePolygonSpecial, 
+ gaiaCloneGeomColl
+
+ \note if GAIA_REVERSE_ORDER is specified, then any Linestring and/or Ring into
+ the newly created object will be in reverse order. If GAIA_LHR_ORDER is specified 
+  instead, any Polygong will have the Exterior Ring in clockwise orientation, and any 
+  Interior Ring int counter-clockwise orientation. In any other case this function will 
+  simply default to gaiaCloneGeomColl. 
+ */
+    GAIAGEO_DECLARE gaiaGeomCollPtr gaiaCloneGeomCollSpecial (gaiaGeomCollPtr
+							      geom, int mode);
 
 /**
  Duplicates a Geometry object [Points only]
@@ -839,7 +948,7 @@ extern "C"
  gaiaCastGeomCollToXYM, gaiaCastGeomCollToXYZM
 
  \note the newly created object is an exact copy of the original one; except
- in that any elementary item  will be casted to 3D [XYZ] dimensions.
+ in that any elementary item  will be cast to 3D [XYZ] dimensions.
  */
     GAIAGEO_DECLARE gaiaGeomCollPtr gaiaCastGeomCollToXYZ (gaiaGeomCollPtr
 							   geom);
@@ -855,7 +964,7 @@ extern "C"
  gaiaCastGeomCollToXYZM
 
  \note the newly created object is an exact copy of the original one; except
- in that any elementary item  will be casted to 2D [XYM] dimensions.
+ in that any elementary item  will be cast to 2D [XYM] dimensions.
  */
     GAIAGEO_DECLARE gaiaGeomCollPtr gaiaCastGeomCollToXYM (gaiaGeomCollPtr
 							   geom);
@@ -871,7 +980,7 @@ extern "C"
  gaiaCastGeomCollToXYM
 
  \note the newly created object is an exact copy of the original one; except
- in that any elementary item  will be casted to 3D [XYZM] dimensions.
+ in that any elementary item  will be cast to 3D [XYZM] dimensions.
  */
     GAIAGEO_DECLARE gaiaGeomCollPtr gaiaCastGeomCollToXYZM (gaiaGeomCollPtr
 							    geom);
@@ -905,7 +1014,7 @@ extern "C"
 					  double *m);
 
 /**
- Sets coodinates for a Linestring's Point
+ Sets coordinates for a Linestring's Point
 
  \param ln pointer to Linestring object.
  \param v relative position of Point: first Point has index 0
@@ -932,7 +1041,7 @@ extern "C"
 					  double y, double z, double m);
 
 /**
- Gets coodinates from a Ring's Point
+ Gets coordinates from a Ring's Point
 
  \param rng pointer to Ring object.
  \param v relative position of Point: first Point has index 0
@@ -1060,11 +1169,44 @@ extern "C"
  \sa gaiaSanitize
 
  \note a \b toxic Geometry is a Geometry containing severely malformed
- Polygons: i.e. containing less than 4 Points, unclosed Rings and so on.
+ Polygons: i.e. containing less than 4 Points.
+ \n Or containing severely malformed Linestrings: i.e. containing less 
+ than 2 Points.
  \n Attempting to pass any toxic Geometry to GEOS supported functions
  will easily cause a crash.
  */
     GAIAGEO_DECLARE int gaiaIsToxic (gaiaGeomCollPtr geom);
+
+/**
+ Checks for not-closed Rings 
+
+ \param ring pointer to Ring object
+
+ \return 0 if the Ring in unclosed: otherwise any other different value.
+
+ \sa gaiaIsToxic, gaiaIsNotClosedGeomColl
+
+ \note unclosed Rings cause GEOS supported functions to crash.
+ \n SpatiaLite will always carefully check any Ring before passing it
+ to GEOS, eventually silently inserting a further point required so 
+ to properly close the figure.
+ \n This function allows to explicitly identify any unclosed Ring.
+ */
+    GAIAGEO_DECLARE int gaiaIsNotClosedRing (gaiaRingPtr ring);
+
+/**
+ Checks for not-closed Rings in a Geometry object
+
+ \param geom pointer to Geometry object
+
+ \return 0 if the Geometry has no unclosed Rings: otherwise any other different value.
+
+ \sa gaiaIsToxic, gaiaIsNotClosedRing
+
+ \note This function allows to explicitly identify any Geometry containing
+ at least one unclosed Ring.
+ */
+    GAIAGEO_DECLARE int gaiaIsNotClosedGeomColl (gaiaGeomCollPtr geom);
 
 /**
  Attempts to sanitize a possibly malformed Geometry object
@@ -1218,6 +1360,28 @@ extern "C"
 							 gaiaGeomCollPtr geom2);
 
 /**
+ Return a GeometryCollection containing elements matching the specified range of measures
+
+ \param geom pointer to Geometry object
+ \param m_start range of measures: start value
+ \param m_end range of measures: end value
+
+ \return the pointer to newly created Geometry: NULL on failure.
+
+ \note you are responsible to destroy (before or after) any allocated Geometry,
+ this including any Geometry created by gaiaLocateBetweenMeasures()
+ \n the newly created Geometry will contain Points and/or Linestrings.
+ \n if the input Geometry has no M dimension then NULL will be returned.
+ \n if the input Geometry doesn't contains any point/vertex corresponding to the
+ required range of measures then NULL will be returned.
+ \n if the input Geometry contains any Polygon (or is a GeometryCollection) then
+ NULL will be returned.
+ */
+    GAIAGEO_DECLARE gaiaGeomCollPtr
+	gaiaLocateBetweenMeasures (gaiaGeomCollPtr geom, double m_start,
+				   double m_end);
+
+/**
  Measures the geometric length for a Linestring or Ring
 
  \param dims dimensions: one of GAIA_XY, GAIA_XY_Z, GAIA_XY_M or GAIA_XY_ZM
@@ -1299,7 +1463,7 @@ extern "C"
 						     double x, double y);
 
 /**
- Computes the minimum distance intercurring from a Point and a Linestring or Ring
+ Computes the minimum distance between a Point and a Linestring or Ring
 
  \param x0 Point X coordinate
  \param y0 Point Y coordinate
@@ -1345,10 +1509,55 @@ extern "C"
  \param shift_x X axis shift factor.
  \param shift_y Y axis shift factor.
 
- \sa gaiaScaleCoords, gaiaRotateCoords, gaiaReflectCoords, gaiaSwapCoords
+ \sa gaiaScaleCoords, gaiaRotateCoords, gaiaReflectCoords, gaiaSwapCoords,
+     gaiaShiftCoords3D, gaiaShiftLongitude
  */
     GAIAGEO_DECLARE void gaiaShiftCoords (gaiaGeomCollPtr geom, double shift_x,
 					  double shift_y);
+
+/**
+ Shifts any coordinate within a 3D Geometry object
+
+ \param geom pointer to Geometry object.
+ \param shift_x X axis shift factor.
+ \param shift_y Y axis shift factor.
+ \param shift_z Z axis shift factor.
+
+ \sa gaiaScaleCoords, gaiaRotateCoords, gaiaReflectCoords, gaiaSwapCoords,
+     gaiaShiftCoords, gaiaShiftLongitude, gaiaNormalizeLonLat
+ */
+    GAIAGEO_DECLARE void gaiaShiftCoords3D (gaiaGeomCollPtr geom,
+					    double shift_x, double shift_y,
+					    double shift_z);
+
+/**
+ Shifts negative longitudes
+
+ \param geom pointer to Geometry object.
+
+ \sa gaiaShiftCoords, gaiaShiftCoords3D, gaiaNormalizeLonLat
+
+ \note only intended for geographic (longitude/latitude) coordinates.
+ Negative longitudes (-180/0) will be shifted by 360, thus allowing
+ to represent longitudes in the 0/360 range and effectively crossing 
+ the International Date Line.
+ 
+ */
+    GAIAGEO_DECLARE void gaiaShiftLongitude (gaiaGeomCollPtr geom);
+
+/**
+ Shifts any coordinate to within the "normal range" of longitude and
+ latitude values (-180.0 to 180.0 longitude and -90.0 to 90.0 latitude).
+
+ \param geom pointer to Geometry object.
+ \param shift_x X axis shift factor.
+ \param shift_y Y axis shift factor.
+
+ \sa gaiaScaleCoords, gaiaRotateCoords, gaiaReflectCoords, gaiaSwapCoords,
+     gaiaShiftCoords3D, gaiaShiftLongitude
+ */
+    GAIAGEO_DECLARE void gaiaNormalizeLonLat (gaiaGeomCollPtr geom);
+
 
 /**
  Scales any coordinate within a Geometry object
@@ -1455,7 +1664,7 @@ extern "C"
 					   double *b, double *rf);
 
 /**
- Calculates the Great Circle Distance intercurring between two Points
+ Calculates the Great Circle Distance between between two Points
 
  \param a first geodesic parameter.
  \param b second geodesic parameter.
@@ -1477,7 +1686,7 @@ extern "C"
 						    double lat2, double lon2);
 
 /**
- Calculates the Geodesic Distance intercurring between two Points
+ Calculates the Geodesic Distance between between two Points
 
  \param a first geodesic parameter.
  \param b second geodesic parameter.

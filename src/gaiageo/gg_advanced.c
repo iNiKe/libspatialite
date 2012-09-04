@@ -2,7 +2,7 @@
 
  gg_advanced.c -- Gaia advanced geometric operations
   
- version 3.0, 2011 July 20
+ version 4.0, 2012 August 6
 
  Author: Sandro Furieri a.furieri@lqt.it
 
@@ -24,7 +24,7 @@ The Original Code is the SpatiaLite library
 
 The Initial Developer of the Original Code is Alessandro Furieri
  
-Portions created by the Initial Developer are Copyright (C) 2008
+Portions created by the Initial Developer are Copyright (C) 2008-2012
 the Initial Developer. All Rights Reserved.
 
 Contributor(s):
@@ -49,11 +49,9 @@ the terms of any one of the MPL, the GPL or the LGPL.
 #include <math.h>
 #include <float.h>
 
-#ifdef SPL_AMALGAMATION		/* spatialite-amalgamation */
-#include <spatialite/sqlite3ext.h>
-#else
-#include <sqlite3ext.h>
-#endif
+#include "config.h"
+
+#include <spatialite/sqlite.h>
 
 #include <spatialite/gaiageo.h>
 
@@ -540,22 +538,22 @@ gaiaIntersect (double *x0, double *y0, double x1, double y1, double x2,
 	  miny2 = y3;
 	  maxy2 = y4;
       }
-/* checkinkg MBRs first */
-    if (minx1 >= maxx2)
+/* checking MBRs first */
+    if (minx1 > maxx2)
 	return 0;
-    if (miny1 >= maxy2)
+    if (miny1 > maxy2)
 	return 0;
-    if (maxx1 <= minx2)
+    if (maxx1 < minx2)
 	return 0;
-    if (maxy1 <= miny2)
+    if (maxy1 < miny2)
 	return 0;
-    if (minx2 >= maxx1)
+    if (minx2 > maxx1)
 	return 0;
-    if (miny2 >= maxy1)
+    if (miny2 > maxy1)
 	return 0;
-    if (maxx2 <= minx1)
+    if (maxx2 < minx1)
 	return 0;
-    if (maxy2 <= miny1)
+    if (maxy2 < miny1)
 	return 0;
 /* there is an MBRs intersection - proceeding */
     if ((x2 - x1) != 0.0)
@@ -827,7 +825,7 @@ gaiaSanitize (gaiaGeomCollPtr geom)
 			  points++;
 		  }
 		else
-		      points++;
+		    points++;
 		last_x = x;
 		last_y = y;
 		last_z = z;
@@ -1008,7 +1006,7 @@ gaiaSanitize (gaiaGeomCollPtr geom)
 				points++;
 			}
 		      else
-			    points++;
+			  points++;
 		      last_x = x;
 		      last_y = y;
 		      last_z = z;
@@ -1163,25 +1161,22 @@ gaiaSanitize (gaiaGeomCollPtr geom)
 }
 
 static int
+gaiaIsToxicLinestring (gaiaLinestringPtr line)
+{
+/* checking a Linestring */
+    if (line->Points < 2)
+	return 1;
+    return 0;
+
+/* not a valid Linestring, simply a degenerated Point */
+    return 1;
+}
+
+static int
 gaiaIsToxicRing (gaiaRingPtr ring)
 {
-/* checking a Rings */
-    double x0;
-    double y0;
-    double z0;
-    double m0;
-    double x1;
-    double y1;
-    double z1;
-    double m1;
+/* checking a Ring */
     if (ring->Points < 4)
-	return 1;
-/* checking for unclosed rings */
-    gaiaRingGetPoint (ring, 0, &x0, &y0, &z0, &m0);
-    gaiaRingGetPoint (ring, ring->Points - 1, &x1, &y1, &z1, &m1);
-    if (x0 == x1 && y0 == y1)
-	;
-    else
 	return 1;
     return 0;
 }
@@ -1210,8 +1205,11 @@ gaiaIsToxic (gaiaGeomCollPtr geom)
     while (line)
       {
 	  /* checking LINESTRINGs */
-	  if (line->Points < 2)
-	      return 1;
+	  if (gaiaIsToxicLinestring (line))
+	    {
+		gaiaSetGeosErrorMsg ("gaiaIsToxic detected a toxic Linestring");
+		return 1;
+	    }
 	  line = line->Next;
       }
     polyg = geom->FirstPolygon;
@@ -1220,11 +1218,67 @@ gaiaIsToxic (gaiaGeomCollPtr geom)
 	  /* checking POLYGONs */
 	  ring = polyg->Exterior;
 	  if (gaiaIsToxicRing (ring))
-	      return 1;
+	    {
+		gaiaSetGeosErrorMsg ("gaiaIsToxic detected a toxic Ring");
+		return 1;
+	    }
 	  for (ib = 0; ib < polyg->NumInteriors; ib++)
 	    {
 		ring = polyg->Interiors + ib;
 		if (gaiaIsToxicRing (ring))
+		  {
+		      gaiaSetGeosErrorMsg ("gaiaIsToxic detected a toxic Ring");
+		      return 1;
+		  }
+	    }
+	  polyg = polyg->Next;
+      }
+    return 0;
+}
+
+GAIAGEO_DECLARE int
+gaiaIsNotClosedRing (gaiaRingPtr ring)
+{
+/* checking a Ring for closure */
+    double x0;
+    double y0;
+    double z0;
+    double m0;
+    double x1;
+    double y1;
+    double z1;
+    double m1;
+    gaiaRingGetPoint (ring, 0, &x0, &y0, &z0, &m0);
+    gaiaRingGetPoint (ring, ring->Points - 1, &x1, &y1, &z1, &m1);
+    if (x0 == x1 && y0 == y1 && z0 == z1 && m0 == m1)
+	return 0;
+    else
+	return 1;
+}
+
+GAIAGEO_DECLARE int
+gaiaIsNotClosedGeomColl (gaiaGeomCollPtr geom)
+{
+/* 
+/ identifying not properly closed Rings 
+/ i.e. geoms making GEOS to crash !!!
+*/
+    int ib;
+    gaiaPolygonPtr polyg;
+    gaiaRingPtr ring;
+    if (!geom)
+	return 0;
+    polyg = geom->FirstPolygon;
+    while (polyg)
+      {
+	  /* checking POLYGONs */
+	  ring = polyg->Exterior;
+	  if (gaiaIsNotClosedRing (ring))
+	      return 1;
+	  for (ib = 0; ib < polyg->NumInteriors; ib++)
+	    {
+		ring = polyg->Interiors + ib;
+		if (gaiaIsNotClosedRing (ring))
 		    return 1;
 	    }
 	  polyg = polyg->Next;
@@ -1250,7 +1304,6 @@ gaiaLinearize (gaiaGeomCollPtr geom, int force_multi)
     double y;
     double m;
     double z;
-
     if (!geom)
 	return NULL;
     pt = geom->FirstPoint;

@@ -2,7 +2,7 @@
 
  virtualshape.c -- SQLite3 extension [VIRTUAL TABLE accessing Shapefile]
 
- version 3.0, 2011 July 20
+ version 4.0, 2012 August 6
 
  Author: Sandro Furieri a.furieri@lqt.it
 
@@ -24,7 +24,7 @@ The Original Code is the SpatiaLite library
 
 The Initial Developer of the Original Code is Alessandro Furieri
  
-Portions created by the Initial Developer are Copyright (C) 2008
+Portions created by the Initial Developer are Copyright (C) 2008-2012
 the Initial Developer. All Rights Reserved.
 
 Contributor(s):
@@ -48,11 +48,10 @@ the terms of any one of the MPL, the GPL or the LGPL.
 #include <stdio.h>
 #include <string.h>
 
-#ifdef SPL_AMALGAMATION		/* spatialite-amalgamation */
-#include <spatialite/sqlite3.h>
-#else
-#include <sqlite3.h>
-#endif
+#include "config.h"
+
+#include <spatialite/sqlite.h>
+#include <spatialite/debug.h>
 
 #include <spatialite/spatialite.h>
 #include <spatialite/gaiaaux.h>
@@ -177,7 +176,7 @@ vshp_create (sqlite3 * db, void *pAux, int argc, const char *const *argv,
 	  else
 	      strcpy (encoding, pEncoding);
 	  srid = atoi (argv[5]);
-	  if (srid <= 0)
+	  if (srid < 0)
 	      srid = -1;
       }
     else
@@ -386,7 +385,7 @@ vshp_read_row (VirtualShapeCursorPtr cursor)
 		return;
 	    }
 	  /* an error occurred */
-	  fprintf (stderr, "%s\n", cursor->pVtab->Shp->LastError);
+	  spatialite_e ("%s\n", cursor->pVtab->Shp->LastError);
 	  cursor->eof = 1;
 	  return;
       }

@@ -2,7 +2,7 @@
 
  gg_geoscvt.c -- Gaia / GEOS conversion [Geometry]
     
- version 3.0, 2011 July 20
+ version 4.0, 2012 August 6
 
  Author: Sandro Furieri a.furieri@lqt.it
 
@@ -24,7 +24,7 @@ The Original Code is the SpatiaLite library
 
 The Initial Developer of the Original Code is Alessandro Furieri
  
-Portions created by the Initial Developer are Copyright (C) 2008
+Portions created by the Initial Developer are Copyright (C) 2008-2012
 the Initial Developer. All Rights Reserved.
 
 Contributor(s):
@@ -47,15 +47,13 @@ the terms of any one of the MPL, the GPL or the LGPL.
 #include <stdlib.h>
 #include <stdio.h>
 
+#include "config.h"
+
 #ifndef OMIT_GEOS		/* including GEOS */
 #include <geos_c.h>
 #endif
 
-#ifdef SPL_AMALGAMATION		/* spatialite-amalgamation */
-#include <spatialite/sqlite3ext.h>
-#else
-#include <sqlite3ext.h>
-#endif
+#include <spatialite/sqlite.h>
 
 #include <spatialite/gaiageo.h>
 
@@ -78,6 +76,9 @@ toGeosGeometry (const gaiaGeomCollPtr gaia)
     double y;
     double z;
     double m;
+    double x0;
+    double y0;
+    double z0;
     gaiaPointPtr pt;
     gaiaLinestringPtr ln;
     gaiaPolygonPtr pg;
@@ -89,6 +90,7 @@ toGeosGeometry (const gaiaGeomCollPtr gaia)
     GEOSGeometry **geos_holes;
     GEOSGeometry **geos_coll;
     GEOSCoordSequence *cs;
+    int ring_points;
     if (!gaia)
 	return NULL;
     pt = gaia->FirstPoint;
@@ -231,32 +233,79 @@ toGeosGeometry (const gaiaGeomCollPtr gaia)
 	  pg = gaia->FirstPolygon;
 	  rng = pg->Exterior;
 	  /* exterior ring */
-	  cs = GEOSCoordSeq_create (rng->Points, dims);
+	  ring_points = rng->Points;
+	  if (gaiaIsNotClosedRing (rng))
+	      ring_points++;
+	  cs = GEOSCoordSeq_create (ring_points, dims);
 	  for (iv = 0; iv < rng->Points; iv++)
 	    {
 		switch (rng->DimensionModel)
 		  {
 		  case GAIA_XY_Z:
 		      gaiaGetPointXYZ (rng->Coords, iv, &x, &y, &z);
+		      if (iv == 0)
+			{
+			    /* saving the first vertex */
+			    x0 = x;
+			    y0 = y;
+			    z0 = z;
+			}
 		      GEOSCoordSeq_setX (cs, iv, x);
 		      GEOSCoordSeq_setY (cs, iv, y);
 		      GEOSCoordSeq_setZ (cs, iv, z);
 		      break;
 		  case GAIA_XY_M:
 		      gaiaGetPointXYM (rng->Coords, iv, &x, &y, &m);
+		      if (iv == 0)
+			{
+			    /* saving the first vertex */
+			    x0 = x;
+			    y0 = y;
+			}
 		      GEOSCoordSeq_setX (cs, iv, x);
 		      GEOSCoordSeq_setY (cs, iv, y);
 		      break;
 		  case GAIA_XY_Z_M:
 		      gaiaGetPointXYZM (rng->Coords, iv, &x, &y, &z, &m);
+		      if (iv == 0)
+			{
+			    /* saving the first vertex */
+			    x0 = x;
+			    y0 = y;
+			    z0 = z;
+			}
 		      GEOSCoordSeq_setX (cs, iv, x);
 		      GEOSCoordSeq_setY (cs, iv, y);
 		      GEOSCoordSeq_setZ (cs, iv, z);
 		      break;
 		  default:
 		      gaiaGetPoint (rng->Coords, iv, &x, &y);
+		      if (iv == 0)
+			{
+			    /* saving the first vertex */
+			    x0 = x;
+			    y0 = y;
+			}
 		      GEOSCoordSeq_setX (cs, iv, x);
 		      GEOSCoordSeq_setY (cs, iv, y);
+		      break;
+		  };
+	    }
+	  if (ring_points > rng->Points)
+	    {
+		/* ensuring Ring's closure */
+		iv = ring_points - 1;
+		switch (rng->DimensionModel)
+		  {
+		  case GAIA_XY_Z:
+		  case GAIA_XY_Z_M:
+		      GEOSCoordSeq_setX (cs, iv, x0);
+		      GEOSCoordSeq_setY (cs, iv, y0);
+		      GEOSCoordSeq_setZ (cs, iv, z0);
+		      break;
+		  default:
+		      GEOSCoordSeq_setX (cs, iv, x0);
+		      GEOSCoordSeq_setY (cs, iv, y0);
 		      break;
 		  };
 	    }
@@ -270,33 +319,80 @@ toGeosGeometry (const gaiaGeomCollPtr gaia)
 		  {
 		      /* interior ring */
 		      rng = pg->Interiors + ib;
-		      cs = GEOSCoordSeq_create (rng->Points, dims);
+		      ring_points = rng->Points;
+		      if (gaiaIsNotClosedRing (rng))
+			  ring_points++;
+		      cs = GEOSCoordSeq_create (ring_points, dims);
 		      for (iv = 0; iv < rng->Points; iv++)
 			{
 			    switch (rng->DimensionModel)
 			      {
 			      case GAIA_XY_Z:
 				  gaiaGetPointXYZ (rng->Coords, iv, &x, &y, &z);
+				  if (iv == 0)
+				    {
+					/* saving the first vertex */
+					x0 = x;
+					y0 = y;
+					z0 = z;
+				    }
 				  GEOSCoordSeq_setX (cs, iv, x);
 				  GEOSCoordSeq_setY (cs, iv, y);
 				  GEOSCoordSeq_setZ (cs, iv, z);
 				  break;
 			      case GAIA_XY_M:
 				  gaiaGetPointXYM (rng->Coords, iv, &x, &y, &m);
+				  if (iv == 0)
+				    {
+					/* saving the first vertex */
+					x0 = x;
+					y0 = y;
+				    }
 				  GEOSCoordSeq_setX (cs, iv, x);
 				  GEOSCoordSeq_setY (cs, iv, y);
 				  break;
 			      case GAIA_XY_Z_M:
 				  gaiaGetPointXYZM (rng->Coords, iv, &x, &y, &z,
 						    &m);
+				  if (iv == 0)
+				    {
+					/* saving the first vertex */
+					x0 = x;
+					y0 = y;
+					z0 = z;
+				    }
 				  GEOSCoordSeq_setX (cs, iv, x);
 				  GEOSCoordSeq_setY (cs, iv, y);
 				  GEOSCoordSeq_setZ (cs, iv, z);
 				  break;
 			      default:
 				  gaiaGetPoint (rng->Coords, iv, &x, &y);
+				  if (iv == 0)
+				    {
+					/* saving the first vertex */
+					x0 = x;
+					y0 = y;
+				    }
 				  GEOSCoordSeq_setX (cs, iv, x);
 				  GEOSCoordSeq_setY (cs, iv, y);
+				  break;
+			      };
+			}
+		      if (ring_points > rng->Points)
+			{
+			    /* ensuring Ring's closure */
+			    iv = ring_points - 1;
+			    switch (rng->DimensionModel)
+			      {
+			      case GAIA_XY_Z:
+			      case GAIA_XY_Z_M:
+				  GEOSCoordSeq_setX (cs, iv, x0);
+				  GEOSCoordSeq_setY (cs, iv, y0);
+				  GEOSCoordSeq_setZ (cs, iv, z0);
+				  break;
+			      default:
+				  GEOSCoordSeq_setX (cs, iv, x0);
+				  GEOSCoordSeq_setY (cs, iv, y0);
 				  break;
 			      };
 			}
@@ -377,32 +473,79 @@ toGeosGeometry (const gaiaGeomCollPtr gaia)
 	    {
 		rng = pg->Exterior;
 		/* exterior ring */
-		cs = GEOSCoordSeq_create (rng->Points, dims);
+		ring_points = rng->Points;
+		if (gaiaIsNotClosedRing (rng))
+		    ring_points++;
+		cs = GEOSCoordSeq_create (ring_points, dims);
 		for (iv = 0; iv < rng->Points; iv++)
 		  {
 		      switch (rng->DimensionModel)
 			{
 			case GAIA_XY_Z:
 			    gaiaGetPointXYZ (rng->Coords, iv, &x, &y, &z);
+			    if (iv == 0)
+			      {
+				  /* saving the first vertex */
+				  x0 = x;
+				  y0 = y;
+				  z0 = z;
+			      }
 			    GEOSCoordSeq_setX (cs, iv, x);
 			    GEOSCoordSeq_setY (cs, iv, y);
 			    GEOSCoordSeq_setZ (cs, iv, z);
 			    break;
 			case GAIA_XY_M:
 			    gaiaGetPointXYM (rng->Coords, iv, &x, &y, &m);
+			    if (iv == 0)
+			      {
+				  /* saving the first vertex */
+				  x0 = x;
+				  y0 = y;
+			      }
 			    GEOSCoordSeq_setX (cs, iv, x);
 			    GEOSCoordSeq_setY (cs, iv, y);
 			    break;
 			case GAIA_XY_Z_M:
 			    gaiaGetPointXYZM (rng->Coords, iv, &x, &y, &z, &m);
+			    if (iv == 0)
+			      {
+				  /* saving the first vertex */
+				  x0 = x;
+				  y0 = y;
+				  z0 = z;
+			      }
 			    GEOSCoordSeq_setX (cs, iv, x);
 			    GEOSCoordSeq_setY (cs, iv, y);
 			    GEOSCoordSeq_setZ (cs, iv, z);
 			    break;
 			default:
 			    gaiaGetPoint (rng->Coords, iv, &x, &y);
+			    if (iv == 0)
+			      {
+				  /* saving the first vertex */
+				  x0 = x;
+				  y0 = y;
+			      }
 			    GEOSCoordSeq_setX (cs, iv, x);
 			    GEOSCoordSeq_setY (cs, iv, y);
+			    break;
+			};
+		  }
+		if (ring_points > rng->Points)
+		  {
+		      /* ensuring Ring's closure */
+		      iv = ring_points - 1;
+		      switch (rng->DimensionModel)
+			{
+			case GAIA_XY_Z:
+			case GAIA_XY_Z_M:
+			    GEOSCoordSeq_setX (cs, iv, x0);
+			    GEOSCoordSeq_setY (cs, iv, y0);
+			    GEOSCoordSeq_setZ (cs, iv, z0);
+			    break;
+			default:
+			    GEOSCoordSeq_setX (cs, iv, x0);
+			    GEOSCoordSeq_setY (cs, iv, y0);
 			    break;
 			};
 		  }
@@ -416,7 +559,10 @@ toGeosGeometry (const gaiaGeomCollPtr gaia)
 			{
 			    /* interior ring */
 			    rng = pg->Interiors + ib;
-			    cs = GEOSCoordSeq_create (rng->Points, dims);
+			    ring_points = rng->Points;
+			    if (gaiaIsNotClosedRing (rng))
+				ring_points++;
+			    cs = GEOSCoordSeq_create (ring_points, dims);
 			    for (iv = 0; iv < rng->Points; iv++)
 			      {
 				  switch (rng->DimensionModel)
@@ -424,6 +570,13 @@ toGeosGeometry (const gaiaGeomCollPtr gaia)
 				    case GAIA_XY_Z:
 					gaiaGetPointXYZ (rng->Coords, iv, &x,
 							 &y, &z);
+					if (iv == 0)
+					  {
+					      /* saving the first vertex */
+					      x0 = x;
+					      y0 = y;
+					      z0 = z;
+					  }
 					GEOSCoordSeq_setX (cs, iv, x);
 					GEOSCoordSeq_setY (cs, iv, y);
 					GEOSCoordSeq_setZ (cs, iv, z);
@@ -431,20 +584,57 @@ toGeosGeometry (const gaiaGeomCollPtr gaia)
 				    case GAIA_XY_M:
 					gaiaGetPointXYM (rng->Coords, iv, &x,
 							 &y, &m);
+					if (iv == 0)
+					  {
+					      /* saving the first vertex */
+					      x0 = x;
+					      y0 = y;
+					  }
 					GEOSCoordSeq_setX (cs, iv, x);
 					GEOSCoordSeq_setY (cs, iv, y);
 					break;
 				    case GAIA_XY_Z_M:
 					gaiaGetPointXYZM (rng->Coords, iv, &x,
 							  &y, &z, &m);
+					if (iv == 0)
+					  {
+					      /* saving the first vertex */
+					      x0 = x;
+					      y0 = y;
+					      z0 = z;
+					  }
 					GEOSCoordSeq_setX (cs, iv, x);
 					GEOSCoordSeq_setY (cs, iv, y);
 					GEOSCoordSeq_setZ (cs, iv, z);
 					break;
 				    default:
 					gaiaGetPoint (rng->Coords, iv, &x, &y);
+					if (iv == 0)
+					  {
+					      /* saving the first vertex */
+					      x0 = x;
+					      y0 = y;
+					  }
 					GEOSCoordSeq_setX (cs, iv, x);
 					GEOSCoordSeq_setY (cs, iv, y);
+					break;
+				    };
+			      }
+			    if (ring_points > rng->Points)
+			      {
+				  /* ensuring Ring's closure */
+				  iv = ring_points - 1;
+				  switch (rng->DimensionModel)
+				    {
+				    case GAIA_XY_Z:
+				    case GAIA_XY_Z_M:
+					GEOSCoordSeq_setX (cs, iv, x0);
+					GEOSCoordSeq_setY (cs, iv, y0);
+					GEOSCoordSeq_setZ (cs, iv, z0);
+					break;
+				    default:
+					GEOSCoordSeq_setX (cs, iv, x0);
+					GEOSCoordSeq_setY (cs, iv, y0);
 					break;
 				    };
 			      }

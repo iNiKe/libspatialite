@@ -42,40 +42,52 @@ the provisions above, a recipient may use your version of this file under
 the terms of any one of the MPL, the GPL or the LGPL.
  
 */
+#define _GNU_SOURCE
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 
+#include "config.h"
+
 #include "sqlite3.h"
 #include "spatialite.h"
 
-int main (int argc, char *argv[])
+#ifdef _WIN32
+#include "asprintf4win.h"
+#endif
+
+int do_test(sqlite3 *db_handle)
 {
-    sqlite3 *db_handle = NULL;
+#ifndef OMIT_ICONV	/* only if ICONV is supported */
     char *sql_statement;
     int ret;
     char *err_msg = NULL;
-    int i;
     char **results;
     int rows;
     int columns;
 
-    spatialite_init (0);
-
-    ret = sqlite3_open_v2 (":memory:", &db_handle, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL);
-    if (ret != SQLITE_OK) {
-	fprintf (stderr, "cannot open in-memory db: %s\n", sqlite3_errmsg (db_handle));
-	sqlite3_close (db_handle);
-	db_handle = NULL;
-	return -1;
-    }
-    
     ret = sqlite3_exec (db_handle, "create VIRTUAL TABLE shapetest USING VirtualShape(\"shapetest1\", UTF-8, 4326);", NULL, NULL, &err_msg);
     if (ret != SQLITE_OK) {
 	fprintf (stderr, "VirtualShape error: %s\n", err_msg);
 	sqlite3_free (err_msg);
 	return -2;
     }
+    ret = sqlite3_get_table (db_handle, "SELECT RegisterVirtualGeometry('shapetest')", &results, &rows, &columns, &err_msg);
+    if (ret != SQLITE_OK) {
+	fprintf (stderr, "RegisterVirtualGeometry error: %s\n", err_msg);
+	sqlite3_free (err_msg);
+	return -3;
+    }
+    if ((rows != 1) || (columns != 1)) {
+	fprintf (stderr, "RegisterVirtualGeometry Unexpected error: select columns bad result: %i/%i.\n", rows, columns);
+	return  -4;
+    }
+    if (strcmp(results[1], "1") != 0) {
+	fprintf (stderr, "RegisterVirtualGeometry Unexpected error: header() bad result: %s.\n", results[0]);
+	return  -5;
+    }
+    sqlite3_free_table (results);
+
 
     asprintf(&sql_statement, "select testcase1, testcase2, AsText(Geometry) from shapetest where testcase2 < 20;");
     ret = sqlite3_get_table (db_handle, sql_statement, &results, &rows, &columns, &err_msg);
@@ -83,27 +95,27 @@ int main (int argc, char *argv[])
     if (ret != SQLITE_OK) {
 	fprintf (stderr, "Error: %s\n", err_msg);
 	sqlite3_free (err_msg);
-	return -3;
+	return -6;
     }
     if ((rows != 1) || (columns != 3)) {
 	fprintf (stderr, "Unexpected error: select columns bad result: %i/%i.\n", rows, columns);
-	return  -4;
+	return  -7;
     }
     if (strcmp(results[0], "testcase1") != 0) {
 	fprintf (stderr, "Unexpected error: header() bad result: %s.\n", results[0]);
-	return  -5;
+	return  -8;
     }
     if (strcmp(results[3], "windward") != 0) {
 	fprintf (stderr, "Unexpected error: windward bad result: %s.\n", results[3]);
-	return  -6;
+	return  -9;
     }
     if (strcmp(results[4], "2") != 0) {
 	fprintf (stderr, "Unexpected error: integer() bad result: %s.\n", results[4]);
-	return  -7;
+	return  -10;
     }
     if (strcmp(results[5], "POINT(3480766.311245 4495355.740524)") != 0) {
 	fprintf (stderr, "Unexpected error: geometry() bad result: %s.\n", results[5]);
-	return  -8;
+	return  -11;
     }
     sqlite3_free_table (results);
 
@@ -113,27 +125,27 @@ int main (int argc, char *argv[])
     if (ret != SQLITE_OK) {
 	fprintf (stderr, "Error: %s\n", err_msg);
 	sqlite3_free (err_msg);
-	return -10;
+	return -12;
     }
     if ((rows != 1) || (columns != 3)) {
 	fprintf (stderr, "Unexpected error: select columns bad result: %i/%i.\n", rows, columns);
-	return  -11;
+	return  -13;
     }
     if (strcmp(results[0], "testcase1") != 0) {
 	fprintf (stderr, "Unexpected error: header() bad result: %s.\n", results[0]);
-	return  -12;
+	return  -14;
     }
     if (strcmp(results[3], "windward") != 0) {
 	fprintf (stderr, "Unexpected error: windward bad result: %s.\n", results[3]);
-	return  -13;
+	return  -15;
     }
     if (strcmp(results[4], "2") != 0) {
 	fprintf (stderr, "Unexpected error: integer() bad result: %s.\n", results[4]);
-	return  -14;
+	return  -16;
     }
     if (strcmp(results[5], "POINT(3480766.311245 4495355.740524)") != 0) {
 	fprintf (stderr, "Unexpected error: geometry() bad result: %s.\n", results[5]);
-	return  -15;
+	return  -17;
     }
     sqlite3_free_table (results);
 
@@ -143,27 +155,27 @@ int main (int argc, char *argv[])
     if (ret != SQLITE_OK) {
 	fprintf (stderr, "Error: %s\n", err_msg);
 	sqlite3_free (err_msg);
-	return -16;
+	return -18;
     }
     if ((rows != 1) || (columns != 3)) {
 	fprintf (stderr, "Unexpected error: select columns bad result: %i/%i.\n", rows, columns);
-	return  -17;
+	return  -19;
     }
     if (strcmp(results[0], "testcase1") != 0) {
 	fprintf (stderr, "Unexpected error: header() bad result: %s.\n", results[0]);
-	return  -18;
+	return  -20;
     }
     if (strcmp(results[3], "orde lees") != 0) {
 	fprintf (stderr, "Unexpected error: orde lees bad result: %s.\n", results[3]);
-	return  -19;
+	return  -21;
     }
     if (strcmp(results[4], "20") != 0) {
 	fprintf (stderr, "Unexpected error: integer2() bad result: %s.\n", results[4]);
-	return  -20;
+	return  -22;
     }
     if (strcmp(results[5], "POINT(3482470.825574 4495691.054818)") != 0) {
 	fprintf (stderr, "Unexpected error: geometry() bad result: %s.\n", results[5]);
-	return  -21;
+	return  -23;
     }
     sqlite3_free_table (results);
 
@@ -173,27 +185,27 @@ int main (int argc, char *argv[])
     if (ret != SQLITE_OK) {
 	fprintf (stderr, "Error: %s\n", err_msg);
 	sqlite3_free (err_msg);
-	return -22;
+	return -24;
     }
     if ((rows != 1) || (columns != 3)) {
 	fprintf (stderr, "Unexpected error: select columns bad result: %i/%i.\n", rows, columns);
-	return  -23;
+	return  -25;
     }
     if (strcmp(results[0], "testcase1") != 0) {
 	fprintf (stderr, "Unexpected error: header() bad result: %s.\n", results[0]);
-	return  -24;
+	return  -26;
     }
     if (strcmp(results[3], "orde lees") != 0) {
 	fprintf (stderr, "Unexpected error: orde lees2 bad result: %s.\n", results[3]);
-	return  -25;
+	return  -27;
     }
     if (strcmp(results[4], "20") != 0) {
 	fprintf (stderr, "Unexpected error: integer4() bad result: %s.\n", results[4]);
-	return  -26;
+	return  -28;
     }
     if (strcmp(results[5], "POINT(3482470.825574 4495691.054818)") != 0) {
 	fprintf (stderr, "Unexpected error: geometry() bad result: %s.\n", results[5]);
-	return  -27;
+	return  -29;
     }
     sqlite3_free_table (results);
 
@@ -203,27 +215,27 @@ int main (int argc, char *argv[])
     if (ret != SQLITE_OK) {
 	fprintf (stderr, "Error: %s\n", err_msg);
 	sqlite3_free (err_msg);
-	return -28;
+	return -30;
     }
     if ((rows != 1) || (columns != 3)) {
 	fprintf (stderr, "Unexpected error: select columns bad result: %i/%i.\n", rows, columns);
-	return  -29;
+	return  -31;
     }
     if (strcmp(results[0], "testcase1") != 0) {
 	fprintf (stderr, "Unexpected error: header() bad result: %s.\n", results[0]);
-	return  -30;
+	return  -32;
     }
     if (strcmp(results[3], "orde lees") != 0) {
 	fprintf (stderr, "Unexpected error: orde lees3 bad result: %s.\n", results[3]);
-	return  -31;
+	return  -33;
     }
     if (strcmp(results[4], "20") != 0) {
 	fprintf (stderr, "Unexpected error: integer5() bad result: %s.\n", results[4]);
-	return  -32;
+	return  -33;
     }
     if (strcmp(results[5], "POINT(3482470.825574 4495691.054818)") != 0) {
 	fprintf (stderr, "Unexpected error: geometry() bad result: %s.\n", results[5]);
-	return  -33;
+	return  -34;
     }
     sqlite3_free_table (results);
 
@@ -233,27 +245,27 @@ int main (int argc, char *argv[])
     if (ret != SQLITE_OK) {
 	fprintf (stderr, "Error: %s\n", err_msg);
 	sqlite3_free (err_msg);
-	return -34;
+	return -35;
     }
     if ((rows != 1) || (columns != 3)) {
 	fprintf (stderr, "Unexpected error: select columns bad result: %i/%i.\n", rows, columns);
-	return  -35;
+	return  -36;
     }
     if (strcmp(results[0], "testcase1") != 0) {
 	fprintf (stderr, "Unexpected error: header() bad result: %s.\n", results[0]);
-	return  -36;
+	return  -37;
     }
     if (strcmp(results[3], "orde lees") != 0) {
 	fprintf (stderr, "Unexpected error: orde lees bad result: %s.\n", results[3]);
-	return  -37;
+	return  -38;
     }
     if (strcmp(results[4], "20") != 0) {
 	fprintf (stderr, "Unexpected error: integer() bad result: %s.\n", results[4]);
-	return  -38;
+	return  -39;
     }
     if (strcmp(results[5], "POINT(3482470.825574 4495691.054818)") != 0) {
 	fprintf (stderr, "Unexpected error: geometry() bad result: %s.\n", results[5]);
-	return  -39;
+	return  -40;
     }
     sqlite3_free_table (results);
 
@@ -263,27 +275,27 @@ int main (int argc, char *argv[])
     if (ret != SQLITE_OK) {
 	fprintf (stderr, "Error: %s\n", err_msg);
 	sqlite3_free (err_msg);
-	return -40;
+	return -41;
     }
     if ((rows != 1) || (columns != 3)) {
 	fprintf (stderr, "Unexpected error: select columns bad result: %i/%i.\n", rows, columns);
-	return  -41;
+	return  -42;
     }
     if (strcmp(results[0], "testcase1") != 0) {
 	fprintf (stderr, "Unexpected error: header() bad result: %s.\n", results[0]);
-	return  -42;
+	return  -43;
     }
     if (strcmp(results[3], "orde lees") != 0) {
 	fprintf (stderr, "Unexpected error: orde lees bad result: %s.\n", results[3]);
-	return  -43;
+	return  -44;
     }
     if (strcmp(results[4], "20") != 0) {
 	fprintf (stderr, "Unexpected error: integer() bad result: %s.\n", results[4]);
-	return  -44;
+	return  -45;
     }
     if (strcmp(results[5], "POINT(3482470.825574 4495691.054818)") != 0) {
 	fprintf (stderr, "Unexpected error: geometry() bad result: %s.\n", results[5]);
-	return  -45;
+	return  -46;
     }
     sqlite3_free_table (results);
 
@@ -292,7 +304,7 @@ int main (int argc, char *argv[])
     if (ret != SQLITE_OK) {
 	fprintf (stderr, "BEGIN error: %s\n", err_msg);
 	sqlite3_free (err_msg);
-	return -46;
+	return -47;
     }
 
     asprintf(&sql_statement, "select testcase1, testcase2, AsText(Geometry) from shapetest where testcase1 > \"p\";");
@@ -329,7 +341,7 @@ int main (int argc, char *argv[])
     if (ret != SQLITE_READONLY) {
 	fprintf (stderr, "UPDATE error: %s\n", err_msg);
 	sqlite3_free (err_msg);
-	return -46;
+	return -54;
     }
     sqlite3_free (err_msg);
     
@@ -337,7 +349,7 @@ int main (int argc, char *argv[])
     if (ret != SQLITE_OK) {
 	fprintf (stderr, "ROLLBACK error: %s\n", err_msg);
 	sqlite3_free (err_msg);
-	return -47;
+	return -55;
     }
 
     asprintf(&sql_statement, "select testcase1, testcase2, AsText(Geometry) from shapetest where testcase1 >= \"p\";");
@@ -346,27 +358,27 @@ int main (int argc, char *argv[])
     if (ret != SQLITE_OK) {
 	fprintf (stderr, "Error: %s\n", err_msg);
 	sqlite3_free (err_msg);
-	return -54;
+	return -56;
     }
     if ((rows != 1) || (columns != 3)) {
 	fprintf (stderr, "Unexpected error: select columns bad result: %i/%i.\n", rows, columns);
-	return  -55;
+	return  -57;
     }
     if (strcmp(results[0], "testcase1") != 0) {
 	fprintf (stderr, "Unexpected error: header() bad result: %s.\n", results[0]);
-	return  -56;
+	return  -58;
     }
     if (strcmp(results[3], "windward") != 0) {
 	fprintf (stderr, "Unexpected error: windward bad result: %s.\n", results[3]);
-	return  -57;
+	return  -59;
     }
     if (strcmp(results[4], "2") != 0) {
 	fprintf (stderr, "Unexpected error: integer() bad result: %s.\n", results[4]);
-	return  -58;
+	return  -60;
     }
     if (strcmp(results[5], "POINT(3480766.311245 4495355.740524)") != 0) {
 	fprintf (stderr, "Unexpected error: geometry() bad result: %s.\n", results[5]);
-	return  -59;
+	return  -61;
     }
     sqlite3_free_table (results);
 
@@ -376,27 +388,27 @@ int main (int argc, char *argv[])
     if (ret != SQLITE_OK) {
 	fprintf (stderr, "Error: %s\n", err_msg);
 	sqlite3_free (err_msg);
-	return -54;
+	return -62;
     }
     if ((rows != 1) || (columns != 3)) {
 	fprintf (stderr, "Unexpected error: select columns bad result: %i/%i.\n", rows, columns);
-	return  -55;
+	return  -63;
     }
     if (strcmp(results[0], "testcase1") != 0) {
 	fprintf (stderr, "Unexpected error: header() bad result: %s.\n", results[0]);
-	return  -56;
+	return  -64;
     }
     if (strcmp(results[3], "windward") != 0) {
 	fprintf (stderr, "Unexpected error: windward bad result: %s.\n", results[3]);
-	return  -57;
+	return  -65;
     }
     if (strcmp(results[4], "2") != 0) {
 	fprintf (stderr, "Unexpected error: integer() bad result: %s.\n", results[4]);
-	return  -58;
+	return  -66;
     }
     if (strcmp(results[5], "POINT(3480766.311245 4495355.740524)") != 0) {
 	fprintf (stderr, "Unexpected error: geometry() bad result: %s.\n", results[5]);
-	return  -59;
+	return  -67;
     }
     sqlite3_free_table (results);
 
@@ -406,27 +418,27 @@ int main (int argc, char *argv[])
     if (ret != SQLITE_OK) {
 	fprintf (stderr, "Error: %s\n", err_msg);
 	sqlite3_free (err_msg);
-	return -60;
+	return -68;
     }
     if ((rows != 1) || (columns != 3)) {
 	fprintf (stderr, "Unexpected error: select columns bad result: %i/%i.\n", rows, columns);
-	return  -61;
+	return  -69;
     }
     if (strcmp(results[0], "testcase1") != 0) {
 	fprintf (stderr, "Unexpected error: header() bad result: %s.\n", results[0]);
-	return  -62;
+	return  -70;
     }
     if (strcmp(results[3], "windward") != 0) {
 	fprintf (stderr, "Unexpected error: windward bad result: %s.\n", results[3]);
-	return  -63;
+	return  -71;
     }
     if (strcmp(results[4], "2") != 0) {
 	fprintf (stderr, "Unexpected error: integer() bad result: %s.\n", results[4]);
-	return  -64;
+	return  -72;
     }
     if (strcmp(results[5], "POINT(3480766.311245 4495355.740524)") != 0) {
 	fprintf (stderr, "Unexpected error: geometry() bad result: %s.\n", results[5]);
-	return  -65;
+	return  -73;
     }
     sqlite3_free_table (results);
 
@@ -436,27 +448,27 @@ int main (int argc, char *argv[])
     if (ret != SQLITE_OK) {
 	fprintf (stderr, "Error: %s\n", err_msg);
 	sqlite3_free (err_msg);
-	return -66;
+	return -74;
     }
     if ((rows != 1) || (columns != 3)) {
 	fprintf (stderr, "Unexpected error: select columns bad result: %i/%i.\n", rows, columns);
-	return  -67;
+	return  -75;
     }
     if (strcmp(results[0], "testcase1") != 0) {
 	fprintf (stderr, "Unexpected error: header() bad result: %s.\n", results[0]);
-	return  -68;
+	return  -76;
     }
     if (strcmp(results[3], "windward") != 0) {
 	fprintf (stderr, "Unexpected error: windward bad result: %s.\n", results[3]);
-	return  -69;
+	return  -77;
     }
     if (strcmp(results[4], "2") != 0) {
 	fprintf (stderr, "Unexpected error: integer() bad result: %s.\n", results[4]);
-	return  -70;
+	return  -78;
     }
     if (strcmp(results[5], "POINT(3480766.311245 4495355.740524)") != 0) {
 	fprintf (stderr, "Unexpected error: geometry() bad result: %s.\n", results[5]);
-	return  -71;
+	return  -79;
     }
     sqlite3_free_table (results);
 
@@ -466,27 +478,27 @@ int main (int argc, char *argv[])
     if (ret != SQLITE_OK) {
 	fprintf (stderr, "Error: %s\n", err_msg);
 	sqlite3_free (err_msg);
-	return -72;
+	return -80;
     }
     if ((rows != 1) || (columns != 3)) {
 	fprintf (stderr, "Unexpected error: select columns bad result: %i/%i.\n", rows, columns);
-	return  -73;
+	return  -81;
     }
     if (strcmp(results[0], "testcase1") != 0) {
 	fprintf (stderr, "Unexpected error: header() bad result: %s.\n", results[0]);
-	return  -74;
+	return  -82;
     }
     if (strcmp(results[3], "windward") != 0) {
 	fprintf (stderr, "Unexpected error: windward bad result: %s.\n", results[3]);
-	return  -75;
+	return  -83;
     }
     if (strcmp(results[4], "2") != 0) {
 	fprintf (stderr, "Unexpected error: integer() bad result: %s.\n", results[4]);
-	return  -76;
+	return  -84;
     }
     if (strcmp(results[5], "POINT(3480766.311245 4495355.740524)") != 0) {
 	fprintf (stderr, "Unexpected error: geometry() bad result: %s.\n", results[5]);
-	return  -77;
+	return  -85;
     }
     sqlite3_free_table (results);
     
@@ -496,27 +508,27 @@ int main (int argc, char *argv[])
     if (ret != SQLITE_OK) {
 	fprintf (stderr, "Error: %s\n", err_msg);
 	sqlite3_free (err_msg);
-	return -78;
+	return -86;
     }
     if ((rows != 1) || (columns != 3)) {
 	fprintf (stderr, "Unexpected error: select columns bad result: %i/%i.\n", rows, columns);
-	return  -79;
+	return  -87;
     }
     if (strcmp(results[0], "testcase1") != 0) {
 	fprintf (stderr, "Unexpected error: header() bad result: %s.\n", results[0]);
-	return  -80;
+	return  -88;
     }
     if (strcmp(results[3], "orde lees") != 0) {
 	fprintf (stderr, "Unexpected error: orde lees bad result: %s.\n", results[3]);
-	return  -81;
+	return  -89;
     }
     if (strcmp(results[4], "20") != 0) {
 	fprintf (stderr, "Unexpected error: integer() bad result: %s.\n", results[4]);
-	return  -82;
+	return  -90;
     }
     if (strcmp(results[5], "POINT(3482470.825574 4495691.054818)") != 0) {
 	fprintf (stderr, "Unexpected error: geometry() bad result: %s.\n", results[5]);
-	return  -83;
+	return  -91;
     }
     sqlite3_free_table (results);
 
@@ -526,70 +538,287 @@ int main (int argc, char *argv[])
     if (ret != SQLITE_OK) {
 	fprintf (stderr, "Error: %s\n", err_msg);
 	sqlite3_free (err_msg);
-	return -84;
+	return -92;
     }
     if ((rows != 1) || (columns != 3)) {
 	fprintf (stderr, "Unexpected error: select columns bad result: %i/%i.\n", rows, columns);
-	return  -85;
+	return  -93;
     }
     if (strcmp(results[0], "testcase1") != 0) {
 	fprintf (stderr, "Unexpected error: header() bad result: %s.\n", results[0]);
-	return  -86;
+	return  -94;
     }
     if (strcmp(results[3], "orde lees") != 0) {
 	fprintf (stderr, "Unexpected error: orde lees bad result: %s.\n", results[3]);
-	return  -87;
+	return  -95;
     }
     if (strcmp(results[4], "20") != 0) {
 	fprintf (stderr, "Unexpected error: integer() bad result: %s.\n", results[4]);
-	return  -88;
+	return  -96;
     }
     if (strcmp(results[5], "POINT(3482470.825574 4495691.054818)") != 0) {
 	fprintf (stderr, "Unexpected error: geometry() bad result: %s.\n", results[5]);
-	return  -89;
+	return  -97;
     }
     sqlite3_free_table (results);
 
-    asprintf(&sql_statement, "select PKUID, testcase1, testcase2, AsText(Geometry) from shapetest where testcase1 LIKE \"wind\%\";");
+    asprintf(&sql_statement, "select PKUID, testcase1, testcase2, AsText(Geometry) from shapetest where testcase1 LIKE \"wind%%\";");
     ret = sqlite3_get_table (db_handle, sql_statement, &results, &rows, &columns, &err_msg);
     free(sql_statement);
     if (ret != SQLITE_OK) {
 	fprintf (stderr, "Error: %s\n", err_msg);
 	sqlite3_free (err_msg);
-	return -90;
+	return -98;
     }
     if ((rows != 1) || (columns != 4)) {
 	fprintf (stderr, "Unexpected error: select columns bad result: %i/%i.\n", rows, columns);
-	return  -91;
+	return  -99;
     }
     if (strcmp(results[0], "PKUID") != 0) {
 	fprintf (stderr, "Unexpected error: header uid bad result: %s.\n", results[0]);
-	return  -92;
+	return  -100;
     }
     if (strcmp(results[1], "testcase1") != 0) {
 	fprintf (stderr, "Unexpected error: header bad result: %s.\n", results[1]);
-	return  -93;
+	return  -101;
     }
     if (strcmp(results[4], "1") != 0) {
 	fprintf (stderr, "Unexpected error: windward PK bad result: %s.\n", results[4]);
-	return  -93;
+	return  -102;
     }
     if (strcmp(results[5], "windward") != 0) {
 	fprintf (stderr, "Unexpected error: windward bad result: %s.\n", results[5]);
-	return  -94;
+	return  -103;
     }
     sqlite3_free_table (results);
 
-    ret = sqlite3_exec (db_handle, "DROP TABLE shapetest;", NULL, NULL, &err_msg);
+    ret = sqlite3_get_table (db_handle, "SELECT DropVirtualGeometry('shapetest')", &results, &rows, &columns, &err_msg);
     if (ret != SQLITE_OK) {
-	fprintf (stderr, "DROP TABLE error: %s\n", err_msg);
+	fprintf (stderr, "DropVirtualGeometry error: %s\n", err_msg);
 	sqlite3_free (err_msg);
-	return -49;
+	return -104;
     }
+    if ((rows != 1) || (columns != 1)) {
+	fprintf (stderr, "DropVirtualGeometry Unexpected error: select columns bad result: %i/%i.\n", rows, columns);
+	return  -105;
+    }
+    if (strcmp(results[1], "1") != 0) {
+	fprintf (stderr, "DropVirtualGeometry Unexpected error: header() bad result: %s.\n", results[0]);
+	return  -106;
+    }
+    sqlite3_free_table (results);
 
+    ret = sqlite3_exec (db_handle, "create VIRTUAL TABLE shapetest2 USING VirtualShape(\"shp/merano-3d/roads\", CP1252, 25832);", NULL, NULL, &err_msg);
+    if (ret != SQLITE_OK) {
+	fprintf (stderr, "VirtualShape error: %s\n", err_msg);
+	sqlite3_free (err_msg);
+	return -107;
+    }
+    ret = sqlite3_get_table (db_handle, "SELECT RegisterVirtualGeometry('shapetest2')", &results, &rows, &columns, &err_msg);
+    if (ret != SQLITE_OK) {
+	fprintf (stderr, "RegisterVirtualGeometry error: %s\n", err_msg);
+	sqlite3_free (err_msg);
+	return -108;
+    }
+    if ((rows != 1) || (columns != 1)) {
+	fprintf (stderr, "RegisterVirtualGeometry Unexpected error: select columns bad result: %i/%i.\n", rows, columns);
+	return  -109;
+    }
+    if (strcmp(results[1], "1") != 0) {
+	fprintf (stderr, "RegisterVirtualGeometry Unexpected error: header() bad result: %s.\n", results[0]);
+	return  -110;
+    }
+    sqlite3_free_table (results);
+    ret = sqlite3_get_table (db_handle, "SELECT UpdateLayerStatistics('shapetest2')", &results, &rows, &columns, &err_msg);
+    if (ret != SQLITE_OK) {
+	fprintf (stderr, "UpdateLayerStatistics error: %s\n", err_msg);
+	sqlite3_free (err_msg);
+	return -111;
+    }
+    if ((rows != 1) || (columns != 1)) {
+	fprintf (stderr, "UpdateLayerStatistics Unexpected error: select columns bad result: %i/%i.\n", rows, columns);
+	return  -112;
+    }
+    if (strcmp(results[1], "1") != 0) {
+	fprintf (stderr, "UpdateLayerStatistics Unexpected error: header() bad result: %s.\n", results[0]);
+	return  -113;
+    }
+    sqlite3_free_table (results);
+
+    ret = sqlite3_get_table (db_handle, "SELECT DropVirtualGeometry('shapetest2')", &results, &rows, &columns, &err_msg);
+    if (ret != SQLITE_OK) {
+	fprintf (stderr, "DropVirtualGeometry error: %s\n", err_msg);
+	sqlite3_free (err_msg);
+	return -114;
+    }
+    if ((rows != 1) || (columns != 1)) {
+	fprintf (stderr, "DropVirtualGeometry Unexpected error: select columns bad result: %i/%i.\n", rows, columns);
+	return  -115;
+    }
+    if (strcmp(results[1], "1") != 0) {
+	fprintf (stderr, "DropVirtualGeometry Unexpected error: header() bad result: %s.\n", results[0]);
+	return  -116;
+    }
+    sqlite3_free_table (results);
+
+    ret = sqlite3_exec (db_handle, "create VIRTUAL TABLE shapetest3 USING VirtualShape(\"shp/merano-3d/points\", CP1252, 25832);", NULL, NULL, &err_msg);
+    if (ret != SQLITE_OK) {
+	fprintf (stderr, "VirtualShape error: %s\n", err_msg);
+	sqlite3_free (err_msg);
+	return -117;
+    }
+    ret = sqlite3_get_table (db_handle, "SELECT RegisterVirtualGeometry('shapetest3')", &results, &rows, &columns, &err_msg);
+    if (ret != SQLITE_OK) {
+	fprintf (stderr, "RegisterVirtualGeometry error: %s\n", err_msg);
+	sqlite3_free (err_msg);
+	return -118;
+    }
+    if ((rows != 1) || (columns != 1)) {
+	fprintf (stderr, "RegisterVirtualGeometry Unexpected error: select columns bad result: %i/%i.\n", rows, columns);
+	return  -119;
+    }
+    if (strcmp(results[1], "1") != 0) {
+	fprintf (stderr, "RegisterVirtualGeometry Unexpected error: header() bad result: %s.\n", results[0]);
+	return  -120;
+    }
+    sqlite3_free_table (results);
+
+    ret = sqlite3_get_table (db_handle, "SELECT DropVirtualGeometry('shapetest3')", &results, &rows, &columns, &err_msg);
+    if (ret != SQLITE_OK) {
+	fprintf (stderr, "DropVirtualGeometry error: %s\n", err_msg);
+	sqlite3_free (err_msg);
+	return -121;
+    }
+    if ((rows != 1) || (columns != 1)) {
+	fprintf (stderr, "DropVirtualGeometry Unexpected error: select columns bad result: %i/%i.\n", rows, columns);
+	return  -122;
+    }
+    if (strcmp(results[1], "1") != 0) {
+	fprintf (stderr, "DropVirtualGeometry Unexpected error: header() bad result: %s.\n", results[0]);
+	return  -123;
+    }
+    sqlite3_free_table (results);
+
+    ret = sqlite3_exec (db_handle, "create VIRTUAL TABLE shapetest4 USING VirtualShape(\"shp/merano-3d/polygons\", CP1252, 25832);", NULL, NULL, &err_msg);
+    if (ret != SQLITE_OK) {
+	fprintf (stderr, "VirtualShape error: %s\n", err_msg);
+	sqlite3_free (err_msg);
+	return -124;
+    }
+    ret = sqlite3_get_table (db_handle, "SELECT RegisterVirtualGeometry('shapetest4')", &results, &rows, &columns, &err_msg);
+    if (ret != SQLITE_OK) {
+	fprintf (stderr, "RegisterVirtualGeometry error: %s\n", err_msg);
+	sqlite3_free (err_msg);
+	return -125;
+    }
+    if ((rows != 1) || (columns != 1)) {
+	fprintf (stderr, "RegisterVirtualGeometry Unexpected error: select columns bad result: %i/%i.\n", rows, columns);
+	return  -126;
+    }
+    if (strcmp(results[1], "1") != 0) {
+	fprintf (stderr, "RegisterVirtualGeometry Unexpected error: header() bad result: %s.\n", results[0]);
+	return  -127;
+    }
+    sqlite3_free_table (results);
+
+    ret = sqlite3_get_table (db_handle, "SELECT DropVirtualGeometry('shapetest4')", &results, &rows, &columns, &err_msg);
+    if (ret != SQLITE_OK) {
+	fprintf (stderr, "DropVirtualGeometry error: %s\n", err_msg);
+	sqlite3_free (err_msg);
+	return -128;
+    }
+    if ((rows != 1) || (columns != 1)) {
+	fprintf (stderr, "DropVirtualGeometry Unexpected error: select columns bad result: %i/%i.\n", rows, columns);
+	return  -129;
+    }
+    if (strcmp(results[1], "1") != 0) {
+	fprintf (stderr, "DropVirtualGeometry Unexpected error: header() bad result: %s.\n", results[0]);
+	return  -130;
+    }
+    sqlite3_free_table (results);
+
+/* final DB cleanup */
+    ret = sqlite3_exec (db_handle, "DELETE FROM spatialite_history WHERE geometry_column IS NOT NULL", NULL, NULL, &err_msg);
+    if (ret != SQLITE_OK) {
+	fprintf (stderr, "DELETE FROM spatialite_history error: %s\n", err_msg);
+	sqlite3_free(err_msg);
+	sqlite3_close(db_handle);
+	return -131;
+    }
+    ret = sqlite3_exec (db_handle, "VACUUM", NULL, NULL, &err_msg);
+    if (ret != SQLITE_OK) {
+	fprintf (stderr, "VACUUM error: %s\n", err_msg);
+	sqlite3_free(err_msg);
+	sqlite3_close(db_handle);
+	return -132;
+    }
+#endif	/* end ICONV conditional */
+
+    return 0;
+}
+
+int main (int argc, char *argv[])
+{
+#ifndef OMIT_ICONV	/* only if ICONV is supported */
+    sqlite3 *db_handle = NULL;
+    int ret;
+    char *err_msg = NULL;
+
+/* testing current style metadata layout >= v.4.0.0 */
+    spatialite_init (0);
+    ret = sqlite3_open_v2 (":memory:", &db_handle, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL);
+    if (ret != SQLITE_OK) {
+	fprintf (stderr, "cannot open in-memory db: %s\n", sqlite3_errmsg (db_handle));
+	sqlite3_close (db_handle);
+	db_handle = NULL;
+	return -1;
+    }
+    
+    ret = sqlite3_exec (db_handle, "SELECT InitSpatialMetadata()", NULL, NULL, &err_msg);
+    if (ret != SQLITE_OK) {
+	fprintf (stderr, "InitSpatialMetadata() error: %s\n", err_msg);
+	sqlite3_free(err_msg);
+	sqlite3_close(db_handle);
+	return -2;
+    }
+	
+    ret = do_test(db_handle);
+    if (ret != 0) {
+	fprintf(stderr, "error while testing legacy style metadata layout\n");
+	return ret;
+    }
+    
     sqlite3_close (db_handle);
     spatialite_cleanup();
-    sqlite3_reset_auto_extension();
+
+/* testing legacy style metadata layout <= v.3.1.0 */
+    spatialite_init (0);
+    ret = sqlite3_open_v2 ("test-legacy-3.0.1.sqlite", &db_handle, SQLITE_OPEN_READWRITE, NULL);
+    if (ret != SQLITE_OK) {
+	fprintf (stderr, "cannot open legacy v.3.0.1 database: %s\n", sqlite3_errmsg (db_handle));
+	sqlite3_close (db_handle);
+	db_handle = NULL;
+	return -1;
+    }
+    
+    ret = sqlite3_exec (db_handle, "SELECT InitSpatialMetadata()", NULL, NULL, &err_msg);
+    if (ret != SQLITE_OK) {
+	fprintf (stderr, "InitSpatialMetadata() error: %s\n", err_msg);
+	sqlite3_free(err_msg);
+	sqlite3_close(db_handle);
+	return -2;
+    }
+	
+    ret = do_test(db_handle);
+    if (ret != 0) {
+	fprintf(stderr, "error while testing legacy style metadata layout\n");
+	return ret;
+    }
+    
+    sqlite3_close (db_handle);
+    spatialite_cleanup();
+
+#endif	/* end ICONV conditional */
     
     return 0;
 }

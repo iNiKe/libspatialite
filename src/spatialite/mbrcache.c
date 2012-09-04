@@ -2,7 +2,7 @@
 
  mbrcache.c -- SQLite3 extension [MBR CACHE VIRTUAL TABLE]
 
- version 3.0, 2011 July 20
+ version 4.0, 2012 August 6
 
  Author: Sandro Furieri a.furieri@lqt.it
 
@@ -24,7 +24,7 @@ The Original Code is the SpatiaLite library
 
 The Initial Developer of the Original Code is Alessandro Furieri
  
-Portions created by the Initial Developer are Copyright (C) 2008
+Portions created by the Initial Developer are Copyright (C) 2008-2012
 the Initial Developer. All Rights Reserved.
 
 Contributor(s):
@@ -49,11 +49,10 @@ the terms of any one of the MPL, the GPL or the LGPL.
 #include <string.h>
 #include <float.h>
 
-#ifdef SPL_AMALGAMATION		/* spatialite-amalgamation */
-#include <spatialite/sqlite3.h>
-#else
-#include <sqlite3.h>
-#endif
+#include "config.h"
+
+#include <spatialite/sqlite.h>
+#include <spatialite/debug.h>
 
 #include <spatialite/spatialite.h>
 #include <spatialite/gaiageo.h>
@@ -524,7 +523,7 @@ retrieving any existing entity from the main table
     if (ret != SQLITE_OK)
       {
 /* some error occurred */
-	  fprintf (stderr, "cache SQL error: %s\n", sqlite3_errmsg (handle));
+	  spatialite_e ("cache SQL error: %s\n", sqlite3_errmsg (handle));
 	  return NULL;
       }
     p_cache = cache_alloc ();
@@ -565,7 +564,8 @@ retrieving any existing entity from the main table
 	  else
 	    {
 /* some unexpected error occurred */
-		printf ("sqlite3_step() error: %s\n", sqlite3_errmsg (handle));
+		spatialite_e ("sqlite3_step() error: %s\n",
+			      sqlite3_errmsg (handle));
 		sqlite3_finalize (stmt);
 		cache_destroy (p_cache);
 		return NULL;

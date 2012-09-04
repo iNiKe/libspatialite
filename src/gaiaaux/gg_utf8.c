@@ -2,7 +2,7 @@
 
  gg_utf8.c -- locale charset handling
   
- version 3.0, 2011 July 20
+ version 4.0, 2012 August 6
 
  Author: Sandro Furieri a.furieri@lqt.it
 
@@ -24,7 +24,7 @@ The Original Code is the SpatiaLite library
 
 The Initial Developer of the Original Code is Alessandro Furieri
  
-Portions created by the Initial Developer are Copyright (C) 2008
+Portions created by the Initial Developer are Copyright (C) 2008-2012
 the Initial Developer. All Rights Reserved.
 
 Contributor(s):
@@ -49,7 +49,9 @@ the terms of any one of the MPL, the GPL or the LGPL.
 #include <string.h>
 #include <errno.h>
 
-#if OMIT_ICONV == 0     /* ICONV is absolutely required */
+#include "config.h"
+
+#if OMIT_ICONV == 0		/* ICONV is absolutely required */
 
 #if defined(__MINGW32__) || defined(_WIN32)
 #define LIBICONV_STATIC
@@ -58,20 +60,21 @@ the terms of any one of the MPL, the GPL or the LGPL.
 #ifdef _MSC_VER
 /* <localcharset.h> isn't supported on OSGeo4W */
 /* applying a tricky workaround to fix this issue */
-extern const char * locale_charset (void);
+extern const char *locale_charset (void);
 #else /* sane Windows - not OSGeo4W */
 #include <localcharset.h>
 #endif /* end localcharset */
 #else /* not MINGW32 - WIN32 */
-#ifdef __APPLE__
+#if defined(__APPLE__) || defined(__ANDROID__)
 #include <iconv.h>
 #include <localcharset.h>
-#else /* not Mac OsX */
+#else /* neither Mac OsX nor Android */
 #include <iconv.h>
 #include <langinfo.h>
 #endif
 #endif
 
+#include <spatialite/sqlite.h>
 #include <spatialite/gaiaaux.h>
 
 GAIAAUX_DECLARE const char *
@@ -81,9 +84,9 @@ gaiaGetLocaleCharset ()
 #if defined(__MINGW32__) || defined(_WIN32)
     return locale_charset ();
 #else /* not MINGW32 - WIN32 */
-#ifdef __APPLE__
+#if defined(__APPLE__) || defined(__ANDROID__)
     return locale_charset ();
-#else /* not Mac OsX */
+#else /* neither Mac OsX nor Android */
     return nl_langinfo (CODESET);
 #endif
 #endif
@@ -174,5 +177,4 @@ gaiaConvertToUTF8 (void *cvtCS, const char *buf, int buflen, int *err)
     return utf8buf;
 }
 
-#endif  /* ICONV enabled/disabled */
-
+#endif /* ICONV enabled/disabled */
