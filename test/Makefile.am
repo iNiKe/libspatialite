@@ -1,3 +1,5 @@
+INCLUDES = @CFLAGS@ @GEOS_CFLAGS@
+
 check_PROGRAMS = check_endian \
 		check_version \
 		check_init \
@@ -5,9 +7,11 @@ check_PROGRAMS = check_endian \
 		check_geom_aux \
 		check_geometry_cols \
 		check_create \
+                check_bufovflw \
 		check_fdo1 \
 		check_fdo2 \
 		check_fdo3 \
+                check_fdo_bufovflw \
 		check_dbf_load \
 		check_shp_load \
 		check_shp_load_3d \
@@ -30,6 +34,7 @@ check_PROGRAMS = check_endian \
 		check_virtualtable4 \
 		check_virtualtable5 \
 		check_virtualtable6 \
+                check_virtual_ovflw \
 		check_mbrcache \
 		check_spatialindex \
 		check_exif \
@@ -318,10 +323,16 @@ EXTRA_DIST = asprintf4win.h \
 	sql_stmt_geos_tests/bdpolyfromwkb7.testcase \
 	sql_stmt_geos_tests/bdpolyfromwkb8.testcase \
 	sql_stmt_geos_tests/bdpolyfromwkb9.testcase \
-	sql_stmt_tests/blobfromfile1.testcase \
-	sql_stmt_tests/blobfromfile2.testcase \
-	sql_stmt_tests/blobfromfile3.testcase \
-	sql_stmt_tests/blobfromfile4.testcase \
+	sql_stmt_security_tests/blobfromfile1.testcase \
+	sql_stmt_security_tests/blobfromfile2.testcase \
+	sql_stmt_security_tests/blobfromfile3.testcase \
+	sql_stmt_security_tests/blobfromfile4.testcase \
+	sql_stmt_security_tests/isXblob1.testcase \
+	sql_stmt_security_tests/isXblob2.testcase \
+	sql_stmt_security_tests/isXblob3.testcase \
+	sql_stmt_security_tests/isXblob4.testcase \
+	sql_stmt_security_tests/isXblob8.testcase \
+	sql_stmt_security_tests/isXblob9.testcase \
 	sql_stmt_geos_tests/boundary1.testcase \
 	sql_stmt_geos_tests/boundary2.testcase \
 	sql_stmt_geos_tests/boundary3.testcase \
@@ -762,6 +773,18 @@ EXTRA_DIST = asprintf4win.h \
 	sql_stmt_geos_tests/distance8.testcase \
 	sql_stmt_geos_tests/distance9.testcase \
 	sql_stmt_geos_tests/distance10.testcase \
+	sql_stmt_geosadvanced_tests/distance_geogr1.testcase \
+	sql_stmt_geosadvanced_tests/distance_geogr2.testcase \
+	sql_stmt_geosadvanced_tests/distance_geogr3.testcase \
+	sql_stmt_geosadvanced_tests/distance_geogr4.testcase \
+	sql_stmt_geosadvanced_tests/distance_geogr5.testcase \
+	sql_stmt_geosadvanced_tests/distance_geogr6.testcase \
+	sql_stmt_geosadvanced_tests/distance_geogr7.testcase \
+	sql_stmt_geosadvanced_tests/distance_geogr8.testcase \
+	sql_stmt_geosadvanced_tests/distance_geogr9.testcase \
+	sql_stmt_geosadvanced_tests/distance_geogr10.testcase \
+	sql_stmt_geosadvanced_tests/distance_geogr11.testcase \
+	sql_stmt_geosadvanced_tests/distance_geogr12.testcase \
 	sql_stmt_tests/dm_m.testcase \
 	sql_stmt_tests/DSC_1467.JPG \
 	sql_stmt_tests/DSCN0042.JPG \
@@ -829,6 +852,41 @@ EXTRA_DIST = asprintf4win.h \
 	sql_stmt_tests/fromewkt1.testcase \
 	sql_stmt_tests/fromewkt2.testcase \
 	sql_stmt_tests/fromewkt3.testcase \
+	sql_stmt_tests/fromewkt4.testcase \
+	sql_stmt_tests/fromewkt5.testcase \
+	sql_stmt_tests/fromewkt6.testcase \
+	sql_stmt_tests/fromewkt7.testcase \
+	sql_stmt_tests/fromewkt8.testcase \
+	sql_stmt_tests/fromewkt9.testcase \
+	sql_stmt_tests/fromewkt10.testcase \
+	sql_stmt_tests/fromewkt11.testcase \
+	sql_stmt_tests/fromewkt12.testcase \
+	sql_stmt_tests/fromewkt13.testcase \
+	sql_stmt_tests/fromewkt14.testcase \
+	sql_stmt_tests/fromewkt15.testcase \
+	sql_stmt_tests/fromewkt16.testcase \
+	sql_stmt_tests/fromewkt17.testcase \
+	sql_stmt_tests/fromewkt18.testcase \
+	sql_stmt_tests/fromewkt19.testcase \
+	sql_stmt_tests/fromewkt20.testcase \
+	sql_stmt_tests/fromewkt22.testcase \
+	sql_stmt_tests/fromewkt23.testcase \
+	sql_stmt_tests/fromewkt24.testcase \
+	sql_stmt_tests/fromewkt25.testcase \
+	sql_stmt_tests/fromewkt26.testcase \
+	sql_stmt_tests/fromewkt27.testcase \
+	sql_stmt_tests/fromewkt28.testcase \
+	sql_stmt_tests/fromewkt29.testcase \
+	sql_stmt_tests/fromewkt30.testcase \
+	sql_stmt_tests/fromewkt31.testcase \
+	sql_stmt_tests/fromewkt32.testcase \
+	sql_stmt_tests/fromewkt33.testcase \
+	sql_stmt_tests/fromewkt34.testcase \
+	sql_stmt_tests/fromewkt35.testcase \
+	sql_stmt_tests/fromewkt36.testcase \
+	sql_stmt_tests/fromewkt37.testcase \
+	sql_stmt_tests/fromewkt38.testcase \
+	sql_stmt_tests/fromewkt39.testcase \
 	sql_stmt_tests/fromgeojson10.testcase \
 	sql_stmt_tests/fromgeojson11.testcase \
 	sql_stmt_tests/fromgeojson12.testcase \
@@ -1062,6 +1120,42 @@ EXTRA_DIST = asprintf4win.h \
 	sql_stmt_tests/geomfromtext7.testcase \
 	sql_stmt_tests/geomfromtext8.testcase \
 	sql_stmt_tests/geomfromtext9.testcase \
+	sql_stmt_tests/geomfromtext10.testcase \
+	sql_stmt_tests/geomfromtext11.testcase \
+	sql_stmt_tests/geomfromtext12.testcase \
+	sql_stmt_tests/geomfromtext13.testcase \
+	sql_stmt_tests/geomfromtext14.testcase \
+	sql_stmt_tests/geomfromtext15.testcase \
+	sql_stmt_tests/geomfromtext16.testcase \
+	sql_stmt_tests/geomfromtext17.testcase \
+	sql_stmt_tests/geomfromtext18.testcase \
+	sql_stmt_tests/geomfromtext19.testcase \
+	sql_stmt_tests/geomfromtext20.testcase \
+	sql_stmt_tests/geomfromtext21.testcase \
+	sql_stmt_tests/geomfromtext22.testcase \
+	sql_stmt_tests/geomfromtext23.testcase \
+	sql_stmt_tests/geomfromtext24.testcase \
+	sql_stmt_tests/geomfromtext25.testcase \
+	sql_stmt_tests/geomfromtext26.testcase \
+	sql_stmt_tests/geomfromtext27.testcase \
+	sql_stmt_tests/geomfromtext28.testcase \
+	sql_stmt_tests/geomfromtext29.testcase \
+	sql_stmt_tests/geomfromtext30.testcase \
+	sql_stmt_tests/geomfromtext31.testcase \
+	sql_stmt_tests/geomfromtext32.testcase \
+	sql_stmt_tests/geomfromtext33.testcase \
+	sql_stmt_tests/geomfromtext34.testcase \
+	sql_stmt_tests/geomfromtext35.testcase \
+	sql_stmt_tests/geomfromtext36.testcase \
+	sql_stmt_tests/geomfromtext37.testcase \
+	sql_stmt_tests/geomfromtext38.testcase \
+	sql_stmt_tests/geomfromtext39.testcase \
+	sql_stmt_tests/geomfromtext40.testcase \
+	sql_stmt_tests/geomfromtext41.testcase \
+	sql_stmt_tests/geomfromtext42.testcase \
+	sql_stmt_tests/geomfromtext43.testcase \
+	sql_stmt_tests/geomfromtext44.testcase \
+	sql_stmt_tests/geomfromtext45.testcase \
 	sql_stmt_tests/geomtype10.testcase \
 	sql_stmt_tests/geomtype11.testcase \
 	sql_stmt_tests/geomtype12.testcase \
@@ -1269,10 +1363,6 @@ EXTRA_DIST = asprintf4win.h \
 	sql_stmt_geos_tests/isvalid7.testcase \
 	sql_stmt_geos_tests/isvalid8.testcase \
 	sql_stmt_geos_tests/isvalid9.testcase \
-	sql_stmt_tests/isXblob1.testcase \
-	sql_stmt_tests/isXblob2.testcase \
-	sql_stmt_tests/isXblob3.testcase \
-	sql_stmt_tests/isXblob4.testcase \
 	sql_stmt_tests/isXblob5.testcase \
 	sql_stmt_tests/isXblob6.testcase \
 	sql_stmt_tests/isXblob7.testcase \
@@ -2200,6 +2290,76 @@ EXTRA_DIST = asprintf4win.h \
 	sql_stmt_lwgeom_tests/st_azimuth15.testcase \
 	sql_stmt_lwgeom_tests/st_azimuth16.testcase \
 	sql_stmt_lwgeom_tests/st_azimuth17.testcase \
+	sql_stmt_lwgeom_tests/st_geohash1.testcase \
+	sql_stmt_lwgeom_tests/st_geohash2.testcase \
+	sql_stmt_lwgeom_tests/st_geohash3.testcase \
+	sql_stmt_lwgeom_tests/st_geohash4.testcase \
+	sql_stmt_lwgeom_tests/st_geohash5.testcase \
+	sql_stmt_lwgeom_tests/st_geohash6.testcase \
+	sql_stmt_lwgeom_tests/st_geohash7.testcase \
+	sql_stmt_lwgeom_tests/st_geohash8.testcase \
+	sql_stmt_lwgeom_tests/st_geohash9.testcase \
+	sql_stmt_lwgeom_tests/st_geohash10.testcase \
+	sql_stmt_lwgeom_tests/st_asx3d1.testcase \
+	sql_stmt_lwgeom_tests/st_asx3d2.testcase \
+	sql_stmt_lwgeom_tests/st_asx3d3.testcase \
+	sql_stmt_lwgeom_tests/st_asx3d4.testcase \
+	sql_stmt_lwgeom_tests/st_asx3d5.testcase \
+	sql_stmt_lwgeom_tests/st_asx3d6.testcase \
+	sql_stmt_lwgeom_tests/st_asx3d7.testcase \
+	sql_stmt_lwgeom_tests/st_asx3d8.testcase \
+	sql_stmt_lwgeom_tests/st_asx3d9.testcase \
+	sql_stmt_lwgeom_tests/st_asx3d10.testcase \
+	sql_stmt_lwgeom_tests/st_asx3d11.testcase \
+	sql_stmt_lwgeom_tests/st_asx3d12.testcase \
+	sql_stmt_lwgeom_tests/st_asx3d13.testcase \
+	sql_stmt_lwgeom_tests/st_asx3d14.testcase \
+	sql_stmt_lwgeom_tests/st_asx3d15.testcase \
+	sql_stmt_lwgeom_tests/st_asx3d16.testcase \
+	sql_stmt_lwgeom_tests/st_asx3d17.testcase \
+	sql_stmt_lwgeom_tests/st_asx3d18.testcase \
+	sql_stmt_lwgeom_tests/st_asx3d19.testcase \
+	sql_stmt_lwgeom_tests/st_asx3d20.testcase \
+	sql_stmt_lwgeom_tests/st_asx3d21.testcase \
+	sql_stmt_lwgeom_tests/st_asx3d22.testcase \
+	sql_stmt_lwgeom_tests/st_asx3d23.testcase \
+	sql_stmt_lwgeom_tests/st_asx3d24.testcase \
+	sql_stmt_lwgeom_tests/st_asx3d25.testcase \
+	sql_stmt_lwgeom_tests/st_asx3d26.testcase \
+	sql_stmt_lwgeom_tests/st_asx3d27.testcase \
+	sql_stmt_lwgeom_tests/st_asx3d28.testcase \
+	sql_stmt_lwgeom_tests/st_asx3d29.testcase \
+	sql_stmt_lwgeom_tests/st_asx3d30.testcase \
+	sql_stmt_lwgeom_tests/3ddistance1.testcase \
+	sql_stmt_lwgeom_tests/3ddistance2.testcase \
+	sql_stmt_lwgeom_tests/3ddistance3.testcase \
+	sql_stmt_lwgeom_tests/3ddistance4.testcase \
+	sql_stmt_lwgeom_tests/3ddistance5.testcase \
+	sql_stmt_lwgeom_tests/3ddistance6.testcase \
+	sql_stmt_lwgeom_tests/3ddistance7.testcase \
+	sql_stmt_lwgeom_tests/3ddistance8.testcase \
+	sql_stmt_lwgeom_tests/3ddistance9.testcase \
+	sql_stmt_lwgeom_tests/3ddistance10.testcase \
+	sql_stmt_lwgeom_tests/maxdistance1.testcase \
+	sql_stmt_lwgeom_tests/maxdistance2.testcase \
+	sql_stmt_lwgeom_tests/maxdistance3.testcase \
+	sql_stmt_lwgeom_tests/maxdistance4.testcase \
+	sql_stmt_lwgeom_tests/maxdistance5.testcase \
+	sql_stmt_lwgeom_tests/maxdistance6.testcase \
+	sql_stmt_lwgeom_tests/maxdistance7.testcase \
+	sql_stmt_lwgeom_tests/maxdistance8.testcase \
+	sql_stmt_lwgeom_tests/maxdistance9.testcase \
+	sql_stmt_lwgeom_tests/maxdistance10.testcase \
+	sql_stmt_lwgeom_tests/3dmaxdistance1.testcase \
+	sql_stmt_lwgeom_tests/3dmaxdistance2.testcase \
+	sql_stmt_lwgeom_tests/3dmaxdistance3.testcase \
+	sql_stmt_lwgeom_tests/3dmaxdistance4.testcase \
+	sql_stmt_lwgeom_tests/3dmaxdistance5.testcase \
+	sql_stmt_lwgeom_tests/3dmaxdistance6.testcase \
+	sql_stmt_lwgeom_tests/3dmaxdistance7.testcase \
+	sql_stmt_lwgeom_tests/3dmaxdistance8.testcase \
+	sql_stmt_lwgeom_tests/3dmaxdistance9.testcase \
+	sql_stmt_lwgeom_tests/3dmaxdistance10.testcase \
 	sql_stmt_lwgeom_tests/st_split1.testcase \
 	sql_stmt_lwgeom_tests/st_split2.testcase \
 	sql_stmt_lwgeom_tests/st_split3.testcase \
@@ -2261,6 +2421,34 @@ EXTRA_DIST = asprintf4win.h \
 	sql_stmt_geos_tests/st_length6.testcase \
 	sql_stmt_geos_tests/st_length7.testcase \
 	sql_stmt_geos_tests/st_length8.testcase \
+	sql_stmt_geos_tests/st_length9.testcase \
+	sql_stmt_geos_tests/st_length10.testcase \
+	sql_stmt_geos_tests/st_length11.testcase \
+	sql_stmt_geos_tests/st_length12.testcase \
+	sql_stmt_geos_tests/st_length13.testcase \
+	sql_stmt_geos_tests/st_length14.testcase \
+	sql_stmt_geos_tests/st_length15.testcase \
+	sql_stmt_geos_tests/st_length16.testcase \
+	sql_stmt_geos_tests/st_length17.testcase \
+	sql_stmt_geos_tests/st_length18.testcase \
+	sql_stmt_geos_tests/st_perimeter1.testcase \
+	sql_stmt_geos_tests/st_perimeter2.testcase \
+	sql_stmt_geos_tests/st_perimeter3.testcase \
+	sql_stmt_geos_tests/st_perimeter4.testcase \
+	sql_stmt_geos_tests/st_perimeter5.testcase \
+	sql_stmt_geos_tests/st_perimeter6.testcase \
+	sql_stmt_geos_tests/st_perimeter7.testcase \
+	sql_stmt_geos_tests/st_perimeter8.testcase \
+	sql_stmt_geos_tests/st_perimeter9.testcase \
+	sql_stmt_geos_tests/st_perimeter10.testcase \
+	sql_stmt_geos_tests/st_perimeter11.testcase \
+	sql_stmt_geos_tests/st_perimeter12.testcase \
+	sql_stmt_geos_tests/st_perimeter13.testcase \
+	sql_stmt_geos_tests/st_perimeter14.testcase \
+	sql_stmt_geos_tests/st_perimeter15.testcase \
+	sql_stmt_geos_tests/st_perimeter16.testcase \
+	sql_stmt_geos_tests/st_perimeter17.testcase \
+	sql_stmt_geos_tests/st_perimeter18.testcase \
 	sql_stmt_tests/st_m1.testcase \
 	sql_stmt_tests/st_m2.testcase \
 	sql_stmt_tests/st_m3.testcase \
@@ -2399,6 +2587,12 @@ EXTRA_DIST = asprintf4win.h \
 	sql_stmt_geostrunk_tests/delaunay11.testcase \
 	sql_stmt_geostrunk_tests/delaunay12.testcase \
 	sql_stmt_geostrunk_tests/delaunay13.testcase \
+	sql_stmt_geostrunk_tests/delaunay14.testcase \
+	sql_stmt_geostrunk_tests/delaunay15.testcase \
+	sql_stmt_geostrunk_tests/delaunay16.testcase \
+	sql_stmt_geostrunk_tests/delaunay17.testcase \
+	sql_stmt_geostrunk_tests/delaunay18.testcase \
+	sql_stmt_geostrunk_tests/delaunay19.testcase \
 	sql_stmt_geostrunk_tests/voronoj1.testcase \
 	sql_stmt_geostrunk_tests/voronoj2.testcase \
 	sql_stmt_geostrunk_tests/voronoj3.testcase \
@@ -2469,75 +2663,75 @@ EXTRA_DIST = asprintf4win.h \
 	sql_stmt_geos_tests/union7.testcase \
 	sql_stmt_geos_tests/union8.testcase \
 	sql_stmt_geos_tests/union9.testcase \
-	sql_stmt_geos_tests/hexgrid1.testcase \
-	sql_stmt_geos_tests/hexgrid2.testcase \
-	sql_stmt_geos_tests/hexgrid3.testcase \
-	sql_stmt_geos_tests/hexgrid4.testcase \
-	sql_stmt_geos_tests/hexgrid5.testcase \
-	sql_stmt_geos_tests/hexgrid6.testcase \
-	sql_stmt_geos_tests/hexgrid7.testcase \
-	sql_stmt_geos_tests/hexgrid8.testcase \
-	sql_stmt_geos_tests/hexgrid9.testcase \
-	sql_stmt_geos_tests/hexgrid10.testcase \
-	sql_stmt_geos_tests/hexgrid11.testcase \
-	sql_stmt_geos_tests/hexgrid12.testcase \
-	sql_stmt_geos_tests/hexgrid13.testcase \
-	sql_stmt_geos_tests/hexgrid14.testcase \
-	sql_stmt_geos_tests/hexgrid15.testcase \
-	sql_stmt_geos_tests/hexgrid16.testcase \
-	sql_stmt_geos_tests/hexgrid17.testcase \
-	sql_stmt_geos_tests/hexgrid18.testcase \
-	sql_stmt_geos_tests/hexgrid19.testcase \
-	sql_stmt_geos_tests/hexgrid20.testcase \
-	sql_stmt_geos_tests/hexgrid21.testcase \
-	sql_stmt_geos_tests/hexgrid22.testcase \
-	sql_stmt_geos_tests/hexgrid23.testcase \
-	sql_stmt_geos_tests/squaregrid1.testcase \
-	sql_stmt_geos_tests/squaregrid2.testcase \
-	sql_stmt_geos_tests/squaregrid3.testcase \
-	sql_stmt_geos_tests/squaregrid4.testcase \
-	sql_stmt_geos_tests/squaregrid5.testcase \
-	sql_stmt_geos_tests/squaregrid6.testcase \
-	sql_stmt_geos_tests/squaregrid7.testcase \
-	sql_stmt_geos_tests/squaregrid8.testcase \
-	sql_stmt_geos_tests/squaregrid9.testcase \
-	sql_stmt_geos_tests/squaregrid10.testcase \
-	sql_stmt_geos_tests/squaregrid11.testcase \
-	sql_stmt_geos_tests/squaregrid12.testcase \
-	sql_stmt_geos_tests/squaregrid13.testcase \
-	sql_stmt_geos_tests/squaregrid14.testcase \
-	sql_stmt_geos_tests/squaregrid15.testcase \
-	sql_stmt_geos_tests/squaregrid16.testcase \
-	sql_stmt_geos_tests/squaregrid17.testcase \
-	sql_stmt_geos_tests/squaregrid18.testcase \
-	sql_stmt_geos_tests/squaregrid19.testcase \
-	sql_stmt_geos_tests/squaregrid20.testcase \
-	sql_stmt_geos_tests/squaregrid21.testcase \
-	sql_stmt_geos_tests/squaregrid22.testcase \
-	sql_stmt_geos_tests/squaregrid23.testcase \
-	sql_stmt_geos_tests/trianggrid1.testcase \
-	sql_stmt_geos_tests/trianggrid2.testcase \
-	sql_stmt_geos_tests/trianggrid3.testcase \
-	sql_stmt_geos_tests/trianggrid4.testcase \
-	sql_stmt_geos_tests/trianggrid5.testcase \
-	sql_stmt_geos_tests/trianggrid6.testcase \
-	sql_stmt_geos_tests/trianggrid7.testcase \
-	sql_stmt_geos_tests/trianggrid8.testcase \
-	sql_stmt_geos_tests/trianggrid9.testcase \
-	sql_stmt_geos_tests/trianggrid10.testcase \
-	sql_stmt_geos_tests/trianggrid11.testcase \
-	sql_stmt_geos_tests/trianggrid12.testcase \
-	sql_stmt_geos_tests/trianggrid13.testcase \
-	sql_stmt_geos_tests/trianggrid14.testcase \
-	sql_stmt_geos_tests/trianggrid15.testcase \
-	sql_stmt_geos_tests/trianggrid16.testcase \
-	sql_stmt_geos_tests/trianggrid17.testcase \
-	sql_stmt_geos_tests/trianggrid18.testcase \
-	sql_stmt_geos_tests/trianggrid19.testcase \
-	sql_stmt_geos_tests/trianggrid20.testcase \
-	sql_stmt_geos_tests/trianggrid21.testcase \
-	sql_stmt_geos_tests/trianggrid22.testcase \
-	sql_stmt_geos_tests/trianggrid23.testcase \
+	sql_stmt_geosadvanced_tests/hexgrid1.testcase \
+	sql_stmt_geosadvanced_tests/hexgrid2.testcase \
+	sql_stmt_geosadvanced_tests/hexgrid3.testcase \
+	sql_stmt_geosadvanced_tests/hexgrid4.testcase \
+	sql_stmt_geosadvanced_tests/hexgrid5.testcase \
+	sql_stmt_geosadvanced_tests/hexgrid6.testcase \
+	sql_stmt_geosadvanced_tests/hexgrid7.testcase \
+	sql_stmt_geosadvanced_tests/hexgrid8.testcase \
+	sql_stmt_geosadvanced_tests/hexgrid9.testcase \
+	sql_stmt_geosadvanced_tests/hexgrid10.testcase \
+	sql_stmt_geosadvanced_tests/hexgrid11.testcase \
+	sql_stmt_geosadvanced_tests/hexgrid12.testcase \
+	sql_stmt_geosadvanced_tests/hexgrid13.testcase \
+	sql_stmt_geosadvanced_tests/hexgrid14.testcase \
+	sql_stmt_geosadvanced_tests/hexgrid15.testcase \
+	sql_stmt_geosadvanced_tests/hexgrid16.testcase \
+	sql_stmt_geosadvanced_tests/hexgrid17.testcase \
+	sql_stmt_geosadvanced_tests/hexgrid18.testcase \
+	sql_stmt_geosadvanced_tests/hexgrid19.testcase \
+	sql_stmt_geosadvanced_tests/hexgrid20.testcase \
+	sql_stmt_geosadvanced_tests/hexgrid21.testcase \
+	sql_stmt_geosadvanced_tests/hexgrid22.testcase \
+	sql_stmt_geosadvanced_tests/hexgrid23.testcase \
+	sql_stmt_geosadvanced_tests/squaregrid1.testcase \
+	sql_stmt_geosadvanced_tests/squaregrid2.testcase \
+	sql_stmt_geosadvanced_tests/squaregrid3.testcase \
+	sql_stmt_geosadvanced_tests/squaregrid4.testcase \
+	sql_stmt_geosadvanced_tests/squaregrid5.testcase \
+	sql_stmt_geosadvanced_tests/squaregrid6.testcase \
+	sql_stmt_geosadvanced_tests/squaregrid7.testcase \
+	sql_stmt_geosadvanced_tests/squaregrid8.testcase \
+	sql_stmt_geosadvanced_tests/squaregrid9.testcase \
+	sql_stmt_geosadvanced_tests/squaregrid10.testcase \
+	sql_stmt_geosadvanced_tests/squaregrid11.testcase \
+	sql_stmt_geosadvanced_tests/squaregrid12.testcase \
+	sql_stmt_geosadvanced_tests/squaregrid13.testcase \
+	sql_stmt_geosadvanced_tests/squaregrid14.testcase \
+	sql_stmt_geosadvanced_tests/squaregrid15.testcase \
+	sql_stmt_geosadvanced_tests/squaregrid16.testcase \
+	sql_stmt_geosadvanced_tests/squaregrid17.testcase \
+	sql_stmt_geosadvanced_tests/squaregrid18.testcase \
+	sql_stmt_geosadvanced_tests/squaregrid19.testcase \
+	sql_stmt_geosadvanced_tests/squaregrid20.testcase \
+	sql_stmt_geosadvanced_tests/squaregrid21.testcase \
+	sql_stmt_geosadvanced_tests/squaregrid22.testcase \
+	sql_stmt_geosadvanced_tests/squaregrid23.testcase \
+	sql_stmt_geosadvanced_tests/trianggrid1.testcase \
+	sql_stmt_geosadvanced_tests/trianggrid2.testcase \
+	sql_stmt_geosadvanced_tests/trianggrid3.testcase \
+	sql_stmt_geosadvanced_tests/trianggrid4.testcase \
+	sql_stmt_geosadvanced_tests/trianggrid5.testcase \
+	sql_stmt_geosadvanced_tests/trianggrid6.testcase \
+	sql_stmt_geosadvanced_tests/trianggrid7.testcase \
+	sql_stmt_geosadvanced_tests/trianggrid8.testcase \
+	sql_stmt_geosadvanced_tests/trianggrid9.testcase \
+	sql_stmt_geosadvanced_tests/trianggrid10.testcase \
+	sql_stmt_geosadvanced_tests/trianggrid11.testcase \
+	sql_stmt_geosadvanced_tests/trianggrid12.testcase \
+	sql_stmt_geosadvanced_tests/trianggrid13.testcase \
+	sql_stmt_geosadvanced_tests/trianggrid14.testcase \
+	sql_stmt_geosadvanced_tests/trianggrid15.testcase \
+	sql_stmt_geosadvanced_tests/trianggrid16.testcase \
+	sql_stmt_geosadvanced_tests/trianggrid17.testcase \
+	sql_stmt_geosadvanced_tests/trianggrid18.testcase \
+	sql_stmt_geosadvanced_tests/trianggrid19.testcase \
+	sql_stmt_geosadvanced_tests/trianggrid20.testcase \
+	sql_stmt_geosadvanced_tests/trianggrid21.testcase \
+	sql_stmt_geosadvanced_tests/trianggrid22.testcase \
+	sql_stmt_geosadvanced_tests/trianggrid23.testcase \
 	sql_stmt_tests/us_ch_m.testcase \
 	sql_stmt_tests/us_ft_m.testcase \
 	sql_stmt_tests/us_in_m.testcase \

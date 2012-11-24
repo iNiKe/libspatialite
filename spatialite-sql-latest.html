@@ -64,6 +64,10 @@
 				<td>geos_version( void ) : <i>String</i></td>
 				<td colspan="3">returns the current <b>GEOS</b> version as a text string<br>
 					or NULL if GEOS is currently unsupported</td></tr>
+			<tr><td><b>lwgeom_version</b></td>
+				<td>lwgeom_version( void ) : <i>String</i></td>
+				<td colspan="3">returns the current <b>LWGEOM</b> version as a text string<br>
+					or NULL if LWGEOM is currently unsupported</td></tr>
 			<tr><td><b>HasIconv</b></td>
 				<td>HasIconv( void ) : <i>Boolean</i></td>
 				<td colspan="3">TRUE if the underlaying library was built enabling <b>ICONV</b></td></tr>
@@ -396,7 +400,7 @@
 				<td>SquareGrid( geom <i>ArealGeometry</i> , size <i>Double precision</i> [ , edges_only <i>Boolean</i> , [ origing <i>PointGeometry</i> ] ] ) : <i>Geometry</i><hr>
                                     ST_SquareGrid( geom <i>ArealGeometry</i> , size <i>Double precision</i> [ , edges_only <i>Boolean</i> , [ origing <i>PointGeometry</i> ] ] ) : <i>Geometry</i></td>
 				<td></td>
-				<td align="center" bgcolor="#d0f0d0">base</td>
+				<td align="center" bgcolor="#f0d0b0">GEOS-advanced</td>
 				<td>return a grid of square cells (having the edge length of <i>size</i>) precisely covering the input Geometry.<br>
                                 The returned Geometry will usually be of the <b>MultiPolygon</b> type (a collection of Squares), but will be a <b>MultiLinestring</b> if the optional <b>edges_only</b> argument is set to <b>TRUE</b><br>
                                 If the optional <b>origin</b> argument (expected to be a Point) is not specified then the (0,0) grid origin will be assumed by default.<hr>
@@ -405,7 +409,7 @@
 				<td>TriangularGrid( geom <i>ArealGeometry</i> , size <i>Double precision</i> [ , edges_only <i>Boolean</i> , [ origing <i>PointGeometry</i> ] ] ) : <i>Geometry</i><hr>
                                     ST_TriangularGrid( geom <i>ArealGeometry</i> , size <i>Double precision</i> [ , edges_only <i>Boolean</i> , [ origing <i>PointGeometry</i> ] ] ) : <i>Geometry</i></td>
 				<td></td>
-				<td align="center" bgcolor="#d0f0d0">base</td>
+				<td align="center" bgcolor="#f0d0b0">GEOS-advanced</td>
 				<td>return a grid of triangular cells (having the edge length of <i>size</i>) precisely covering the input Geometry.<br>
                                 The returned Geometry will usually be of the <b>MultiPolygon</b> type (a collection of Squares), but will be a <b>MultiLinestring</b> if the optional <b>edges_only</b> argument is set to <b>TRUE</b><br>
                                 If the optional <b>origin</b> argument (expected to be a Point) is not specified then the (0,0) grid origin will be assumed by default.<hr>
@@ -414,7 +418,7 @@
 				<td>HexagonalGrid( geom <i>ArealGeometry</i> , size <i>Double precision</i> [ , edges_only <i>Boolean</i> , [ origing <i>PointGeometry</i> ] ] ) : <i>Geometry</i><hr>
                                     ST_HexagonalGrid( geom <i>ArealGeometry</i> , size <i>Double precision</i> [ , edges_only <i>Boolean</i> , [ origing <i>PointGeometry</i> ] ] ) : <i>Geometry</i></td>
 				<td></td>
-				<td align="center" bgcolor="#d0f0d0">base</td>
+				<td align="center" bgcolor="#f0d0b0">GEOS-advanced</td>
 				<td>return a grid of hexagonal cells (having the edge length of <i>size</i>) precisely covering the input Geometry.<br>
                                 The returned Geometry will usually be of the <b>MultiPolygon</b> type (a collection of Squares), but will be a <b>MultiLinestring</b> if the optional <b>edges_only</b> argument is set to <b>TRUE</b><br>
                                 If the optional <b>origin</b> argument (expected to be a Point) is not specified then the (0,0) grid origin will be assumed by default.<hr>
@@ -667,7 +671,7 @@ a Geometry will be returned representing the MBR for the corresponding GARS area
 					GeometryCollectionFromWKB( wkbGeometryCollection <i>Binary</i> [ , SRID <i>Integer</i>] ) : <i>GeometryCollection</i><hr>
 					ST_GeometryCollectionFromWKB( wkbGeometryCollection <i>Binary</i> [ , SRID <i>Integer</i>] ) : <i>GeometryCollection</i></td>
 				<td align="center" bgcolor="#d0f0d0">X</td>
-				<td align="center" bgcolor="#d0f0d0">nase</td>
+				<td align="center" bgcolor="#d0f0d0">base</td>
 				<td>construct a GeometryCollection</td></tr>
 			<tr><td><b>BdPolyFromWKB</b></td>
 				<td>BdPolyFromWKB( wkbMultilinestring <i>Binary</i> [ , SRID <i>Integer</i>] ) : <i>Polygon</i><hr>
@@ -1102,7 +1106,7 @@ a Geometry will be returned representing the MBR for the corresponding GARS area
 				<td align="center" bgcolor="#d0f0d0">X</td>
 				<td align="center" bgcolor="#d0f0d0">base</td>
 				<td>return a Point containing the last Point of c</td></tr>
-			<tr><td><b>Length</b></td>
+			<tr><td rowspan="2"><b>Length</b></td>
 				<td>GLength( c <i>Curve</i> ) : <i>Double precision</i>
 					<table><tbody><tr><td bgcolor="#d080ff">
 						OpenGis name for this function is <b>Length()</b>, but it conflicts with an SQLite reserved keyword
@@ -1111,7 +1115,34 @@ a Geometry will be returned representing the MBR for the corresponding GARS area
 				</td>
 				<td align="center" bgcolor="#d0f0d0">X</td>
 				<td align="center" bgcolor="#f0d0d0">GEOS</td>
-				<td>return the length of c</td></tr>
+				<td>return the length of c<hr>
+Starting since v.4.0.0 this function will simply consider Linestrings and MultiLinestrings, ignoring any Polygon or MultiPolygon</td></tr>
+			<tr><td>GLength( c <i>Curve</i> , use_ellipsoid <i>Boolean</i> ) : <i>Double precision</i><hr>
+					ST_Length( c <i>Curve</i> , use_ellipsoid <i>Boolean</i> ) : <i>Double precision</i>
+				</td>
+				<td align="center" bgcolor="#d0f0d0">X</td>
+				<td align="center" bgcolor="#f0d0b0">GEOS-advanced</td>
+				<td>return the length of c (measured in meters).<br>
+If the <b>use_ellipsoid</b> argument is set to <b>TRUE</b> the precise (but slower) length will be computed on the Ellipsoid, otherwise will be computed on the Great Cicle (approximative, but faster).<hr>
+This function only supports Long/Lat coordinates, and will return NULL for any planar CRS<hr>
+Starting since v.4.0.0 this function will simply consider Linestrings and MultiLinestrings, ignoring any Polygon or MultiPolygon</td></tr>
+			<tr><td rowspan="2"><b>Perimeter</b></td>
+				<td>Perimeter( s <i>Surface</i> ) : <i>Double precision</i>
+					ST_Perimeter( s <i>Surface</i> ) : <i>Double precision</i>
+				</td>
+				<td align="center" bgcolor="#d0f0d0">X</td>
+				<td align="center" bgcolor="#f0d0d0">GEOS</td>
+				<td>return the perimeter of s<hr>
+Starting since v.4.0.0 this function will simply consider Polygons and MultiPolygons, ignoring any Linestring or MultiLinestring</td></tr>
+			<tr><td>Perimeter( s <i>Surface</i> , use_ellipsoid <i>Boolean</i> ) : <i>Double precision</i><hr>
+					ST_Perimeter( s <i>Surface</i> , use_ellipsoid <i>Boolean</i> ) : <i>Double precision</i>
+				</td>
+				<td align="center" bgcolor="#d0f0d0">X</td>
+				<td align="center" bgcolor="#f0d0b0">GEOS-advanced</td>
+				<td>return the perimeter of s (measured in meters).<br>
+If the <b>use_ellipsoid</b> argument is set to <b>TRUE</b> the precise (but slower) perimeter will be computed on the Ellipsoid, otherwise will be computed on the Great Cicle (approximative, but faster).<hr>
+This function only supports Long/Lat coordinates, and will return NULL for any planar CRS<hr>
+Starting since v.4.0.0 this function will simply consider Polygons and MultiPolygons, ignoring any Linestring or MultiLinestring</td></tr>
 			<tr><td><b>Geodesic Length</b></td>
 				<td>GeodesicLength( c <i>Curve</i> ) : <i>Double precision</i></td>
 				<td></td>
@@ -1425,12 +1456,19 @@ algorithm with given <i>tolerance</i> and respecting topology</td></tr>
 				<th bgcolor="#d0d0d0">OGC<br>defined</th>
 				<th bgcolor="#d0d0d0">required<br>module</th>
 				<th bgcolor="#d0d0d0">Summary</th></tr>
-			<tr><td><b>Distance</b></td>
+			<tr><td rowspan="2"><b>Distance</b></td>
 				<td>Distance( geom1 <i>Geometry</i> , geom2 <i>Geometry</i> ) : <i>Double precision</i><hr>
 					ST_Distance( geom1 <i>Geometry</i> , geom2 <i>Geometry</i> ) : <i>Double precision</i></td>
 				<td align="center" bgcolor="#d0f0d0">X</td>
 				<td align="center" bgcolor="#f0d0d0">GEOS</td>
-				<td>return the distance between geom1 and geom2</td></tr>
+				<td>return the distance between geom1 and geom2 (always measured in CRS units).</td></tr>
+			<tr><td>Distance( geom1 <i>Geometry</i> , geom2 <i>Geometry</i> , use_ellipsoid <i>Boolean</i> ) : <i>Double precision</i><hr>
+					ST_Distance( geom1 <i>Geometry</i> , geom2 <i>Geometry</i> , use_ellipsoid <i>Boolean</i> ) : <i>Double precision</i></td>
+				<td align="center" bgcolor="#d0f0d0">X</td>
+				<td align="center" bgcolor="#f0d0b0">GEOS-advanced</td>
+				<td>return the distance between geom1 and geom2 (measured in meters).<br>
+If the <b>use_ellipsoid</b> argument is set to <b>TRUE</b> the precise (but slower) distance will be computed on the Ellipsoid, otherwise will be computed on the Great Cicle (approximative, but faster).<hr>
+This function only supports Long/Lat coordinates, and will return NULL for any planar CRS</td></tr>
 			<tr><td><b>PtDistWithin</b></td>
 				<td>PtDistWithin( geom1 <i>Geometry</i> , geom2 <i>Geometry</i>, range <i>Double precision</i> [, use_spheroid <i>Integer</i> ] ) 
 					: <i>Integer</i></td>
@@ -1460,7 +1498,7 @@ algorithm with given <i>tolerance</i> and respecting topology</td></tr>
 				<td>Difference( geom1 <i>Geometry</i> , geom2 <i>Geometry</i> ) : <i>Geometry</i><hr>
 					ST_Difference( geom1 <i>Geometry</i> , geom2 <i>Geometry</i> ) : <i>Geometry</i></td>
 				<td align="center" bgcolor="#d0f0d0">X</td>
-				<td align="center" bgcolor="#d0f0d0">GEOS</td>
+				<td align="center" bgcolor="#f0d0d0">GEOS</td>
 				<td>return a geometric object that is the closure of the set difference of geom1 and geom2</td></tr>
 			<tr><td><b>GUnion</b></td>
 				<td>GUnion( geom1 <i>Geometry</i> , geom2 <i>Geometry</i> ) : <i>Geometry</i>
@@ -1501,6 +1539,13 @@ algorithm with given <i>tolerance</i> and respecting topology</td></tr>
 				<td>return a geometric object that is the convex hull of geom</td></tr>
 			<tr><td colspan="5" align="center" bgcolor="#f0f0c0">
 				<h3><a name="p14b">SQL functions that implement spatial operators<br>[GEOS advanced features]</a></h3></td></tr>
+			<tr><td><b>HausdorffDistance</b></td>
+				<td>HausdorffDistance( geom1 <i>Geometry</i> , geom2 <i>Geometry</i> ) : <i>Double precision</i><hr>
+					ST_HausdorffDistance( geom1 <i>Geometry</i> , geom2 <i>Geometry</i> ) : <i>Double precision</i></td>
+				<td>X</td>
+				<td align="center" bgcolor="#f0d0b0">GEOS-advanced</td>
+				<td>return the Hausdorff distance between geom1 and geom2<br>
+<a href="http://en.wikipedia.org/wiki/Hausdorff_distance">learn more</a></td></tr>
 			<tr><td><b>OffestCurve</b></td>
 				<td>OffsetCurve( geom <i>Curve</i> , radius <i>Double precision</i> , left_or_right <i>Integer</i> ) : <i>Curve</i><hr>
 					ST_OffsetCurve( geom <i>Curve</i> , radius <i>Double precision</i> , left_or_right <i>Integer</i> ) : <i>Curve</i></td>
@@ -1825,11 +1870,48 @@ algorithm with given <i>tolerance</i> and respecting topology</td></tr>
                                         ST_SnapToGrid( geom <i>Geometry</i> , origin_x <i>Double precision</i> , origin_y <i>Double precision</i> , size_x <i>Double precision</i> , size_y <i>Double precision</i> )  ) : <i>Geometry</i><br>
                                         ST_SnapToGrid( geom <i>Geometry</i> , origin <i>Geometry</i> , size_x <i>Double precision</i> , size_y <i>Double precision</i> , size_z <i>Double precision</i> , size_m <i>Double precision</i> ) : <i>Geometry</i></td>
 				<td></td>
-				<td align="center" bgcolor="##d0f0d0">base</td>
+				<td align="center" bgcolor="#d0f0d0">base</td>
 				<td>return a new Geometry corresponding to the input Geometry; all points and vertices will be snapped to the grid defined by its origin and size(s).<br>
                                         Removes all consecutive points falling on the same cell.<br>
                                         All collapsed geometries will be stripped from the returned Geometry.<br>
 					NULL is returned on failure.</td></tr>
+			<tr><td><b>GeoHash</b></td>
+				<td>GeoHash( geom <i>Geometry</i> ) : <i>String</i><hr>
+					ST_GeoHash( geom <i>Geometry</i> ) : <i>String</i></td>
+				<td></td>
+				<td align="center" bgcolor="#f0d0f0">LWGEOM</td>
+				<td>Return a GeoHash representation (geohash.org) of the geometry.<br>
+                                    A GeoHash encodes a point into a text form that is sortable and searchable based on prefixing.<hr>
+                                    ST_GeoHash will not work with geometries that are not in geographic (lon/lat) coordinates</td></tr>
+			<tr><td><b>AsX3D</b></td>
+				<td>AsX3D( geom <i>Geometry</i> ) : <i>String</i><br>
+				AsX3D( geom <i>Geometry</i> , precision <i>Integer</i> ) : <i>String</i><br>
+				AsX3D( geom <i>Geometry</i> , precision <i>Integer</i> , options <i>Integer</i> ) : <i>String</i><br>
+				AsX3D( geom <i>Geometry</i> , precision <i>Integer</i> , options <i>Integer</i> , refid <i>String</i> ) : <i>String</i><hr>
+				ST_AsX3D( geom <i>Geometry</i> ) : <i>String</i><br>
+				ST_AsX3D( geom <i>Geometry</i> , precision <i>Integer</i> ) : <i>String</i><br>
+				ST_AsX3D( geom <i>Geometry</i> , precision <i>Integer</i> , options <i>Integer</i> ) : <i>String</i><br>
+				ST_AsX3D( geom <i>Geometry</i> , precision <i>Integer</i> , options <i>Integer</i> , refid <i>String</i> ) : <i>String</i>
+</td>
+				<td></td>
+				<td align="center" bgcolor="#f0d0f0">LWGEOM</td>
+				<td>Returns a geometry as an X3D XML formatted node element.</td></tr>
+			<tr><td><b>MaxDistance</b></td>
+				<td>MaxDistance( geom1 <i>Geometry</i> , geom2 <i>Geometry</i> ) : <i>Double precision</i><hr>
+					ST_MaxDistance( geom1 <i>Geometry</i> , geom2 <i>Geometry</i> ) : <i>Double precision</i></td>
+				<td></td>
+				<td align="center" bgcolor="#f0d0f0">LWGEOM</td>
+				<td>return the max distance between geom1 and geom2</td></tr>
+			<tr><td><b>3DDistance</b></td>
+				<td>ST_3DDistance( geom1 <i>Geometry</i> , geom2 <i>Geometry</i> ) : <i>Double precision</i></td>
+				<td></td>
+				<td align="center" bgcolor="#f0d0f0">LWGEOM</td>
+				<td>return the 3D-distance between geom1 and geom2 (Z coordinates will be considered)</td></tr>
+			<tr><td><b>3DMaxDistance</b></td>
+				<td>ST_3DMaxDistance( geom1 <i>Geometry</i> , geom2 <i>Geometry</i> ) : <i>Double precision</i></td>
+				<td></td>
+				<td align="center" bgcolor="#f0d0f0">LWGEOM</td>
+				<td>return the max 3D-distance between geom1 and geom2 (Z coordinates will be considered)</td></tr>
 			<tr><td colspan="5" align="center" bgcolor="#f0f0c0">
 				<h3><a name="p15">SQL functions for coordinate transformations</a></h3></td></tr>
 			<tr><th bgcolor="#d0d0d0">Function</th>
@@ -1888,7 +1970,9 @@ algorithm with given <i>tolerance</i> and respecting topology</td></tr>
 					RotateCoordinates( geom <i>Geometry</i> , angleInDegrees <i>Double precision</i> ) : <i>Geometry</i></td>
 				<td></td>
 				<td align="center" bgcolor="#d0f0d0">base</td>
-				<td>return a geometric object obtained by rotating coordinates according to angleInDegrees value</td></tr>
+				<td>return a geometric object obtained by rotating coordinates according to angleInDegrees value.<hr>
+Positive angle = clockwise rotation.<br>
+Negative angle = counterclockwise rotation.</td></tr>
 			<tr><td><b>ReflectCoords</b><br><b>ReflectCoordinates</b></td>
 				<td>ReflectCoords( geom <i>Geometry</i> , xAxis <i>Integer</i> , yAxis <i>Integer</i> ) : <i>Geometry</i><hr>
 					ReflectCoordinates( geom <i>Geometry</i> , xAxis <i>Integer</i> , yAxis <i>Integer</i> ) : <i>Geometry</i></td>

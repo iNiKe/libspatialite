@@ -79,6 +79,11 @@ extern "C"
  but will avoid to insert any row at all */
 #define GAIA_EPSG_NONE -9997
 
+#define SPATIALITE_STATISTICS_GENUINE	1
+#define SPATIALITE_STATISTICS_VIEWS	2
+#define SPATIALITE_STATISTICS_VIRTS	3
+#define SPATIALITE_STATISTICS_LEGACY	4
+
     struct epsg_defs
     {
 	int srid;
@@ -135,6 +140,12 @@ extern "C"
 
     SPATIALITE_PRIVATE int createGeometryColumns (void *p_sqlite);
 
+    SPATIALITE_PRIVATE int check_layer_statistics (void *p_sqlite);
+
+    SPATIALITE_PRIVATE int check_views_layer_statistics (void *p_sqlite);
+
+    SPATIALITE_PRIVATE int check_virts_layer_statistics (void *p_sqlite);
+
     SPATIALITE_PRIVATE void
 	updateGeometryTriggers (void *p_sqlite, const char *table,
 				const char *column);
@@ -146,6 +157,20 @@ extern "C"
     SPATIALITE_PRIVATE void
 	buildSpatialIndex (void *p_sqlite, const unsigned char *table,
 			   const char *column);
+
+    SPATIALITE_PRIVATE int
+	doComputeFieldInfos (void *p_sqlite, const char *table,
+			     const char *column, int stat_type, void *p_lyr);
+
+    SPATIALITE_PRIVATE void
+	getProjParams (void *p_sqlite, int srid, char **params);
+
+    SPATIALITE_PRIVATE int
+	getEllipsoidParams (void *p_sqlite, int srid, double *a, double *b,
+			    double *rf);
+
+    SPATIALITE_PRIVATE const char *splite_lwgeom_version (void);
+
 
 #ifdef __cplusplus
 }

@@ -155,7 +155,7 @@ int get_clean_line(FILE *f, char ** line)
 {
     size_t len = 0;
     ssize_t num_read = 0;
-    size_t end = 0;
+    ssize_t end = 0;
     char *tmp_line = NULL;
 
 #if !defined(_WIN32) &&!defined(__APPLE__)
@@ -272,6 +272,7 @@ int run_all_testcases()
     int n;
     int i;
     int result = 0;
+    const char *security_level;
     
     n = scandir("sql_stmt_tests", &namelist, test_case_filter, alphasort);
     if (n < 0) {
@@ -297,6 +298,36 @@ int run_all_testcases()
 	free(namelist[i]);
     }
     free(namelist);
+    
+    security_level = getenv ("SPATIALITE_SECURITY");
+    if (security_level == NULL)
+	;
+    else if (strcasecmp (security_level, "relaxed") == 0) {
+	n = scandir("sql_stmt_security_tests", &namelist, test_case_filter, alphasort);
+	if (n < 0) {
+	    perror("scandir");
+	    return -1;
+	}
+
+	for (i = 0; i < n; ++i) {
+	    struct test_data *data;
+	    char *path;
+	    if (asprintf(&path, "sql_stmt_security_tests/%s", namelist[i]->d_name) < 0) {
+	        return -1;
+	    }
+	    data = read_one_case(path);
+	    free(path);
+	
+	    result = do_one_case(data);
+	
+	    cleanup_test_data(data);
+	    if (result != 0) {
+	        return result;
+	    }
+	    free(namelist[i]);
+	}
+	free(namelist);
+    }
 
 #ifndef OMIT_MATHSQL	/* only if MATHSQL is supported */
     n = scandir("sql_stmt_mathsql_tests", &namelist, test_case_filter, alphasort);
@@ -356,10 +387,10 @@ int run_all_testcases()
     if (strcmp(GEOSversion (), "3.3") < 0)
     {
     /* 
-    /* skipping GEOS tests if some obsolete version is found 
-    /*
-    /* rationale: obsolete versions may return substantially
-    /* different results, thus causing many testcases to fail
+      skipping GEOS tests if some obsolete version is found 
+    
+      rationale: obsolete versions may return substantially
+      different results, thus causing many testcases to fail
     */
         fprintf(stderr, "WARNING: skipping GEOS testcases; obsolete version found !!!\n");
         goto skip_geos;
@@ -396,10 +427,10 @@ skip_geos:
     if (strcmp(GEOSversion (), "3.3") < 0)
     {
     /* 
-    /* skipping GEOS tests if some obsolete version is found 
-    /*
-    /* rationale: obsolete versions may return substantially
-    /* different results, thus causing many testcases to fail
+       skipping GEOS tests if some obsolete version is found 
+
+       rationale: obsolete versions may return substantially
+       different results, thus causing many testcases to fail
     */
         fprintf(stderr, "WARNING: skipping GEOS_ADVANCED testcases; obsolete version found !!!\n");
         goto skip_geos_advanced;
@@ -435,10 +466,10 @@ skip_geos_advanced:
     if (strcmp(GEOSversion (), "3.3") < 0)
     {
     /* 
-    /* skipping GEOS tests if some obsolete version is found 
-    /*
-    /* rationale: obsolete versions may return substantially
-    /* different results, thus causing many testcases to fail
+       skipping GEOS tests if some obsolete version is found 
+
+       rationale: obsolete versions may return substantially
+       different results, thus causing many testcases to fail
     */
         fprintf(stderr, "WARNING: skipping GEOS_TRUNK testcases; obsolete version found !!!\n");
         goto skip_geos_trunk;

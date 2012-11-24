@@ -60,15 +60,28 @@ Regione Toscana - Settore Sistema Informativo Territoriale ed Ambientale
 #include <string.h>
 #include <float.h>
 
+#if defined(_WIN32) && !defined(__MINGW32__)
+#include "config-msvc.h"
+#else
 #include "config.h"
+#endif
 
 #include <spatialite/sqlite.h>
 #include <spatialite/gaiageo.h>
 #include <spatialite.h>
+#include <spatialite_private.h>
 
 #ifdef ENABLE_LWGEOM		/* enabling LWGEOM support */
 
 #include <liblwgeom.h>
+
+const char splitelwgeomversion[] = LIBLWGEOM_VERSION;
+
+SPATIALITE_PRIVATE const char *
+splite_lwgeom_version (void)
+{
+    return splitelwgeomversion;
+}
 
 void
 lwgeom_init_allocators (void)
@@ -1627,6 +1640,122 @@ gaiaAzimuth (double xa, double ya, double xb, double yb, double *azimuth)
     if (!azimuth_pt_pt (&pt1, &pt2, &az))
 	return 0;
     *azimuth = az;
+    return 1;
+}
+
+GAIAGEO_DECLARE char *
+gaiaGeoHash (gaiaGeomCollPtr geom, int precision)
+{
+/* wrapping LWGEOM GeoHash */
+    LWGEOM *g;
+    char *result;
+    char *geo_hash;
+    int len;
+
+    if (!geom)
+	return NULL;
+    gaiaMbrGeometry (geom);
+    if (geom->MinX < -180.0 || geom->MaxX > 180.0 || geom->MinY < -90.0
+	|| geom->MaxY > 90.0)
+	return NULL;
+    g = toLWGeom (geom);
+    result = lwgeom_geohash (g, precision);
+    lwgeom_free (g);
+    if (result == NULL)
+	return NULL;
+    len = strlen (result);
+    if (len == 0)
+      {
+	  lwfree (result);
+	  return NULL;
+      }
+    geo_hash = malloc (len + 1);
+    strcpy (geo_hash, result);
+    lwfree (result);
+    return geo_hash;
+}
+
+GAIAGEO_DECLARE char *
+gaiaAsX3D (gaiaGeomCollPtr geom, const char *srs, int precision, int options,
+	   const char *defid)
+{
+/* wrapping LWGEOM AsX3D */
+    LWGEOM *g;
+    char *result;
+    char *x3d;
+    int len;
+
+    if (!geom)
+	return NULL;
+    gaiaMbrGeometry (geom);
+    g = toLWGeom (geom);
+    result = lwgeom_to_x3d3 (g, (char *) srs, precision, options, defid);
+    lwgeom_free (g);
+    if (result == NULL)
+	return NULL;
+    len = strlen (result);
+    if (len == 0)
+      {
+	  lwfree (result);
+	  return NULL;
+      }
+    x3d = malloc (len + 1);
+    strcpy (x3d, result);
+    lwfree (result);
+    return x3d;
+}
+
+GAIAGEO_DECLARE int
+gaia3DDistance (gaiaGeomCollPtr geom1, gaiaGeomCollPtr geom2, double *dist)
+{
+/* wrapping LWGEOM mindistance3d */
+    LWGEOM *g1;
+    LWGEOM *g2;
+    double d;
+
+    g1 = toLWGeom (geom1);
+    g2 = toLWGeom (geom2);
+
+    d = lwgeom_mindistance3d (g1, g2);
+    lwgeom_free (g1);
+    lwgeom_free (g2);
+    *dist = d;
+    return 1;
+}
+
+GAIAGEO_DECLARE int
+gaiaMaxDistance (gaiaGeomCollPtr geom1, gaiaGeomCollPtr geom2, double *dist)
+{
+/* wrapping LWGEOM maxdistance2d */
+    LWGEOM *g1;
+    LWGEOM *g2;
+    double d;
+
+    g1 = toLWGeom (geom1);
+    g2 = toLWGeom (geom2);
+
+    d = lwgeom_maxdistance2d (g1, g2);
+    lwgeom_free (g1);
+    lwgeom_free (g2);
+    *dist = d;
+    return 1;
+}
+
+GAIAGEO_DECLARE int
+gaia3DMaxDistance (gaiaGeomCollPtr geom1, gaiaGeomCollPtr geom2, double *dist)
+{
+/* wrapping LWGEOM maxdistance2d */
+    LWGEOM *g1;
+    LWGEOM *g2;
+    double d;
+
+    g1 = toLWGeom (geom1);
+    g2 = toLWGeom (geom2);
+
+    d = lwgeom_maxdistance3d (g1, g2);
+    lwgeom_free (g1);
+    lwgeom_free (g2);
+    *dist = d;
     return 1;
 }
 

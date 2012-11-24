@@ -48,7 +48,11 @@ the terms of any one of the MPL, the GPL or the LGPL.
 #include <stdio.h>
 #include <string.h>
 
+#if defined(_WIN32) && !defined(__MINGW32__)
+#include "config-msvc.h"
+#else
 #include "config.h"
+#endif
 
 #include <spatialite/sqlite.h>
 #include <spatialite/debug.h>
@@ -56,6 +60,7 @@ the terms of any one of the MPL, the GPL or the LGPL.
 #include <spatialite/spatialite.h>
 #include <spatialite/gaiaaux.h>
 #include <spatialite/gaiageo.h>
+#include <spatialite_private.h>
 
 #ifdef _WIN32
 #define strcasecmp	_stricmp
@@ -104,23 +109,56 @@ typedef struct VirtualShapeCursorStruct
 } VirtualShapeCursor;
 typedef VirtualShapeCursor *VirtualShapeCursorPtr;
 
-static void
-vshp_double_quoted_sql (char *buf)
+static int
+vshp_has_metadata (sqlite3 * db, int *geotype)
 {
-/* well-formatting a string to be used as an SQL name */
-    char tmp[1024];
-    char *in = tmp;
-    char *out = buf;
-    strcpy (tmp, buf);
-    *out++ = '"';
-    while (*in != '\0')
+/* testing the layout of virts_geometry_columns table */
+    char **results;
+    int ret;
+    int rows;
+    int columns;
+    int i;
+    int ok_virt_name = 0;
+    int ok_virt_geometry = 0;
+    int ok_srid = 0;
+    int ok_geometry_type = 0;
+    int ok_type = 0;
+    int ok_coord_dimension = 0;
+
+    ret =
+	sqlite3_get_table (db, "PRAGMA table_info(virts_geometry_columns)",
+			   &results, &rows, &columns, NULL);
+    if (ret != SQLITE_OK)
+	return 0;
+    for (i = 1; i <= rows; i++)
       {
-	  if (*in == '"')
-	      *out++ = '"';
-	  *out++ = *in++;
+	  if (strcasecmp ("virt_name", results[(i * columns) + 1]) == 0)
+	      ok_virt_name = 1;
+	  if (strcasecmp ("virt_geometry", results[(i * columns) + 1]) == 0)
+	      ok_virt_geometry = 1;
+	  if (strcasecmp ("srid", results[(i * columns) + 1]) == 0)
+	      ok_srid = 1;
+	  if (strcasecmp ("geometry_type", results[(i * columns) + 1]) == 0)
+	      ok_geometry_type = 1;
+	  if (strcasecmp ("type", results[(i * columns) + 1]) == 0)
+	      ok_type = 1;
+	  if (strcasecmp ("coord_dimension", results[(i * columns) + 1]) == 0)
+	      ok_coord_dimension = 1;
       }
-    *out++ = '"';
-    *out = '\0';
+    sqlite3_free_table (results);
+
+    if (ok_virt_name && ok_virt_geometry && ok_srid && ok_geometry_type
+	&& ok_coord_dimension)
+      {
+	  *geotype = 1;
+	  return 1;
+      }
+    if (ok_virt_name && ok_virt_geometry && ok_srid && ok_type)
+      {
+	  *geotype = 0;
+	  return 1;
+      }
+    return 0;
 }
 
 static int
@@ -128,8 +166,7 @@ vshp_create (sqlite3 * db, void *pAux, int argc, const char *const *argv,
 	     sqlite3_vtab ** ppVTab, char **pzErr)
 {
 /* creates the virtual table connected to some shapefile */
-    char buf[4096];
-    char field[128];
+    char *sql;
     VirtualShapePtr p_vt;
     char path[2048];
     char encoding[128];
@@ -143,8 +180,10 @@ vshp_create (sqlite3 * db, void *pAux, int argc, const char *const *argv,
     int seed;
     int dup;
     int idup;
-    char dummyName[4096];
+    char *xname;
     char **col_name = NULL;
+    int geotype;
+    gaiaOutBuffer sql_statement;
     if (pAux)
 	pAux = pAux;		/* unused arg warning suppression */
 /* checking for shapefile PATH */
@@ -200,17 +239,20 @@ vshp_create (sqlite3 * db, void *pAux, int argc, const char *const *argv,
     if (!(p_vt->Shp->Valid))
       {
 	  /* something is going the wrong way; creating a stupid default table */
-	  strcpy (dummyName, argv[2]);
-	  vshp_double_quoted_sql (dummyName);
-	  sprintf (buf, "CREATE TABLE %s (PKUID INTEGER, Geometry BLOB)",
-		   dummyName);
-	  if (sqlite3_declare_vtab (db, buf) != SQLITE_OK)
+	  xname = gaiaDoubleQuotedSql ((const char *) argv[2]);
+	  sql =
+	      sqlite3_mprintf
+	      ("CREATE TABLE \"%s\" (PKUID INTEGER, Geometry BLOB)", xname);
+	  free (xname);
+	  if (sqlite3_declare_vtab (db, sql) != SQLITE_OK)
 	    {
+		sqlite3_free (sql);
 		*pzErr =
 		    sqlite3_mprintf
 		    ("[VirtualShape module] cannot build a table from Shapefile\n");
 		return SQLITE_ERROR;
 	    }
+	  sqlite3_free (sql);
 	  *ppVTab = (sqlite3_vtab *) p_vt;
 	  return SQLITE_OK;
       }
@@ -222,11 +264,14 @@ vshp_create (sqlite3 * db, void *pAux, int argc, const char *const *argv,
 	  gaiaShpAnalyze (p_vt->Shp);
       }
 /* preparing the COLUMNs for this VIRTUAL TABLE */
-    strcpy (buf, "CREATE TABLE ");
-    strcpy (dummyName, argv[2]);
-    vshp_double_quoted_sql (dummyName);
-    strcat (buf, dummyName);
-    strcat (buf, " (PKUID INTEGER, Geometry BLOB");
+    gaiaOutBufferInitialize (&sql_statement);
+    xname = gaiaDoubleQuotedSql (argv[2]);
+    sql =
+	sqlite3_mprintf ("CREATE TABLE \"%s\" (PKUID INTEGER, Geometry BLOB",
+			 xname);
+    free (xname);
+    gaiaAppendToOutBuffer (&sql_statement, sql);
+    sqlite3_free (sql);
 /* checking for duplicate / illegal column names and antialising them */
     col_cnt = 0;
     pFld = p_vt->Shp->Dbf->First;
@@ -242,43 +287,43 @@ vshp_create (sqlite3 * db, void *pAux, int argc, const char *const *argv,
     pFld = p_vt->Shp->Dbf->First;
     while (pFld)
       {
-	  sprintf (dummyName, "%s", pFld->Name);
-	  vshp_double_quoted_sql (dummyName);
+	  xname = gaiaDoubleQuotedSql (pFld->Name);
 	  dup = 0;
 	  for (idup = 0; idup < cnt; idup++)
 	    {
-		if (strcasecmp (dummyName, *(col_name + idup)) == 0)
+		if (strcasecmp (xname, *(col_name + idup)) == 0)
 		    dup = 1;
 	    }
-	  if (strcasecmp (dummyName, "PKUID") == 0)
+	  if (strcasecmp (xname, "\"PKUID\"") == 0)
 	      dup = 1;
-	  if (strcasecmp (dummyName, "Geometry") == 0)
+	  if (strcasecmp (xname, "\"Geometry\"") == 0)
 	      dup = 1;
 	  if (dup)
 	    {
-		sprintf (dummyName, "COL_%d", seed++);
-		vshp_double_quoted_sql (dummyName);
+		free (xname);
+		sql = sqlite3_mprintf ("COL_%d", seed++);
+		xname = gaiaDoubleQuotedSql (sql);
+		sqlite3_free (sql);
 	    }
 	  if (pFld->Type == 'N')
 	    {
 		if (pFld->Decimals > 0 || pFld->Length > 18)
-		    sprintf (field, "%s DOUBLE", dummyName);
+		    sql = sqlite3_mprintf (", \"%s\" DOUBLE", xname);
 		else
-		    sprintf (field, "%s INTEGER", dummyName);
+		    sql = sqlite3_mprintf (", \"%s\" INTEGER", xname);
 	    }
 	  else if (pFld->Type == 'F')
-	      sprintf (field, "%s DOUBLE", dummyName);
+	      sql = sqlite3_mprintf (", \"%s\" DOUBLE", xname);
 	  else
-	      sprintf (field, "%s VARCHAR(%d)", dummyName, pFld->Length);
-	  strcat (buf, ", ");
-	  strcat (buf, field);
-	  len = strlen (dummyName);
-	  *(col_name + cnt) = malloc (len + 1);
-	  strcpy (*(col_name + cnt), dummyName);
+	      sql =
+		  sqlite3_mprintf (", \"%s\" VARCHAR(%d)", xname, pFld->Length);
+	  gaiaAppendToOutBuffer (&sql_statement, sql);
+	  sqlite3_free (sql);
+	  *(col_name + cnt) = xname;
 	  cnt++;
 	  pFld = pFld->Next;
       }
-    strcat (buf, ")");
+    gaiaAppendToOutBuffer (&sql_statement, ")");
     if (col_name)
       {
 	  /* releasing memory allocation for column names */
@@ -286,15 +331,217 @@ vshp_create (sqlite3 * db, void *pAux, int argc, const char *const *argv,
 	      free (*(col_name + cnt));
 	  free (col_name);
       }
-    if (sqlite3_declare_vtab (db, buf) != SQLITE_OK)
+    if (sql_statement.Error == 0 && sql_statement.Buffer != NULL)
       {
-	  *pzErr =
-	      sqlite3_mprintf
-	      ("[VirtualShape module] CREATE VIRTUAL: invalid SQL statement \"%s\"",
-	       buf);
-	  return SQLITE_ERROR;
+	  if (sqlite3_declare_vtab (db, sql_statement.Buffer) != SQLITE_OK)
+	    {
+		*pzErr =
+		    sqlite3_mprintf
+		    ("[VirtualShape module] CREATE VIRTUAL: invalid SQL statement \"%s\"",
+		     sql_statement.Buffer);
+		gaiaOutBufferReset (&sql_statement);
+		return SQLITE_ERROR;
+	    }
       }
+    gaiaOutBufferReset (&sql_statement);
     *ppVTab = (sqlite3_vtab *) p_vt;
+
+    if (vshp_has_metadata (db, &geotype))
+      {
+	  /* registering the Virtual Geometry */
+	  if (geotype)
+	    {
+		int xtype = 0;
+		int xdims = 0;
+		switch (p_vt->Shp->EffectiveType)
+		  {
+		  case GAIA_POINT:
+		      switch (p_vt->Shp->EffectiveDims)
+			{
+			case GAIA_XY_Z_M:
+			    xtype = 3001;
+			    xdims = 4;
+			    break;
+			case GAIA_XY_M:
+			    xtype = 2001;
+			    xdims = 3;
+			    break;
+			case GAIA_XY_Z:
+			    xtype = 1001;
+			    xdims = 3;
+			    break;
+			default:
+			    xtype = 1;
+			    xdims = 2;
+			    break;
+			};
+		      break;
+		  case GAIA_LINESTRING:
+		      switch (p_vt->Shp->EffectiveDims)
+			{
+			case GAIA_XY_Z_M:
+			    xtype = 3002;
+			    xdims = 4;
+			    break;
+			case GAIA_XY_M:
+			    xtype = 2002;
+			    xdims = 3;
+			    break;
+			case GAIA_XY_Z:
+			    xtype = 1002;
+			    xdims = 3;
+			    break;
+			default:
+			    xtype = 2;
+			    xdims = 2;
+			    break;
+			};
+		      break;
+		  case GAIA_POLYGON:
+		      switch (p_vt->Shp->EffectiveDims)
+			{
+			case GAIA_XY_Z_M:
+			    xtype = 3003;
+			    xdims = 4;
+			    break;
+			case GAIA_XY_M:
+			    xtype = 2003;
+			    xdims = 3;
+			    break;
+			case GAIA_XY_Z:
+			    xtype = 1003;
+			    xdims = 3;
+			    break;
+			default:
+			    xtype = 3;
+			    xdims = 2;
+			    break;
+			};
+		      break;
+		  case GAIA_MULTIPOINT:
+		      switch (p_vt->Shp->EffectiveDims)
+			{
+			case GAIA_XY_Z_M:
+			    xtype = 3004;
+			    xdims = 4;
+			    break;
+			case GAIA_XY_M:
+			    xtype = 2004;
+			    xdims = 3;
+			    break;
+			case GAIA_XY_Z:
+			    xtype = 1004;
+			    xdims = 3;
+			    break;
+			default:
+			    xtype = 4;
+			    xdims = 2;
+			    break;
+			};
+		      break;
+		  case GAIA_MULTILINESTRING:
+		      switch (p_vt->Shp->EffectiveDims)
+			{
+			case GAIA_XY_Z_M:
+			    xtype = 3005;
+			    xdims = 4;
+			    break;
+			case GAIA_XY_M:
+			    xtype = 2005;
+			    xdims = 3;
+			    break;
+			case GAIA_XY_Z:
+			    xtype = 1005;
+			    xdims = 3;
+			    break;
+			default:
+			    xtype = 5;
+			    xdims = 2;
+			    break;
+			};
+		      break;
+		  case GAIA_MULTIPOLYGON:
+		      switch (p_vt->Shp->EffectiveDims)
+			{
+			case GAIA_XY_Z_M:
+			    xtype = 3006;
+			    xdims = 4;
+			    break;
+			case GAIA_XY_M:
+			    xtype = 2006;
+			    xdims = 3;
+			    break;
+			case GAIA_XY_Z:
+			    xtype = 1006;
+			    xdims = 3;
+			    break;
+			default:
+			    xtype = 6;
+			    xdims = 2;
+			    break;
+			};
+		      break;
+		  };
+		sql =
+		    sqlite3_mprintf
+		    ("INSERT OR IGNORE INTO virts_geometry_columns "
+		     "(virt_name, virt_geometry, geometry_type, coord_dimension, srid) "
+		     "VALUES (Lower(%Q), 'geometry', %d, %d, %d)", argv[2],
+		     xtype, xdims, p_vt->Srid);
+	    }
+	  else
+	    {
+		const char *xgtype = "GEOMETRY";
+		switch (p_vt->Shp->EffectiveType)
+		  {
+		  case GAIA_POINT:
+		      xgtype = "POINT";
+		      break;
+		  case GAIA_LINESTRING:
+		      xgtype = "LINESTRING";
+		      break;
+		  case GAIA_POLYGON:
+		      xgtype = "POLYGON";
+		      break;
+		  case GAIA_MULTIPOINT:
+		      xgtype = "MULTIPOINT";
+		      break;
+		  case GAIA_MULTILINESTRING:
+		      xgtype = "MULTILINESTRING";
+		      break;
+		  case GAIA_MULTIPOLYGON:
+		      xgtype = "MULTIPOLYGON";
+		      break;
+		  };
+		sql =
+		    sqlite3_mprintf
+		    ("INSERT OR IGNORE INTO virts_geometry_columns "
+		     "(virt_name, virt_geometry, type, srid) "
+		     "VALUES (Lower(%Q), 'geometry', %Q, %d)", argv[2], xgtype,
+		     p_vt->Srid);
+	    }
+	  sqlite3_exec (db, sql, NULL, NULL, NULL);
+	  sqlite3_free (sql);
+      }
+    if (checkSpatialMetaData (db) == 3)
+      {
+	  /* current metadata style >= v.4.0.0 */
+
+	  /* inserting a row into VIRTS_GEOMETRY_COLUMNS_AUTH */
+	  sql = sqlite3_mprintf ("INSERT OR IGNORE INTO "
+				 "virts_geometry_columns_auth (virt_name, virt_geometry, hidden) "
+				 "VALUES (Lower(%Q), 'geometry', 0)", argv[2]);
+	  sqlite3_exec (db, sql, NULL, NULL, NULL);
+	  sqlite3_free (sql);
+
+	  /* inserting a row into GEOMETRY_COLUMNS_STATISTICS */
+	  sql = sqlite3_mprintf ("INSERT OR IGNORE INTO "
+				 "virts_geometry_columns_statistics (virt_name, virt_geometry) "
+				 "VALUES (Lower(%Q), 'geometry')", argv[2]);
+	  sqlite3_exec (db, sql, NULL, NULL, NULL);
+	  sqlite3_free (sql);
+      }
+
     return SQLITE_OK;
 }
 

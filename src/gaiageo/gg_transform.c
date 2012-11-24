@@ -47,7 +47,11 @@ the terms of any one of the MPL, the GPL or the LGPL.
 #include <stdio.h>
 #include <string.h>
 
+#if defined(_WIN32) && !defined(__MINGW32__)
+#include "config-msvc.h"
+#else
 #include "config.h"
+#endif
 
 #ifndef OMIT_PROJ		/* including PROJ.4 */
 #include <proj_api.h>
@@ -1443,6 +1447,17 @@ gaiaTransform (gaiaGeomCollPtr org, char *proj_from, char *proj_to)
     projPJ from_cs = pj_init_plus (proj_from);
     projPJ to_cs = pj_init_plus (proj_to);
     gaiaGeomCollPtr dst;
+    if (!from_cs)
+      {
+	  if (to_cs)
+	      pj_free (to_cs);
+	  return NULL;
+      }
+    if (!to_cs)
+      {
+	  pj_free (from_cs);
+	  return NULL;
+      }
     if (org->DimensionModel == GAIA_XY_Z)
 	dst = gaiaAllocGeomCollXYZ ();
     else if (org->DimensionModel == GAIA_XY_M)
@@ -1454,10 +1469,6 @@ gaiaTransform (gaiaGeomCollPtr org, char *proj_from, char *proj_to)
 /* setting up projection parameters */
     from_angle = gaiaIsLongLat (proj_from);
     to_angle = gaiaIsLongLat (proj_to);
-    if (!from_cs)
-	return dst;
-    if (!to_cs)
-	return dst;
     cnt = 0;
     pt = org->FirstPoint;
     while (pt)

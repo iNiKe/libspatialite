@@ -48,11 +48,16 @@ the terms of any one of the MPL, the GPL or the LGPL.
 #include <stdio.h>
 #include <string.h>
 
+#if defined(_WIN32) && !defined(__MINGW32__)
+#include "config-msvc.h"
+#else
 #include "config.h"
+#endif
 
 #include <spatialite/sqlite.h>
 
 #include <spatialite/gaiaaux.h>
+#include <spatialite_private.h>
 
 #ifdef _WIN32
 #define strcasecmp	_stricmp
@@ -541,6 +546,77 @@ gaiaIsReservedSqlName (const char *name)
 }
 
 GAIAAUX_DECLARE char *
+gaiaDequotedSql (const char *value)
+{
+/*
+/ returns a well formatted TEXT value from SQL
+/ 1] if the input string begins and ends with ' sigle quote will be the target
+/ 2] if the input string begins and ends with " double quote will be the target
+/ 3] in any othet case the string will simply be copied
+*/
+    const char *pi = value;
+    const char *start;
+    const char *end;
+    char *clean;
+    char *po;
+    int len;
+    char target;
+    int mark = 0;
+    if (value == NULL)
+	return NULL;
+
+    len = strlen (value);
+    clean = malloc (len + 1);
+    if (*(value + 0) == '"' && *(value + len - 1) == '"')
+	target = '"';
+    else if (*(value + 0) == '\'' && *(value + len - 1) == '\'')
+	target = '\'';
+    else
+      {
+	  /* no dequoting; simply copying */
+	  strcpy (clean, value);
+	  return clean;
+      }
+    start = value;
+    end = value + len - 1;
+    po = clean;
+    while (*pi != '\0')
+      {
+	  if (mark)
+	    {
+		if (*pi == target)
+		  {
+		      *po++ = *pi++;
+		      mark = 0;
+		      continue;
+		  }
+		else
+		  {
+		      /* error: mismatching quote */
+		      free (clean);
+		      return NULL;
+		  }
+	    }
+	  if (*pi == target)
+	    {
+		if (pi == start || pi == end)
+		  {
+		      /* first or last char */
+		      pi++;
+		      continue;
+		  }
+		/* found a quote marker */
+		mark = 1;
+		pi++;
+		continue;
+	    }
+	  *po++ = *pi++;
+      }
+    *po = '\0';
+    return clean;
+}
+
+GAIAAUX_DECLARE char *
 gaiaQuotedSql (const char *value, int quote)
 {
 /*
@@ -692,7 +768,6 @@ gaiaUpdateSqlLog (sqlite3 * sqlite, sqlite3_int64 sqllog_pk, int success,
 {
 /* completing an event already inserted into the SQL Log */
     char *sql_statement;
-    int ret;
     char dummy[64];
 
     if (checkSpatialMetaData (sqlite) != 3)
@@ -721,6 +796,7 @@ gaiaUpdateSqlLog (sqlite3 * sqlite, sqlite3_int64 sqllog_pk, int success,
 					   (errMsg == NULL)
 					   ? "UNKNOWN" : errMsg, dummy);
       }
-    ret = sqlite3_exec (sqlite, sql_statement, NULL, 0, NULL);
+    sqlite3_exec (sqlite, sql_statement, NULL, 0, NULL);
     sqlite3_free (sql_statement);
 }
+

@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT(libspatialite, 4.0.0-RC1, a.furieri@lqt.it)
+AC_INIT(libspatialite, 4.0.0, a.furieri@lqt.it)
 AC_LANG(C)
 AC_CONFIG_MACRO_DIR([m4])
 
@@ -228,12 +228,12 @@ if test x"$enable_geos" != "xno"; then
   fi
   # Extract the linker and include flags
   GEOS_LDFLAGS=`$GEOSCONFIG --ldflags`
-  GEOS_CPPFLAGS=-I`$GEOSCONFIG --includes`
+  GEOS_CFLAGS=-I`$GEOSCONFIG --includes`
   AC_SUBST([GEOS_LDFLAGS])
-  AC_SUBST([GEOS_CPPFLAGS])	
+  AC_SUBST([GEOS_CFLAGS])	
   # Ensure that we can parse geos_c.h
   CPPFLAGS_SAVE="$CPPFLAGS"
-  CPPFLAGS="$GEOS_CPPFLAGS"
+  CPPFLAGS="$GEOS_CFLAGS"
   AC_CHECK_HEADERS([geos_c.h],, [AC_MSG_ERROR([could not find geos_c.h - you may need to specify the directory of a geos-config file using --with-geosconfig])])
   CPPFLAGS="$CPPFLAGS_SAVE"	
   # Ensure we can link against libgeos_c
@@ -273,14 +273,14 @@ if test x"$enable_geos" != "xno"; then
 	  [], [enable_lwgeom=no])
   if test x"$enable_lwgeom" != "xno"; then
 	  AC_CHECK_HEADERS(liblwgeom.h,, [AC_MSG_ERROR([cannot find liblwgeom.h, bailing out])])
-	  _save_ldflags="$LDFLAGS"
-	  LDFLAGS="$LDFLAGS -llwgeom"
-	  AC_LINK_IFELSE([AC_LANG_SOURCE([int main() { return 0; } 
+	  _save_libs="$LIBS"
+	  LIBS=$LIBS' -llwgeom -lgeos_c'
+	  AC_LINK_IFELSE([AC_LANG_SOURCE([int main() { return lwgeom_make_valid(); return 0; }
 	    void lwgeom_init_allocators(void) { return; } ])],
-	    [AC_DEFINE(ENABLE_LWGEOM)], 
-            [AC_MSG_ERROR(['liblwgeom' is required but it doesn't seem to be installed on this system.])])
-	  LDFLAGS="$_save_ldflags"
-	  LIBS=$LIBS' -llwgeom'
+	    [AC_DEFINE(ENABLE_LWGEOM)],
+            [AC_MSG_ERROR(['liblwgeom' doesn't seem to be installed on this system; unsupported lwgeom_make_valid().])])
+	  LIBS="$_save_libs"
+	  LIBS=$LIBS' -llwgeom -lgeos_c'
   fi
 else
   AC_DEFINE(OMIT_GEOS)
