@@ -64,16 +64,21 @@ int main (int argc, char *argv[])
     int columns;
     double tic;
     gaiaVectorLayersListPtr list;
+    void *cache = spatialite_alloc_connection();
 
-    spatialite_init (0);
+    if (argc > 1 || argv[0] == NULL)
+	argc = 1;		/* silencing stupid compiler warnings */
+
     ret = sqlite3_open_v2 (":memory:", &handle, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL);
     if (ret != SQLITE_OK) {
 	fprintf(stderr, "cannot open in-memory database: %s\n", sqlite3_errmsg (handle));
 	sqlite3_close(handle);
 	return -1;
     }
+
+    spatialite_init_ex (handle, cache, 0);
     
-    ret = sqlite3_exec (handle, "SELECT InitSpatialMetadata()", NULL, NULL, &err_msg);
+    ret = sqlite3_exec (handle, "SELECT InitSpatialMetadata(1)", NULL, NULL, &err_msg);
     if (ret != SQLITE_OK) {
 	fprintf (stderr, "InitSpatialMetadata() error: %s\n", err_msg);
 	sqlite3_free(err_msg);
@@ -484,6 +489,24 @@ int main (int argc, char *argv[])
 /* checking gaiaGetVectorLayersList() - ALL */
     list = gaiaGetVectorLayersList(handle, NULL, NULL, GAIA_VECTORS_LIST_FAST);
     gaiaFreeVectorLayersList(list);
+
+#ifdef ENABLE_LWGEOM		/* only if LWGEOM is supported */
+
+    ret = check_all_geometry_columns (handle, "./report", NULL, NULL);
+    if (!ret) {
+        fprintf (stderr, "check_all_geometry_columns() error\n");
+	sqlite3_close(handle);
+	return -61;
+    }
+
+    ret = sanitize_all_geometry_columns (handle, "tmp_", "./report", NULL, NULL); 
+    if (!ret) {
+        fprintf (stderr, "sanitize_all_geometry_columns() error\n");
+	sqlite3_close(handle);
+	return -62;
+    }
+
+#endif /* end LWGEOM conditionals */
     
 /* checking gaiaGetVectorLayersList() - Table */
     list = gaiaGetVectorLayersList(handle, "elem_points_xyz", NULL, GAIA_VECTORS_LIST_FAST);
@@ -499,7 +522,7 @@ int main (int argc, char *argv[])
 	return -61;
     }
 
-    spatialite_cleanup();
+    spatialite_cleanup_ex (cache);
 #endif	/* end ICONV conditional */
 
     return 0;

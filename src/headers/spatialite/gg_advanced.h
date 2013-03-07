@@ -1,7 +1,7 @@
 /*
  gg_advanced.h -- Gaia common support for geometries: advanced
   
- version 4.0, 2012 August 6
+ version 4.1, 2013 May 8
 
  Author: Sandro Furieri a.furieri@lqt.it
 
@@ -23,7 +23,7 @@ The Original Code is the SpatiaLite library
 
 The Initial Developer of the Original Code is Alessandro Furieri
  
-Portions created by the Initial Developer are Copyright (C) 2008-2012
+Portions created by the Initial Developer are Copyright (C) 2008-2013
 the Initial Developer. All Rights Reserved.
 
 Contributor(s):
@@ -65,9 +65,16 @@ Regione Toscana - Settore Sistema Informativo Territoriale ed Ambientale
 #define _GG_ADVANCED_H
 #endif
 
+/** Gaia-to-GEOS: all geometries */
 #define GAIA2GEOS_ALL			0
+
+/** Gaia-to-GEOS: only geometries of the Point type */
 #define GAIA2GEOS_ONLY_POINTS		1
+
+/** Gaia-to-GEOS: only geometries of the Linestring type */
 #define GAIA2GEOS_ONLY_LINESTRINGS	2
+
+/** Gaia-to-GEOS: only geometries of the Polygon type */
 #define GAIA2GEOS_ONLY_POLYGONS		3
 
 #ifdef __cplusplus
@@ -75,7 +82,9 @@ extern "C"
 {
 #endif
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
 #ifndef OMIT_PROJ		/* including PROJ.4 */
+#endif
 
 /**
  Converts and angle from Radians into Degrees
@@ -129,8 +138,8 @@ extern "C"
 /**
  Resets the GEOS error and warning messages to an empty state
 
- \sa gaiaGetGeosErrorMsg, gaiaGetGeosWarningMsg, gaiaSetGeosErrorMsg,
- gaiaSetGeosWarningMsg
+ \sa gaiaGetGeosErrorMsg, gaiaGetGeosWarningMsg, gaiaGeosAuxErrorMsg,
+ gaiaSetGeosErrorMsg, gaiaSetGeosWarningMsg, gaiaSetGeosAuxErrorMsg
 
  \remark \b GEOS support required.
  */
@@ -142,8 +151,8 @@ extern "C"
  \return the latest GEOS error message: an empty string if no error was
  previoysly found.
 
- \sa gaiaResetGeosMsg, gaiaGetGeosWarningMsg, gaiaSetGeosErrorMsg,
- gaiaSetGeosWarningMsg
+ \sa gaiaResetGeosMsg, gaiaGetGeosWarningMsg, gaiaGetGeosAuxErrorMsg,
+ gaiaSetGeosErrorMsg, gaiaSetGeosWarningMsg, gaiaSetGeosAuxErrorMsg
 
  \remark \b GEOS support required.
  */
@@ -155,12 +164,25 @@ extern "C"
  \return the latest GEOS warning message: an empty string if no warning was 
  previoysly found.
 
- \sa gaiaResetGeosMsg, gaiaGetGeosErrorMsg, gaiaSetGeosErrorMsg,
- gaiaSetGeosWarningMsg
+ \sa gaiaResetGeosMsg, gaiaGetGeosErrorMsg, gaiaGetGeosAuxErrorMsg,
+ gaiaSetGeosErrorMsg, gaiaSetGeosWarningMsg, gaiaSetGeosAuxErrorMsg
 
  \remark \b GEOS support required.
  */
     GAIAGEO_DECLARE const char *gaiaGetGeosWarningMsg (void);
+
+/**
+ Return the latest GEOS (auxiliary) error message (if any)
+
+ \return the latest GEOS (auxiliary) error message: an empty string if no 
+ error was previoysly found.
+
+ \sa gaiaResetGeosMsg, gaiaGetGeosErrorMsg, gaiaGetGeosWarningMsg, 
+ gaiaSetGeosErrorMsg, gaiaSetGeosWarningMsg, gaiaSetGeosAuxErrorMsg
+
+ \remark \b GEOS support required.
+ */
+    GAIAGEO_DECLARE const char *gaiaGetGeosAuxErrorMsg (void);
 
 /**
  Set the current GEOS error message
@@ -168,7 +190,7 @@ extern "C"
  \param msg the error message to be set.
 
  \sa gaiaResetGeosMsg, gaiaGetGeosErrorMsg, gaiaGetGeosWarningMsg,
- gaiaSetGeosWarningMsg
+ gaiaGetGeosAuxErrorMsg, gaiaSetGeosWarningMsg, gaiaSetGeosAuxErrorMsg
 
  \remark \b GEOS support required.
  */
@@ -180,11 +202,23 @@ extern "C"
  \param msg the warning message to be set.
 
  \sa gaiaResetGeosMsg, gaiaGetGeosErrorMsg, gaiaGetGeosWarningMsg,
- gaiaSetGeosErrorMsg
+ gaiaGetGeosAuxErrorMsg, gaiaSetGeosErrorMsg, gaiaSetGeosAuxErrorMsg
 
  \remark \b GEOS support required.
  */
     GAIAGEO_DECLARE void gaiaSetGeosWarningMsg (const char *msg);
+
+/**
+ Set the current GEOS (auxiliary) error message
+
+ \param msg the error message to be set.
+
+ \sa gaiaResetGeosMsg, gaiaGetGeosErrorMsg, gaiaGetGeosWarningMsg,
+ gaiaGetGeosAuxErrorMsg, gaiaSetGeosWarningMsg, gaiaSetGeosErrorMsg
+
+ \remark \b GEOS support required.
+ */
+    GAIAGEO_DECLARE void gaiaSetGeosAuxErrorMsg (const char *msg);
 
 /**
  Converts a Geometry object into a GEOS Geometry
@@ -318,7 +352,7 @@ extern "C"
 /**
  Checks if a Geometry object represents an OGC Closed Linestring
 
- \param line pointer to Geometry object.
+ \param geom pointer to Geometry object.
 
  \return 0 if false; any other value if true
 
@@ -395,12 +429,11 @@ extern "C"
 
  \return 0 on failure: any other value on success
 
- \sa gaiaGeomCollLength, gaiaMeasureArea
+ \sa gaiaGeomCollLength, gaiaMeasureArea, gaiaGeodesicArea
 
  \remark \b GEOS support required.
  */
     GAIAGEO_DECLARE int gaiaGeomCollArea (gaiaGeomCollPtr geom, double *area);
-
 
 /**
  Attempts to rearrange a generic Geometry object into a Polygon or MultiPolygon
@@ -431,7 +464,7 @@ extern "C"
 
  \sa gaiaGeomCollDisjoint, gaiaGeomCollIntersects, gaiaGeomCollOverlaps,
  gaiaGeomCollCrosses, gaiaGeomCollContains, gaiaGeomCollWithin,
- gaiaGeomCollTouches, gaiaGeomCollRelate
+ gaiaGeomCollTouches, gaiaGeomCollRelate, gaiaGeomCollPreparedDisjoint
 
  \remark \b GEOS support required.
  */
@@ -456,8 +489,34 @@ extern "C"
 					      gaiaGeomCollPtr geom2);
 
 /**
+ Spatial relationship evalution: Disjoint (GEOSPreparedGeometry)
+
+ \param p_cache a memory pointer returned by spatialite_alloc_connection()
+ \param geom1 the first Geometry object to be evaluated
+ \param blob1 the BLOB corresponding to the first Geometry
+ \param size1 the size (in bytes) of the first BLOB
+ \param geom2 the second Geometry object to be evaluated
+ \param blob2 the BLOB corresponding to the second Geometry
+ \param size2 the size (in bytes) of the second BLOB
+
+ \return 0 if false: any other value if true
+
+ \sa gaiaGeomCollDisjoint
+ 
+ \remark \b GEOS support required.
+ */
+    GAIAGEO_DECLARE int gaiaGeomCollPreparedDisjoint (void *p_cache,
+						      gaiaGeomCollPtr geom1,
+						      unsigned char *blob1,
+						      int size1,
+						      gaiaGeomCollPtr geom2,
+						      unsigned char *blob2,
+						      int size2);
+
+/**
  Spatial relationship evalution: Intesects
 
+ \param p_cache a memory pointer returned by spatialite_alloc_connection()
  \param geom1 the first Geometry object to be evaluated
  \param geom2 the second Geometry object to be evaluated
 
@@ -465,12 +524,35 @@ extern "C"
 
  \sa gaiaGeomCollEquals, gaiaGeomCollDisjoint, gaiaGeomCollOverlaps,
  gaiaGeomCollCrosses, gaiaGeomCollContains, gaiaGeomCollWithin,
- gaiaGeomCollTouches, gaiaGeomCollRelate
+ gaiaGeomCollTouches, gaiaGeomCollRelate, gaiaGeomCollPreparedIntersects
  
  \remark \b GEOS support required.
  */
     GAIAGEO_DECLARE int gaiaGeomCollIntersects (gaiaGeomCollPtr geom1,
 						gaiaGeomCollPtr geom2);
+/**
+ Spatial relationship evalution: Intesects (GEOSPreparedGeometry)
+
+ \param geom1 the first Geometry object to be evaluated
+ \param blob1 the BLOB corresponding to the first Geometry
+ \param size1 the size (in bytes) of the first BLOB
+ \param geom2 the second Geometry object to be evaluated
+ \param blob2 the BLOB corresponding to the second Geometry
+ \param size2 the size (in bytes) of the second BLOB
+
+ \return 0 if false: any other value if true
+
+ \sa gaiaGeomCollIntersects
+ 
+ \remark \b GEOS support required.
+ */
+    GAIAGEO_DECLARE int gaiaGeomCollPreparedIntersects (void *p_cache,
+							gaiaGeomCollPtr geom1,
+							unsigned char *blob1,
+							int size1,
+							gaiaGeomCollPtr geom2,
+							unsigned char *blob2,
+							int size2);
 
 /**
  Spatial relationship evalution: Overlaps
@@ -482,12 +564,37 @@ extern "C"
 
  \sa gaiaGeomCollEquals, gaiaGeomCollDisjoint, gaiaGeomCollIntersects, 
  gaiaGeomCollCrosses, gaiaGeomCollContains, gaiaGeomCollWithin,
- gaiaGeomCollTouches, gaiaGeomCollRelate
+ gaiaGeomCollTouches, gaiaGeomCollRelate, gaiaGeomCollPreparedOverlaps
  
  \remark \b GEOS support required.
  */
     GAIAGEO_DECLARE int gaiaGeomCollOverlaps (gaiaGeomCollPtr geom1,
 					      gaiaGeomCollPtr geom2);
+
+/**
+ Spatial relationship evalution: Overlaps (GEOSPreparedGeometry)
+
+ \param p_cache a memory pointer returned by spatialite_alloc_connection()
+ \param geom1 the first Geometry object to be evaluated
+ \param blob1 the BLOB corresponding to the first Geometry
+ \param size1 the size (in bytes) of the first BLOB
+ \param geom2 the second Geometry object to be evaluated
+ \param blob2 the BLOB corresponding to the second Geometry
+ \param size2 the size (in bytes) of the second BLOB
+
+ \return 0 if false: any other value if true
+
+ \sa gaiaGeomCollOverlaps
+ 
+ \remark \b GEOS support required.
+ */
+    GAIAGEO_DECLARE int gaiaGeomCollPreparedOverlaps (void *p_cache,
+						      gaiaGeomCollPtr geom1,
+						      unsigned char *blob1,
+						      int size1,
+						      gaiaGeomCollPtr geom2,
+						      unsigned char *blob2,
+						      int size2);
 
 /**
  Spatial relationship evalution: Crosses
@@ -499,12 +606,37 @@ extern "C"
 
  \sa gaiaGeomCollEquals, gaiaGeomCollDisjoint, gaiaGeomCollIntersects, 
  gaiaGeomCollOverlaps, gaiaGeomCollContains, gaiaGeomCollWithin,
- gaiaGeomCollTouches, gaiaGeomCollRelate
+ gaiaGeomCollTouches, gaiaGeomCollRelate, gaiaGeomCollCrosses
  
  \remark \b GEOS support required.
  */
     GAIAGEO_DECLARE int gaiaGeomCollCrosses (gaiaGeomCollPtr geom1,
 					     gaiaGeomCollPtr geom2);
+
+/**
+ Spatial relationship evalution: Crosses (GEOSPreparedGeometry)
+
+ \param p_cache a memory pointer returned by spatialite_alloc_connection()
+ \param geom1 the first Geometry object to be evaluated
+ \param blob1 the BLOB corresponding to the first Geometry
+ \param size1 the size (in bytes) of the first BLOB
+ \param geom2 the second Geometry object to be evaluated
+ \param blob2 the BLOB corresponding to the second Geometry
+ \param size2 the size (in bytes) of the second BLOB
+
+ \return 0 if false: any other value if true
+
+ \sa gaiaGeomCollCrosses
+ 
+ \remark \b GEOS support required.
+ */
+    GAIAGEO_DECLARE int gaiaGeomCollPreparedCrosses (void *p_cache,
+						     gaiaGeomCollPtr geom1,
+						     unsigned char *blob1,
+						     int size1,
+						     gaiaGeomCollPtr geom2,
+						     unsigned char *blob2,
+						     int size2);
 
 /**
  Spatial relationship evalution: Contains
@@ -516,12 +648,37 @@ extern "C"
 
  \sa gaiaGeomCollEquals, gaiaGeomCollDisjoint, gaiaGeomCollIntersects, 
  gaiaGeomCollOverlaps, gaiaGeomCollCrosses, gaiaGeomCollWithin,
- gaiaGeomCollTouches, gaiaGeomCollRelate
+ gaiaGeomCollTouches, gaiaGeomCollRelate, gaiaGeomCollPreparedContains
  
  \remark \b GEOS support required.
  */
     GAIAGEO_DECLARE int gaiaGeomCollContains (gaiaGeomCollPtr geom1,
 					      gaiaGeomCollPtr geom2);
+
+/**
+ Spatial relationship evalution: Contains (GEOSPreparedGeometry)
+
+ \param p_cache a memory pointer returned by spatialite_alloc_connection()
+ \param geom1 the first Geometry object to be evaluated
+ \param blob1 the BLOB corresponding to the first Geometry
+ \param size1 the size (in bytes) of the first BLOB
+ \param geom2 the second Geometry object to be evaluated
+ \param blob2 the BLOB corresponding to the second Geometry
+ \param size2 the size (in bytes) of the second BLOB
+
+ \return 0 if false: any other value if true
+
+ \sa gaiaGeomCollContains
+ 
+ \remark \b GEOS support required.
+ */
+    GAIAGEO_DECLARE int gaiaGeomCollPreparedContains (void *p_cache,
+						      gaiaGeomCollPtr geom1,
+						      unsigned char *blob1,
+						      int size1,
+						      gaiaGeomCollPtr geom2,
+						      unsigned char *blob2,
+						      int size2);
 
 /**
  Spatial relationship evalution: Within
@@ -533,12 +690,37 @@ extern "C"
 
  \sa gaiaGeomCollEquals, gaiaGeomCollDisjoint, gaiaGeomCollIntersects, 
  gaiaGeomCollOverlaps, gaiaGeomCollCrosses, gaiaGeomCollContains, 
- gaiaGeomCollTouches, gaiaGeomCollRelate
+ gaiaGeomCollTouches, gaiaGeomCollRelate, gaiaGeomCollWithin
  
  \remark \b GEOS support required.
  */
     GAIAGEO_DECLARE int gaiaGeomCollWithin (gaiaGeomCollPtr geom1,
 					    gaiaGeomCollPtr geom2);
+
+/**
+ Spatial relationship evalution: Within (GEOSPreparedGeometry)
+
+ \param p_cache a memory pointer returned by spatialite_alloc_connection()
+ \param geom1 the first Geometry object to be evaluated
+ \param blob1 the BLOB corresponding to the first Geometry
+ \param size1 the size (in bytes) of the first BLOB
+ \param geom2 the second Geometry object to be evaluated
+ \param blob2 the BLOB corresponding to the second Geometry
+ \param size2 the size (in bytes) of the second BLOB
+
+ \return 0 if false: any other value if true
+
+ \sa gaiaGeomCollPrepared
+ 
+ \remark \b GEOS support required.
+ */
+    GAIAGEO_DECLARE int gaiaGeomCollPreparedWithin (void *p_cache,
+						    gaiaGeomCollPtr geom1,
+						    unsigned char *blob1,
+						    int size1,
+						    gaiaGeomCollPtr geom2,
+						    unsigned char *blob2,
+						    int size2);
 
 /**
  Spatial relationship evalution: Touches
@@ -550,12 +732,37 @@ extern "C"
 
  \sa gaiaGeomCollEquals, gaiaGeomCollDisjoint, gaiaGeomCollIntersects, 
  gaiaGeomCollOverlaps, gaiaGeomCollCrosses, gaiaGeomCollContains, 
- gaiaGeomCollWithin, gaiaGeomCollRelate
+ gaiaGeomCollWithin, gaiaGeomCollRelate, gaiaGeomCollPreparedTouches
  
  \remark \b GEOS support required.
  */
     GAIAGEO_DECLARE int gaiaGeomCollTouches (gaiaGeomCollPtr geom1,
 					     gaiaGeomCollPtr geom2);
+
+/**
+ Spatial relationship evalution: Touches (GEOSPreparedGeometry)
+
+ \param p_cache a memory pointer returned by spatialite_alloc_connection()
+ \param geom1 the first Geometry object to be evaluated
+ \param blob1 the BLOB corresponding to the first Geometry
+ \param size1 the size (in bytes) of the first BLOB
+ \param geom2 the second Geometry object to be evaluated
+ \param blob2 the BLOB corresponding to the second Geometry
+ \param size2 the size (in bytes) of the second BLOB
+
+ \return 0 if false: any other value if true
+
+ \sa gaiaGeomCollTouches
+ 
+ \remark \b GEOS support required.
+ */
+    GAIAGEO_DECLARE int gaiaGeomCollPreparedTouches (void *p_cache,
+						     gaiaGeomCollPtr geom1,
+						     unsigned char *blob1,
+						     int size1,
+						     gaiaGeomCollPtr geom2,
+						     unsigned char *blob2,
+						     int size2);
 
 /**
  Spatial relationship evalution: Relate
@@ -1110,6 +1317,31 @@ extern "C"
     GAIAGEO_DECLARE int gaiaGeomCollCovers (gaiaGeomCollPtr geom1,
 					    gaiaGeomCollPtr geom2);
 
+/** 
+ Topology check: test if a Geometry covers another one (GEOSPreparedGeometry)
+
+ \param p_cache a memory pointer returned by spatialite_alloc_connection()
+ \param geom1 pointer to first input Geometry object.
+ \param blob1 the BLOB corresponding to the first Geometry
+ \param size1 the size (in bytes) of the first BLOB
+ \param geom2 pointer to second input Geometry object.
+ \param blob2 the BLOB corresponding to the second Geometry
+ \param size2 the size (in bytes) of the second BLOB
+
+ \return 0 if false; any other value if geom1 \e spatially \e covers geom2.
+
+ \sa gaiaGeomCollCovers
+
+ \remark \b GEOS-ADVANCED support required.
+ */
+    GAIAGEO_DECLARE int gaiaGeomCollPreparedCovers (void *p_cache,
+						    gaiaGeomCollPtr geom1,
+						    unsigned char *blob1,
+						    int size1,
+						    gaiaGeomCollPtr geom2,
+						    unsigned char *blob2,
+						    int size2);
+
 /**
  Topology check: test if a Geometry is covered by another one
                                             
@@ -1125,6 +1357,32 @@ extern "C"
  */
     GAIAGEO_DECLARE int gaiaGeomCollCoveredBy (gaiaGeomCollPtr geom1,
 					       gaiaGeomCollPtr geom2);
+
+/**
+ Topology check: test if a Geometry is covered by another one (GEOSPreparedGeometry)
+                                            
+ \param p_cache a memory pointer returned by spatialite_alloc_connection()
+ \param geom1 pointer to first input Geometry object.
+ \param blob1 the BLOB corresponding to the first Geometry
+ \param size1 the size (in bytes) of the first BLOB
+ \param geom2 pointer to second input Geometry object.
+ \param blob2 the BLOB corresponding to the second Geometry
+ \param size2 the size (in bytes) of the second BLOB
+                                               
+ \return 0 if false; any other value if geom2 is \e spatially \e covered \e by
+ geom1.
+
+ \sa gaiaGeomCollCovers
+
+ \remark \b GEOS-ADVANCED support required.
+ */
+    GAIAGEO_DECLARE int gaiaGeomCollPreparedCoveredBy (void *p_cache,
+						       gaiaGeomCollPtr geom1,
+						       unsigned char *blob1,
+						       int size1,
+						       gaiaGeomCollPtr geom2,
+						       unsigned char *blob2,
+						       int size2);
 
 /**
  Utility function: SquareGrid
@@ -1263,7 +1521,7 @@ extern "C"
  \param geom pointer to input Geometry object.
  \param factor multiplier used for filtering Delaunay triangles: please read the note.
  \param tolerance optional snapping tolerance.
- \param allow_hows if FALSE any interior hole will be suppressed.
+ \param allow_holes if FALSE any interior hole will be suppressed.
  
  \return the pointer to newly created Geometry object (always of the Polygon type): 
   NULL on failure.
@@ -1294,6 +1552,66 @@ extern "C"
 #ifndef DOXYGEN_SHOULD_IGNORE_THIS
 #ifdef ENABLE_LWGEOM
 #endif
+
+/**
+ Resets the LWGEOM error and warning messages to an empty state
+
+ \sa gaiaGetLwGeomErrorMsg, gaiaGetLwGeomWarningMsg, gaiaSetLwGeomErrorMsg,
+ gaiaSetLwGeomWarningMsg
+
+ \remark \b LWGEOM support required.
+ */
+    GAIAGEO_DECLARE void gaiaResetLwGeomMsg (void);
+
+/**
+ Return the latest LWGEOM error message (if any)
+
+ \return the latest LWGEOM error message: an empty string if no error was
+ previoysly found.
+
+ \sa gaiaResetLwGeomMsg, gaiaGetLwGeomWarningMsg, gaiaSetLwGeomErrorMsg,
+ gaiaSetLwGeomWarningMsg
+
+ \remark \b LWGEOM support required.
+ */
+    GAIAGEO_DECLARE const char *gaiaGetLwGeomErrorMsg (void);
+
+/**
+ Return the latest LWGEOM warning message (if any)
+
+ \return the latest LWGEOM warning message: an empty string if no warning was 
+ previoysly found.
+
+ \sa gaiaResetLwGeomMsg, gaiaGetLwGeomErrorMsg, gaiaSetLwGeomErrorMsg,
+ gaiaSetLwGeomWarningMsg
+
+ \remark \b LWGEOM support required.
+ */
+    GAIAGEO_DECLARE const char *gaiaGetLwGeomWarningMsg (void);
+
+/**
+ Set the current LWGEOM error message
+
+ \param msg the error message to be set.
+
+ \sa gaiaResetLwGeomMsg, gaiaGetLwGeomErrorMsg, gaiaGetLwGeomWarningMsg,
+ gaiaSetLwGeomWarningMsg
+
+ \remark \b LWGEOM support required.
+ */
+    GAIAGEO_DECLARE void gaiaSetLwGeomErrorMsg (const char *msg);
+
+/**
+ Set the current LWGEOM warning message
+
+ \param msg the warning message to be set.
+
+ \sa gaiaResetLwGeomMsg, gaiaGetLwGeomErrorMsg, gaiaGetLwGeomWarningMsg,
+ gaiaSetLwGeomErrorMsg
+
+ \remark \b LWGEOM support required.
+ */
+    GAIAGEO_DECLARE void gaiaSetLwGeomWarningMsg (const char *msg);
 
 /**
  Utility function: MakeValid
@@ -1362,7 +1680,7 @@ extern "C"
 /**
  Utility function: Azimuth
 
- \param xa the X ccordinate of PointA.
+ \param xa the X coordinate of PointA.
  \param ya the Y coordinate of PointA.
  \param xb the X ccordinate of PointB.
  \param yb the Y coordinate of PointB.
@@ -1372,10 +1690,59 @@ extern "C"
 
  \return 0 on failure: any other value on success
 
+ \sa gaiaProjectedPoint
+
  \remark \b LWGEOM support required.
  */
     GAIAGEO_DECLARE int gaiaAzimuth (double xa, double ya, double xb,
 				     double yb, double *azimuth);
+
+/**
+ Utility function: EllipsoidAzimuth
+
+ \param xa the X coordinate of PointA.
+ \param ya the Y coordinate of PointA.
+ \param xb the X ccordinate of PointB.
+ \param yb the Y coordinate of PointB.
+ \param a major axis of the reference spheroid.
+ \param b minor axis of the reference spheroid.
+ \param azimuth on completion this variable will contain the angle in radians from 
+  the horizontal of the vector defined by pointA and pointB. 
+ \n Angle is computed clockwise from down-to-up: on the clock: 12=0; 3=PI/2; 6=PI; 9=3PI/2.
+
+ \return 0 on failure: any other value on success
+
+ \sa gaiaAzimuth
+
+ \remark \b LWGEOM support required.
+ */
+    GAIAGEO_DECLARE int gaiaEllipsoidAzimuth (double xa, double ya, double xb,
+					      double yb, double a, double b,
+					      double *azimuth);
+
+/**
+ Utility function: ProjectedPoint
+
+ \param x1 the X coordinate of the Start Point.
+ \param y1 the Y coordinate of the Start Point.
+ \param a major axis of the reference spheroid.
+ \param b minor axis of the reference spheroid.
+ \param distance a distance expressed in Meters
+ \param azimuth (aka bearing aka heading) expressed in radians;
+ on the clock: 12=0; 3=PI/2; 6=PI; 9=3PI/2.
+ \param x2 on completion this variable will contain the the X coordinate 
+ of the Projected Point.
+ \param y2 on completion this variable will contain the the Y coordinate 
+ of the Projected Point.
+
+ \return 0 on failure: any other value on success
+
+ \remark \b LWGEOM support required.
+ */
+    GAIAGEO_DECLARE int gaiaProjectedPoint (double x1, double y1, double a,
+					    double b, double distance,
+					    double azimuth, double *x2,
+					    double *y2);
 
 /**
  Utility function: GeoHash
@@ -1410,7 +1777,7 @@ extern "C"
  */
     GAIAGEO_DECLARE char *gaiaAsX3D (gaiaGeomCollPtr geom, const char *srs,
 				     int precision, int options,
-				     const char *defid);
+				     const char *refid);
 
 /**
  Calculates the minimum 3D distance intercurring between two Geometry objects
@@ -1531,6 +1898,25 @@ extern "C"
     GAIAGEO_DECLARE gaiaGeomCollPtr gaiaSplitRight (gaiaGeomCollPtr input,
 						    gaiaGeomCollPtr blade);
 
+/**
+ Measures the total Area for a Geometry object (geodesic)
+
+ \param geom pointer to Geometry object
+ \param a major axis of the reference spheroid.
+ \param b minor axis of the reference spheroid.
+ \param use_ellipsoid if TRUE will measure the Area on the Ellipsoid,
+  otherwise on the Sphere
+ \param area on completion this variable will contain the measured area
+
+ \return 0 on failure: any other value on success
+
+ \sa gaiaGeomCollLength, gaiaMeasureArea, gaiaGeomCollArea
+
+ \remark \b LWGEOM support required.
+ */
+    GAIAGEO_DECLARE int gaiaGeodesicArea (gaiaGeomCollPtr geom, double a,
+					  double b, int use_ellipsoid,
+					  double *area);
 
 #endif				/* end LWGEOM support */
 
@@ -1539,8 +1925,11 @@ extern "C"
 /**
  Utility function: SnapToGrid
 
+ \param geom the input Geometry object.
  \param origin_x the X ccordinate identifying the Grid Origin.
  \param origin_y the Y coordinate identifiying the Grid Origin.
+ \param origin_z the Z ccordinate identifying the Grid Origin.
+ \param origin_m the M coordinate identifiying the Grid Origin.
  \param size_x Grid cell size (X axis).
  \param size_y Grid cell size (Y axis).
  \param size_z Grid cell size (Z axis).

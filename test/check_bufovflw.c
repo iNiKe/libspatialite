@@ -101,15 +101,21 @@ int main (int argc, char *argv[])
     char frmt[2048];
     int row_count;
     char *dumpname = __FILE__"dump";
+    void *cache = spatialite_alloc_connection();
 
-    spatialite_init (0);
+    if (argc > 1 || argv[0] == NULL)
+	argc = 1;		/* silencing stupid compiler warnings */
+
     ret = sqlite3_open_v2 (":memory:", &handle, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL);
     if (ret != SQLITE_OK) {
 	fprintf(stderr, "cannot open in-memory db: %s\n", sqlite3_errmsg (handle));
 	sqlite3_close(handle);
 	return -1;
     }
-    ret = sqlite3_exec (handle, "SELECT InitSpatialMetadata()", NULL, NULL, &err_msg);
+
+    spatialite_init_ex (handle, cache, 0);
+
+    ret = sqlite3_exec (handle, "SELECT InitSpatialMetadata(1)", NULL, NULL, &err_msg);
     if (ret != SQLITE_OK) {
 	fprintf (stderr, "InitSpatialMetadata() error: %s\n", err_msg);
 	sqlite3_free(err_msg);
@@ -537,6 +543,27 @@ test7:
     if (strcmp ("1", value) != 0) {
         fprintf (stderr, "Unexpected result (statistics TABLE-B): %s\n", results[1]);
         return -42;
+    }
+    sqlite3_free_table (results);
+
+/* retieving the LayerExtent for table "B" */
+    sql = sqlite3_mprintf("SELECT ST_AsText(GetLayerExtent(%Q, %Q))", table_b, geom);
+    ret = sqlite3_get_table (handle, sql, &results, &rows, &columns, &err_msg);
+    sqlite3_free(sql);
+    if (ret != SQLITE_OK) {
+	fprintf (stderr, "GetLayerExtent TABLE-B error: %s\n", err_msg);
+	sqlite3_free(err_msg);
+	sqlite3_close(handle);
+	return -140;
+    }
+    if (rows != 1 || columns != 1) {
+        fprintf (stderr, "Unexpected rows/columns (GetLayerExtent TABLE-B): r=%d c=%d\n", rows, columns);
+        return -141;
+    }
+    value = results[1];
+    if (strcmp ("POLYGON((-3 -30, 5 -30, 5 50, -3 50, -3 -30))", value) != 0) {
+        fprintf (stderr, "Unexpected result (GetLayerExtent TABLE-B): %s\n", results[1]);
+        return -142;
     }
     sqlite3_free_table (results);
 
@@ -1620,7 +1647,7 @@ test7:
 	return -133;
     }
         
-    spatialite_cleanup();
+    spatialite_cleanup_ex (cache);
     free(suffix);
     
     return 0;

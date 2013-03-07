@@ -58,16 +58,21 @@ int main (int argc, char *argv[])
     sqlite3 *handle;
     char *err_msg = NULL;
     int row_count;
+    void *cache = spatialite_alloc_connection();
 
-    spatialite_init (0);
+    if (argc > 1 || argv[0] == NULL)
+	argc = 1;		/* silencing stupid compiler warnings */
+
     ret = sqlite3_open_v2 (":memory:", &handle, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL);
     if (ret != SQLITE_OK) {
 	fprintf(stderr, "cannot open in-memory database: %s\n", sqlite3_errmsg (handle));
 	sqlite3_close(handle);
 	return -1;
     }
+
+    spatialite_init_ex (handle, cache, 0);
     
-    ret = sqlite3_exec (handle, "SELECT InitSpatialMetadata()", NULL, NULL, &err_msg);
+    ret = sqlite3_exec (handle, "SELECT InitSpatialMetadata(1)", NULL, NULL, &err_msg);
     if (ret != SQLITE_OK) {
 	fprintf (stderr, "InitSpatialMetadata() error: %s\n", err_msg);
 	sqlite3_free(err_msg);
@@ -82,14 +87,46 @@ int main (int argc, char *argv[])
 	sqlite3_close(handle);
 	return -3;
     }
+
+#ifdef ENABLE_LWGEOM		/* only if LWGEOM is supported */
+
+    ret = check_geometry_column (handle, "test1", "geometry", "./report.html", NULL, NULL, NULL);
+    if (ret) {
+        fprintf (stderr, "check_geometry_column() error\n");
+	sqlite3_close(handle);
+	return -4;
+    }
+
+    ret = sanitize_geometry_column (handle, "test1", "geometry", "tmp_test1", "./report.html", NULL, NULL, NULL, NULL, NULL); 
+    if (ret) {
+        fprintf (stderr, "sanitize_geometry_column() error\n");
+	sqlite3_close(handle);
+	return -5;
+    }
+
+    ret = check_geometry_column (handle, "test1", "col1", "./report.html", NULL, NULL, NULL);
+    if (!ret) {
+        fprintf (stderr, "check_geometry_column() error\n");
+	sqlite3_close(handle);
+	return -6;
+    }
+
+    ret = sanitize_geometry_column (handle, "test1", "col1", "tmp_test1", "./report.html", NULL, NULL, NULL, NULL, NULL); 
+    if (!ret) {
+        fprintf (stderr, "sanitize_geometry_column() error\n");
+	sqlite3_close(handle);
+	return -7;
+    }
+
+#endif /* end LWGEOM conditionals */
     
     ret = sqlite3_close (handle);
     if (ret != SQLITE_OK) {
         fprintf (stderr, "sqlite3_close() error: %s\n", sqlite3_errmsg (handle));
-	return -4;
+	return -8;
     }
     
-    spatialite_cleanup();
+    spatialite_cleanup_ex (cache);
 #endif	/* end ICONV conditional */
 
     return 0;

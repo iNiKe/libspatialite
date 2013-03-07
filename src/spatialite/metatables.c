@@ -2,7 +2,7 @@
 
  metatables.c -- creating the metadata tables and related triggers
 
- version 4.0, 2012 September 2
+ version 4.1, 2013 May 8
 
  Author: Sandro Furieri a.furieri@lqt.it
 
@@ -24,7 +24,7 @@ The Original Code is the SpatiaLite library
 
 The Initial Developer of the Original Code is Alessandro Furieri
  
-Portions created by the Initial Developer are Copyright (C) 2008-2012
+Portions created by the Initial Developer are Copyright (C) 2008-2013
 the Initial Developer. All Rights Reserved.
 
 Contributor(s):
@@ -49,6 +49,7 @@ the terms of any one of the MPL, the GPL or the LGPL.
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <float.h>
 
 #if defined(_WIN32) && !defined(__MINGW32__)
 #include "config-msvc.h"
@@ -3902,17 +3903,20 @@ getRealSQLnames (void *p_sqlite, const char *table, const char *column,
     return 1;
 }
 
-static void
-addLayerAttributeField (gaiaVectorLayersListPtr list, const char *table_name,
+SPATIALITE_PRIVATE void
+addLayerAttributeField (void *x_list, const char *table_name,
 			const char *geometry_column, int ordinal,
 			const char *column_name, int null_values,
 			int integer_values, int double_values, int text_values,
 			int blob_values, int null_max_size, int max_size,
-			int null_int_range, sqlite3_int64 integer_min,
-			sqlite3_int64 integer_max, int null_double_range,
+			int null_int_range, void *x_integer_min,
+			void *x_integer_max, int null_double_range,
 			double double_min, double double_max)
 {
 /* adding some AttributeFiled to a VectorLayer */
+    gaiaVectorLayersListPtr list = (gaiaVectorLayersListPtr) x_list;
+    sqlite3_int64 integer_min = *((sqlite3_int64 *) x_integer_min);
+    sqlite3_int64 integer_max = *((sqlite3_int64 *) x_integer_max);
     gaiaLayerAttributeFieldPtr fld;
     int len;
     gaiaVectorLayerPtr lyr = list->Current;
@@ -3976,12 +3980,13 @@ addLayerAttributeField (gaiaVectorLayersListPtr list, const char *table_name,
     lyr->Last = fld;
 }
 
-static void
-addVectorLayer (gaiaVectorLayersListPtr list, const char *layer_type,
+SPATIALITE_PRIVATE void
+addVectorLayer (void *x_list, const char *layer_type,
 		const char *table_name, const char *geometry_column,
 		int geometry_type, int srid, int spatial_index)
 {
 /* adding a Layer to a VectorLayersList */
+    gaiaVectorLayersListPtr list = (gaiaVectorLayersListPtr) x_list;
     int len;
     gaiaVectorLayerPtr lyr = malloc (sizeof (gaiaVectorLayer));
     lyr->LayerType = GAIA_VECTOR_UNKNOWN;
@@ -4161,12 +4166,13 @@ addVectorLayer (gaiaVectorLayersListPtr list, const char *layer_type,
     list->Last = lyr;
 }
 
-static void
-addVectorLayerExtent (gaiaVectorLayersListPtr list, const char *table_name,
+SPATIALITE_PRIVATE void
+addVectorLayerExtent (void *x_list, const char *table_name,
 		      const char *geometry_column, int count, double min_x,
 		      double min_y, double max_x, double max_y)
 {
 /* appending a LayerExtent object to the corresponding VectorLayer */
+    gaiaVectorLayersListPtr list = (gaiaVectorLayersListPtr) x_list;
     gaiaVectorLayerPtr lyr = list->First;
     while (lyr)
       {
@@ -4562,8 +4568,8 @@ gaiaGetVectorLayersList_v4 (sqlite3 * handle, const char *table,
 					ordinal, column_name, null_values,
 					integer_values, double_values,
 					text_values, blob_values, null_max_size,
-					max_size, null_int_range, integer_min,
-					integer_max, null_double_range,
+					max_size, null_int_range, &integer_min,
+					&integer_max, null_double_range,
 					double_min, double_max);
 	    }
       }
@@ -5919,4 +5925,60 @@ gaiaGetVectorLayersList (sqlite3 * handle, const char *table,
   error:
     gaiaFreeVectorLayersList (list);
     return NULL;
+}
+
+SPATIALITE_DECLARE gaiaGeomCollPtr
+gaiaGetLayerExtent (sqlite3 * handle, const char *table,
+		    const char *geometry, int mode)
+{
+/* attempting to get a Layer Full Extent (Envelope) */
+    gaiaVectorLayersListPtr list;
+    gaiaVectorLayerPtr lyr;
+    double minx = -DBL_MAX;
+    double miny = -DBL_MAX;
+    double maxx = DBL_MAX;
+    double maxy = DBL_MAX;
+    int srid;
+    gaiaGeomCollPtr bbox;
+    gaiaPolygonPtr polyg;
+    gaiaRingPtr rect;
+    int md = GAIA_VECTORS_LIST_OPTIMISTIC;
+
+    if (table == NULL)
+	return NULL;
+    if (mode)
+	md = GAIA_VECTORS_LIST_PESSIMISTIC;
+
+    list = gaiaGetVectorLayersList (handle, table, geometry, md);
+    if (list == NULL)
+	return NULL;
+    lyr = list->First;
+    if (lyr == list->Last && lyr != NULL)
+      {
+	  srid = lyr->Srid;
+	  if (lyr->ExtentInfos)
+	    {
+		minx = lyr->ExtentInfos->MinX;
+		miny = lyr->ExtentInfos->MinY;
+		maxx = lyr->ExtentInfos->MaxX;
+		maxy = lyr->ExtentInfos->MaxY;
+	    }
+      }
+    gaiaFreeVectorLayersList (list);
+
+    if (minx == -DBL_MIN || miny == -DBL_MAX || maxx == DBL_MAX
+	|| maxy == DBL_MAX)
+	return NULL;
+
+/* building the Envelope */
+    bbox = gaiaAllocGeomColl ();
+    bbox->Srid = srid;
+    polyg = gaiaAddPolygonToGeomColl (bbox, 5, 0);
+    rect = polyg->Exterior;
+    gaiaSetPoint (rect->Coords, 0, minx, miny);	/* vertex # 1 */
+    gaiaSetPoint (rect->Coords, 1, maxx, miny);	/* vertex # 2 */
+    gaiaSetPoint (rect->Coords, 2, maxx, maxy);	/* vertex # 3 */
+    gaiaSetPoint (rect->Coords, 3, minx, maxy);	/* vertex # 4 */
+    gaiaSetPoint (rect->Coords, 4, minx, miny);	/* vertex # 5 [same as vertex # 1 to close the polygon] */
+    return bbox;
 }

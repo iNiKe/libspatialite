@@ -2,7 +2,7 @@
 
  gg_sqlaux.c -- SQL ancillary functions
 
- version 4.0, 2012 August 6
+ version 4.1, 2013 May 8
 
  Author: Sandro Furieri a.furieri@lqt.it
 
@@ -24,7 +24,7 @@ The Original Code is the SpatiaLite library
 
 The Initial Developer of the Original Code is Alessandro Furieri
  
-Portions created by the Initial Developer are Copyright (C) 2008-2012
+Portions created by the Initial Developer are Copyright (C) 2008-2013
 the Initial Developer. All Rights Reserved.
 
 Contributor(s):
@@ -62,6 +62,13 @@ the terms of any one of the MPL, the GPL or the LGPL.
 #ifdef _WIN32
 #define strcasecmp	_stricmp
 #endif /* not WIN32 */
+
+/* 64 bit integer: portable format for printf() */
+#if defined(_WIN32) && !defined(__MINGW32__)
+#define FRMT64 "%I64d"
+#else
+#define FRMT64 "%lld"
+#endif
 
 GAIAAUX_DECLARE int
 gaiaIllegalSqlName (const char *name)
@@ -775,12 +782,7 @@ gaiaUpdateSqlLog (sqlite3 * sqlite, sqlite3_int64 sqllog_pk, int success,
 /* CURRENT db-schema (>= 4.0.0) required */
 	  return;
       }
-#if defined(_WIN32) || defined(__MINGW32__)
-    /* CAVEAT - M$ runtime doesn't supports %lld for 64 bits */
-    sprintf (dummy, "%I64d", sqllog_pk);
-#else
-    sprintf (dummy, "%lld", sqllog_pk);
-#endif
+    sprintf (dummy, FRMT64, sqllog_pk);
     if (success)
       {
 	  sql_statement = sqlite3_mprintf ("UPDATE sql_statements_log SET "
@@ -799,4 +801,3 @@ gaiaUpdateSqlLog (sqlite3 * sqlite, sqlite3_int64 sqllog_pk, int success,
     sqlite3_exec (sqlite, sql_statement, NULL, 0, NULL);
     sqlite3_free (sql_statement);
 }
-

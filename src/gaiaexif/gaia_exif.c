@@ -2,7 +2,7 @@
 
  gaia_exif.c -- Gaia EXIF support
   
- version 4.0, 2012 August 6
+ version 4.1, 2013 May 8
 
  Author: Sandro Furieri a.furieri@lqt.it
 
@@ -24,7 +24,7 @@ The Original Code is the SpatiaLite library
 
 The Initial Developer of the Original Code is Alessandro Furieri
  
-Portions created by the Initial Developer are Copyright (C) 2008-2012
+Portions created by the Initial Developer are Copyright (C) 2008-2013
 the Initial Developer. All Rights Reserved.
 
 Contributor(s):
@@ -2526,6 +2526,14 @@ gaiaGuessBlobType (const unsigned char *blob, int size)
       }
     if (geom)
 	return GAIA_GEOMETRY_BLOB;
+
+#ifdef ENABLE_LIBXML2		/* LIBXML2 enabled: supporting XML documents */
+
+    if (gaiaIsValidXmlBlob (blob, size))
+	return GAIA_XML_BLOB;
+
+#endif /* end LIBXML2: supporting XML documents */
+
     return GAIA_HEX_BLOB;
 }
 

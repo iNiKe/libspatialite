@@ -43,6 +43,7 @@ the terms of any one of the MPL, the GPL or the LGPL.
 */
 #define _GNU_SOURCE
 #include <stdlib.h>
+#include <unistd.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -61,8 +62,10 @@ int main (int argc, char *argv[])
     char *suffix;
     char *table;
     char *sql;
+    void *cache = spatialite_alloc_connection();
 
-    spatialite_init (0);
+    if (argc > 1 || argv[0] == NULL)
+	argc = 1;		/* silencing stupid compiler warnings */
 
     ret = sqlite3_open_v2 (":memory:", &db_handle, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL);
     if (ret != SQLITE_OK) {
@@ -71,8 +74,10 @@ int main (int argc, char *argv[])
 	db_handle = NULL;
 	return -1;
     }
+
+    spatialite_init_ex (db_handle, cache, 0);
     
-    ret = sqlite3_exec (db_handle, "SELECT InitSpatialMetadata()", NULL, NULL, &err_msg);
+    ret = sqlite3_exec (db_handle, "SELECT InitSpatialMetadata(1)", NULL, NULL, &err_msg);
     if (ret != SQLITE_OK) {
 	fprintf (stderr, "InitSpatialMetadata() error: %s\n", err_msg);
 	sqlite3_free(err_msg);
@@ -260,11 +265,16 @@ int main (int argc, char *argv[])
 #endif	/* end ICONV conditional */
 
     sqlite3_close (db_handle);
-    spatialite_cleanup();
+    spatialite_cleanup_ex (cache);
 
-    spatialite_init (0);
-
-    ret = sqlite3_open_v2 ("./sql_stmt_tests/testdb1.sqlite", &db_handle, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL);
+    ret = system("cp sql_stmt_tests/testdb1.sqlite testdb1.sqlite");
+    if (ret != 0)
+    {
+        fprintf(stderr, "cannot copy testdb1.sqlite database\n");
+        return -131;
+    }
+    cache = spatialite_alloc_connection();
+    ret = sqlite3_open_v2 ("testdb1.sqlite", &db_handle, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL);
     if (ret != SQLITE_OK) {
 	fprintf (stderr, "cannot open testdb1.sqlite db: %s\n", sqlite3_errmsg (db_handle));
 	sqlite3_close (db_handle);
@@ -272,6 +282,8 @@ int main (int argc, char *argv[])
 	return -31;
     }
 
+    spatialite_init_ex (db_handle, cache, 0);
+    
     table = sqlite3_mprintf("roads_net_%s", suffix);
     
     sql = sqlite3_mprintf("create VIRTUAL TABLE %s USING VirtualNetwork(\"roads_net_data\");", table);
@@ -321,7 +333,13 @@ int main (int argc, char *argv[])
     sqlite3_free(table);
 
     sqlite3_close (db_handle);
-    spatialite_cleanup();
+    spatialite_cleanup_ex (cache);
+    ret = unlink("testdb1.sqlite");
+    if (ret != 0)
+    {
+        fprintf(stderr, "cannot remove testdb1 database\n");
+        return -39;
+    }
 
     free(suffix);    
     

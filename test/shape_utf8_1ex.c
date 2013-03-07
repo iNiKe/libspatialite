@@ -283,17 +283,22 @@ int main (int argc, char *argv[])
     int ret;
     sqlite3 *handle;
     char *err_msg = NULL;
+    void *cache = spatialite_alloc_connection();
+
+    if (argc > 1 || argv[0] == NULL)
+	argc = 1;		/* silencing stupid compiler warnings */
 
 /* testing current style metadata layout >= v.4.0.0 */
-    spatialite_init (0);
     ret = sqlite3_open_v2 (":memory:", &handle, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL);
     if (ret != SQLITE_OK) {
 	fprintf(stderr, "cannot open in-memory database: %s\n", sqlite3_errmsg (handle));
 	sqlite3_close(handle);
 	return -1;
     }
+
+    spatialite_init_ex (handle, cache, 0);
     
-    ret = sqlite3_exec (handle, "SELECT InitSpatialMetadata()", NULL, NULL, &err_msg);
+    ret = sqlite3_exec (handle, "SELECT InitSpatialMetadata(1)", NULL, NULL, &err_msg);
     if (ret != SQLITE_OK) {
 	fprintf (stderr, "InitSpatialMetadata() error: %s\n", err_msg);
 	sqlite3_free(err_msg);
@@ -312,17 +317,25 @@ int main (int argc, char *argv[])
         fprintf (stderr, "sqlite3_close() error: %s\n", sqlite3_errmsg (handle));
 	return -19;
     }
-    spatialite_cleanup();
+    spatialite_cleanup_ex (cache);
 
 /* testing legacy style metadata layout <= v.3.1.0 */
-    spatialite_init (0);
-    ret = sqlite3_open_v2 ("test-legacy-3.0.1.sqlite", &handle, SQLITE_OPEN_READWRITE, NULL);
+    cache = spatialite_alloc_connection();
+    ret = system("cp test-legacy-3.0.1.sqlite copy-legacy-3.0.1.sqlite");
+    if (ret != 0)
+    {
+        fprintf(stderr, "cannot copy legacy v.3.0.1 database\n");
+        return -1;
+    }
+    ret = sqlite3_open_v2 ("copy-legacy-3.0.1.sqlite", &handle, SQLITE_OPEN_READWRITE, NULL);
     if (ret != SQLITE_OK) {
 	fprintf(stderr, "cannot open legacy v.3.0.1 database: %s\n", sqlite3_errmsg (handle));
 	sqlite3_close(handle);
 	return -1;
     }
-	
+
+    spatialite_init_ex (handle, cache, 0);
+
     ret = do_test(handle, 1);
     if (ret != 0) {
 	fprintf(stderr, "error while testing legacy style metadata layout\n");
@@ -334,7 +347,13 @@ int main (int argc, char *argv[])
         fprintf (stderr, "sqlite3_close() error: %s\n", sqlite3_errmsg (handle));
 	return -19;
     }
-    spatialite_cleanup();
+    spatialite_cleanup_ex (cache);
+    ret = unlink("copy-legacy-3.0.1.sqlite");
+    if (ret != 0)
+    {
+        fprintf(stderr, "cannot remove legacy v.3.0.1 database\n");
+        return -20;
+    }
 	
 #endif	/* end ICONV conditional */
 

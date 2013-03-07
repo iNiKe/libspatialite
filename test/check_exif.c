@@ -181,6 +181,8 @@ get_date(gaiaExifTagListPtr tag_list, const char **str, int *ok)
 
 int main (int argc, char *argv[])
 {
+    int ret;
+    sqlite3 *handle;
     FILE *fl;
     int sz = 0;
     int rd;
@@ -195,8 +197,19 @@ int main (int argc, char *argv[])
     gaiaExifTagListPtr tag_list = NULL;
     double longitude;
     double latitude;
+    void *cache = spatialite_alloc_connection();
 
-    spatialite_init (0);
+    if (argc > 1 || argv[0] == NULL)
+	argc = 1;		/* silencing stupid compiler warnings */
+
+    ret = sqlite3_open_v2 (":memory:", &handle, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL);
+    if (ret != SQLITE_OK) {
+	fprintf(stderr, "cannot open in-memory db: %s\n", sqlite3_errmsg (handle));
+	sqlite3_close(handle);
+	return -100;
+    }
+
+    spatialite_init_ex (handle, cache, 0);
     
     fl = fopen("sql_stmt_tests/DSC_1467.JPG", "rb");
     if (!fl) {
@@ -563,7 +576,13 @@ int main (int argc, char *argv[])
         gaiaExifTagsFree(tag_list);
     fclose(fl);
     
-    spatialite_cleanup();
+    ret = sqlite3_close (handle);
+    if (ret != SQLITE_OK) {
+        fprintf (stderr, "sqlite3_close() error: %s\n", sqlite3_errmsg (handle));
+	return -133;
+    }
+        
+    spatialite_cleanup_ex(cache);
     
     return 0;
 }

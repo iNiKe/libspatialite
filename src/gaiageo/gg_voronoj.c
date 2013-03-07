@@ -2,7 +2,7 @@
 
  gg_voronoj.c -- Voronoj Diagram implementation
     
- version 4.0, 2012 August 26
+ version 4.1, 2013 May 8
 
  Author: Sandro Furieri a.furieri@lqt.it
 
@@ -24,7 +24,7 @@ The Original Code is the SpatiaLite library
 
 The Initial Developer of the Original Code is Alessandro Furieri
  
-Portions created by the Initial Developer are Copyright (C) 2008-2012
+Portions created by the Initial Developer are Copyright (C) 2008-2013
 the Initial Developer. All Rights Reserved.
 
 Contributor(s):
@@ -403,6 +403,8 @@ voronoj_internal (struct voronoj_triangle *triangle)
     gaiaSetPoint (rng->Coords, 2, triangle->x3, triangle->y3);
     gaiaSetPoint (rng->Coords, 3, triangle->x1, triangle->y1);
     gaiaAddPointToGeomColl (pt, triangle->cx, triangle->cy);
+    gaiaMbrGeometry (pt);
+    gaiaMbrGeometry (tri);
     ret = gaiaGeomCollIntersects (tri, pt);
     gaiaFreeGeomColl (pt);
     gaiaFreeGeomColl (tri);

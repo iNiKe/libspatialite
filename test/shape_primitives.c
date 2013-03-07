@@ -601,11 +601,15 @@ int do_test(sqlite3 *handle)
 int main (int argc, char *argv[])
 {
 #ifndef OMIT_ICONV	/* only if ICONV is supported */
+#ifdef ENABLE_LWGEOM		/* only if LWGEOM is supported */
     int ret;
     sqlite3 *handle;
     char *err_msg = NULL;
+    void *cache = spatialite_alloc_connection();
 
-    spatialite_init (0);
+    if (argc > 1 || argv[0] == NULL)
+	argc = 1;		/* silencing stupid compiler warnings */
+
 /* testing current style metadata layout >= v.4.0.0 */
     ret = sqlite3_open_v2 (":memory:", &handle, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL);
     if (ret != SQLITE_OK) {
@@ -613,8 +617,10 @@ int main (int argc, char *argv[])
 	sqlite3_close(handle);
 	return -1;
     }
+
+    spatialite_init_ex (handle, cache, 0);
     
-    ret = sqlite3_exec (handle, "SELECT InitSpatialMetadata()", NULL, NULL, &err_msg);
+    ret = sqlite3_exec (handle, "SELECT InitSpatialMetadata(1)", NULL, NULL, &err_msg);
     if (ret != SQLITE_OK) {
 	fprintf (stderr, "InitSpatialMetadata() error: %s\n", err_msg);
 	sqlite3_free(err_msg);
@@ -628,17 +634,25 @@ int main (int argc, char *argv[])
 	return ret;
     }
 
-    spatialite_cleanup();
+    spatialite_cleanup_ex (cache);
     sqlite3_close(handle);
 	
 /* testing legacy style metadata layout <= v.3.1.0 */
-    spatialite_init (0);
-    ret = sqlite3_open_v2 ("test-legacy-3.0.1.sqlite", &handle, SQLITE_OPEN_READWRITE, NULL);
+    cache = spatialite_alloc_connection();
+    ret = system("cp test-legacy-3.0.1.sqlite copy-legacy-3.0.1.sqlite");
+    if (ret != 0)
+    {
+        fprintf(stderr, "cannot copy legacy v.3.0.1 database\n");
+        return -1;
+    }
+    ret = sqlite3_open_v2 ("copy-legacy-3.0.1.sqlite", &handle, SQLITE_OPEN_READWRITE, NULL);
     if (ret != SQLITE_OK) {
 	fprintf(stderr, "cannot open legacy v.3.0.1 database: %s\n", sqlite3_errmsg (handle));
 	sqlite3_close(handle);
 	return -1;
     }
+
+    spatialite_init_ex (handle, cache, 0);
 	
     ret = do_test(handle);
     if (ret != 0) {
@@ -646,17 +660,71 @@ int main (int argc, char *argv[])
 	return ret;
     }
 
-    spatialite_cleanup();
+    spatialite_cleanup_ex (cache);
     sqlite3_close(handle);
+    ret = unlink("copy-legacy-3.0.1.sqlite");
+    if (ret != 0)
+    {
+        fprintf(stderr, "cannot remove legacy v.3.0.1 database\n");
+        return -1;
+    }
+	
+/* testing invalid geometries [check/repair] */
+    cache = spatialite_alloc_connection();
+    ret = system("cp test-invalid.sqlite copy-invalid.sqlite");
+    if (ret != 0)
+    {
+        fprintf(stderr, "cannot copy invalid-geoms database\n");
+        return -1;
+    }
+    ret = sqlite3_open_v2 ("copy-invalid.sqlite", &handle, SQLITE_OPEN_READWRITE, NULL);
+    if (ret != SQLITE_OK) {
+	fprintf(stderr, "cannot open invalid-geoms database: %s\n", sqlite3_errmsg (handle));
+	sqlite3_close(handle);
+	return -1;
+    }
+
+    spatialite_init_ex (handle, cache, 0);
+    
+    ret = check_all_geometry_columns (handle, "./report", NULL, NULL);
+    if (!ret) {
+        fprintf (stderr, "check_all_geometry_columns() error\n");
+	sqlite3_close(handle);
+	return -61;
+    }
+
+    ret = sanitize_all_geometry_columns (handle, "tmp_", "./report", NULL, NULL); 
+    if (!ret) {
+        fprintf (stderr, "sanitize_all_geometry_columns() error\n");
+	sqlite3_close(handle);
+	return -62;
+    }
+
+    spatialite_cleanup_ex (cache);
+    sqlite3_close(handle);
+    ret = unlink("copy-invalid.sqlite");
+    if (ret != 0)
+    {
+        fprintf(stderr, "cannot remove invalid-geoms database\n");
+        return -1;
+    }
 	
 /* testing legacy style metadata layout (v.2.3.1) */
-    spatialite_init (0);
-    ret = sqlite3_open_v2 ("test-legacy-2.3.1.sqlite", &handle, SQLITE_OPEN_READWRITE, NULL);
+    cache = spatialite_alloc_connection();
+    ret = system("cp test-legacy-2.3.1.sqlite copy-legacy-2.3.1.sqlite");
+    if (ret != 0)
+    {
+        fprintf(stderr, "cannot copy legacy v.2.3.1 database\n");
+        return -1;
+    }
+    ret = sqlite3_open_v2 ("copy-legacy-2.3.1.sqlite", &handle, SQLITE_OPEN_READWRITE, NULL);
     if (ret != SQLITE_OK) {
 	fprintf(stderr, "cannot open legacy v.2.3.1 database: %s\n", sqlite3_errmsg (handle));
 	sqlite3_close(handle);
 	return -1;
     }
+
+    spatialite_init_ex (handle, cache, 0);
 	
     ret = do_test(handle);
     if (ret != 0) {
@@ -664,9 +732,16 @@ int main (int argc, char *argv[])
 	return ret;
     }
 
-    spatialite_cleanup();
+    spatialite_cleanup_ex (cache);
     sqlite3_close(handle);
+    ret = unlink("copy-legacy-2.3.1.sqlite");
+    if (ret != 0)
+    {
+        fprintf(stderr, "cannot remove legacy v.2.3.1 database\n");
+        return -1;
+    }
     
+#endif /* end LWGEOM conditionals */
 #endif	/* end ICONV conditional */
 
     return 0;

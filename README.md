@@ -6,19 +6,19 @@ PLEASE read the following information.
 2 - Required dependencies
 3 - Build notes
   3.1: Building on Linux
-  3.2: Building on MacOsX
+  3.2: Building on Mac OS X
   3.3: Building on Windows
     3.3.1: using MinGW / MSYS
     3.3.2: using Visual Studio .NET
   
 =====================================================================
 
-1 - Installation:
+1. Installation:
 =================
 
 The default destination path prefix for installed files is /usr/local.
 Results from the installation script will be placed into subdirectories
-include and lib.  If this default path prefix is proper, then execute:
+include and lib.  If this default path prefix is appropriate, then execute:
 
     ./configure
 
@@ -40,145 +40,108 @@ their size:
 
     make install-strip
 
-2- Required dependencies:
+2. Required dependencies:
 =========================
     
 The main external dependencies needed in order to build 'libspatialite' 
-are the PROJ.4 and GEOS devel-packages.
+are:
+ - SQLite 3 (http://www.sqlite.org)
+    This is a hard dependency - you can't build libspatialite without it. SQLite
+    version 3.7.3 or later is strongly preferred - if you have an earlier
+    version then you will need to pass --enable-geocallbacks=no to the
+    ./configure script.
+    
+ - PROJ.4 (http://trac.osgeo.org/proj/)
+    This is strongly recommended, unless you have a particular purpose in mind
+    for your libspatialite build, and know that you won't need it. It is usually
+    available as a package, and libspatialite is pretty flexible about versions.
 
-You can build 'libspatialite' without including GEOS; GEOS is
-a quite heavy-weighted library, and you may well prefer
-to build a light-weighted version of 'libspatialite' [loosing
-some advanced features, by the way, but saving lots of memory]; 
-if you want to do such a thing:
-# ./configure --enable-geos=no
-    [disabling GEOS saves some 1.200 KB]
+ - GEOS (http://trac.osgeo.org/geos/)
+    This is strongly recommended, unless you have a particular purpose in mind
+    for your libspatialite build, and know that you won't need it. It is usually
+    available as a package, but libspatialite will have more capability if you
+    use version 3.3.0 or later so make sure that the package is recent enough.
+    Use --enable-geosadvanced=no argument to the ./configure script if you want
+    to use an earlier version of GEOS.
 
-You can even decide not to include PROJ.4:
-# ./configure --enable-proj=no
-    [disabling PROJ.4 saves some 170 KB]
+ - FreeXL (http://www.gaia-gis.it/FreeXL/)
+    This is recommended if you want to be able to import data from Microsoft
+    Excel format (.xls suffix) files. If you do not wish to use it, you will
+    need to pass --enable-freexl=no to the ./configure script. Version 0.0.4
+    or later is required.
 
-If you wish to build an extra-light-weighted version of 
-'libspatialite' you can obviously omit both PROJ.4 and GEOS:
-# ./configure --enable-geos=no  --enable-proj=no
+Note that you need development code (e.g. -dev packages on Debian Linux and 
+derivatives such as Ubuntu, or -devel packages on most other Linux
+distributions).
 
-IMPORTANT NOTICE: avoiding to enable GEOS and/or PROJ is useful only 
-if you are planning to use 'libspatialite' in order to support some
-process requiring only limited access to SQLite/SpatiaLite DBs.
-But if you intend to use 'libspatialite' for any serious GIS app,
-you absolutely MUST support both PROJ and GEOS.
-
-PROJ
-----
-'libspatialite' is built using PROJ v.4.6.1 [and I suppose any 
-previous version may be used as well]
-Many Linux distros support PROJ as a standard package; and you can
-get some standard PROJ package on MacOsX as well.
-Anyway, you can easily build PROJ by yourself starting from sources
-[this is true on Windows as well, using both MinGW or Visual Studio].
-You can get the latest PROJ sources from:
-http://trac.osgeo.org/proj/
-
-The standard ./configure [no args] will apply the followings setting
-to locate the PROJ objects:
-header files: /usr/local/include
-libraries: /usr/local/lib
-
-You are anyway allowed to search them on any other different location,
-simply using the following options:
-
-./configure --with-proj-include=some_dir --with-proj-lib=some_other_dir
-
-GEOS
-----
-'libspatialite' is built using GEOS v.3.1.0 [you can use any v.3.0.x
-as well; using the oldest v.2.x.x is not supported] 
-Many Linux distros support GEOS as a standard package; and you can
-get some standard GEOS package on MacOsX as well.
-Building GEOS by yourself starting from sources is a quite lengthy
-but plain task on Linux and/or MacOsX.
-On Windows [using both MinGW or Visual Studio] building GEOS is
-quite a nightmare, but not an impossible task.
-You can get the latest GEOS sources from:
-http://trac.osgeo.org/geos/
-
-The standard ./configure [no args] will apply the followings setting
-to locate the GEOS objects:
-header files: /usr/local/include
-libraries: /usr/local/lib
-
-You are anyway allowed to search them on any other different location,
-simply using the following options:
-
-./configure --with-geos-include=some_dir --with-geos-lib=some_other_dir
 
 ICONV [Windows]
 ---------------
-If building on Windows, then a further dependency has to be satisfied,
-the ICONV one.
-PLEASE NOTE: this one is not an issue when building on Linux or MacOsX,
-because these systems offers a "native" ICONV support (this latter being
-a standard system component).
+When building on Windows, then you also need to provide iconv to ensure that
+appropriate character set conversions are available. This dependency is not 
+usually an issue when building on Linux or Mac OS X, because these systems 
+provide iconv as a standard component.
+
 For Windows the preferred solution is to download and install the pre-built 
-ICONV binaries and related files from:
+iconv binaries and related files from:
 http://gnuwin32.sourceforge.net/packages/libiconv.htm
 
 3 - Build notes
 ===============
 
-3.1: Building on Linux
-----------------------
+3.1: Building on Linux and similar systems
+------------------------------------------
 
-Building 'libspatialite' on Linux does not require any special 
-setting; we'll suppose you have unpacked the sources as 
-./libspatialite-amalgamation-2.3.0
+Building libspatialite on Linux and similar systems such as BSD or other Unix
+variants does not require any special settings. If you have unpacked the sources
+as ./libspatialite-3.1.0, then the required steps are:
 
-# cd libspatialite-amalgamation-2.3.0
+# cd libspatialite-3.1.0
 # ./configure
 # make
 # sudo make install
 #     or (in order to save some disk space)
 # sudo make install-strip
 
-3.2: Building on MacOsX
------------------------
+3.2: Building on Mac OS X
+-------------------------
 
-Building 'libspatialite' on MacOsX is the same as for Linux.
-We'll suppose you have unpacked the sources as 
-./libspatialite-amalgamation-2.3.0
+Building 'libspatialite' on Mac OS X very similar to Linux. You simply have to
+set explicitly some environment variables. If you have unpacked the sources as 
+./libspatialite-3.1.0, then the required steps are:
 
-# cd libspatialite-amalgamation-2.3.0
-# ./configure --target=macosx
+# cd libspatialite-3.1.0
+# export "CFLAGS=-I/opt/local/include"
+# export "LDFLAGS=-I/opt/local/lib"
+# ./configure 
 # make
 # sudo make install
 #     or (in order to save some disk space)
 # sudo make install-strip
 
-IMPORTANT NOTICE: this will build an executable for your
-specific platform. i.e. when building on a PPC Mac,
-resulting binary will be targeted to run on PPC anyway.
-And when building on Intel Mac, resulting binary will
-run on Intel target.
+IMPORTANT NOTICE: this will build an executable for your specific platform.
+That is, when building on a PPC Mac, the resulting binary will be be for PPC.
+Similarly, when building on Intel Mac, resulting binary will be for  Intel.
 
-3.3: building on Windows
+3.3: Building on Windows
 ------------------------
 
 On Windows systems you can choose using two different compilers:
 - MinGW / MSYS
-  this represents a smart porting of a minimalistic Linux-like
-  devel-toolkit
+  This represents a smart porting of a minimalistic Linux-like
+  development toolkit
 - Microsoft Visual Studio .NET
-  this one is the standard platform devel-toolkit
+  This is the standard platform development toolkit from Microsoft.
 
 3.3.1: using MinGW / MSYS
 -------------------------
 
-We suppose you have already installed the MinGW compiler and the MSYS shell.
+We assume that you have already installed the MinGW compiler and the MSYS shell.
 Building 'libspatialite' under Windows is then more or less like building
-on any other UNIX-like system. We'll suppose you have unpacked the sources as 
-C:\libspatialite-amalgamation-2.3.0
+on any other UNIX-like system. If you have unpacked the sources as 
+C:\libspatialite-3.1.0, then the required steps are:
 
-$ cd c:/libspatialite-amalgamation-2.3.0
+$ cd c:/libspatialite-3.1.0
 $ export "CFLAGS=-I/usr/local/include"
 $ export "LDFLAGS=-L/usr/local/lib"
 $ ./configure --target=mingw32
@@ -191,12 +154,12 @@ $ make install-strip
 3.3.2: using Microsoft Visual Studio .NET
 -----------------------------------------
 
-We suppose you have already installed Visual Studio enabling the command
-line tools [you are expected to use the command prompt shell].
-We'll suppose you have unpacked the sources as 
-C:\libspatialite-amalgamation-2.3.0
+We assume that you have already installed Visual Studio enabling the command
+line tools. Note that you are expected to the Visual Studio command prompt shell
+rather than the GUI build environment. If you have unpacked the sources as 
+C:\libspatialite-3.1.0, then the required steps are:
 
-> cd c:\libspatialite-amalgamation-2.3.0
+> cd c:\libspatialite-3.1.0
 > nmake /f makefile.vc
 > nmake /f makefile.vc install
 
@@ -204,8 +167,7 @@ Please note: standard definitions in 'makefile.vc' assumes:
 - enabling PROJ
 - disabling GEOS
 
-If you want to alter this 'basic' behaviour you have then to
-adapt 'makefile.vc'.
-The 'libspatialite-geos.def' file contains any external symbol
-to be exported from the DLL when you build including GEOS.
+If you want to alter the default behaviour then make modifications in 
+'makefile.vc'. Also note that 'libspatialite-geos.def' contains those external
+symbols to be exported from the DLL when you build GEOS.
 

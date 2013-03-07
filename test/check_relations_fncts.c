@@ -59,6 +59,8 @@ static const double double_eps = 0.00000001;
 int main (int argc, char *argv[])
 {
 #ifndef OMIT_GEOS	/* only if GEOS is supported */
+    int ret;
+    sqlite3 *handle;
     int result;
     double resultDouble;
     int returnValue = 0;
@@ -66,14 +68,25 @@ int main (int argc, char *argv[])
     gaiaGeomCollPtr g;
     gaiaPolygonPtr pg;
     gaiaRingPtr rng;
+    void *cache = spatialite_alloc_connection();
     
     /* Common setup */
     gaiaGeomCollPtr validGeometry = gaiaAllocGeomColl();
     double dummyResultArg = 0.0;
     double dummyResultArg2 = 0.0;
+
+    if (argc > 1 || argv[0] == NULL)
+	argc = 1;		/* silencing stupid compiler warnings */
     
     /* Tests start here */
-    spatialite_init (0);
+    ret = sqlite3_open_v2 (":memory:", &handle, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL);
+    if (ret != SQLITE_OK) {
+	fprintf(stderr, "cannot open in-memory db: %s\n", sqlite3_errmsg (handle));
+	sqlite3_close(handle);
+	return -1;
+    }
+
+    spatialite_init_ex (handle, cache, 0);
     
     /* null inputs for a range of geometry functions */
     result = gaiaGeomCollEquals(0, validGeometry);
@@ -785,7 +798,14 @@ int main (int argc, char *argv[])
     /* Cleanup and exit */
 exit:
     gaiaFreeGeomColl (validGeometry);
-    spatialite_cleanup();
+
+    ret = sqlite3_close (handle);
+    if (ret != SQLITE_OK) {
+        fprintf (stderr, "sqlite3_close() error: %s\n", sqlite3_errmsg (handle));
+	return -133;
+    }
+        
+    spatialite_cleanup_ex (cache);
     return returnValue;
 
 #endif	/* end GEOS conditional */
