@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT(libspatialite, 4.1.0-RC1, a.furieri@lqt.it)
+AC_INIT(libspatialite, 4.1.0, a.furieri@lqt.it)
 AC_LANG(C)
 AC_CONFIG_MACRO_DIR([m4])
 
@@ -69,7 +69,7 @@ AC_CHECK_HEADERS(sys/time.h,, [AC_MSG_ERROR([cannot find sys/time.h, bailing out
 AC_CHECK_HEADERS(unistd.h,, [AC_MSG_ERROR([cannot find unistd.h, bailing out])])
 AC_CHECK_HEADERS(sqlite3.h,, [AC_MSG_ERROR([cannot find sqlite3.h, bailing out])])
 AC_CHECK_HEADERS(sqlite3ext.h,, [AC_MSG_ERROR([cannot find sqlite3ext.h, bailing out])])
-AC_CHECK_HEADERS(zlib.h,, [AC_MSG_ERROR([cannot find sqlite3ext.h, bailing out])])
+AC_CHECK_HEADERS(zlib.h,, [AC_MSG_ERROR([cannot find zlib.h, bailing out])])
 
 
 # Checks for programs.
@@ -114,6 +114,8 @@ AC_CONFIG_FILES([Makefile \
 		src/geopackage/Makefile \
 		src/spatialite/Makefile \
 		src/shapefiles/Makefile \
+		src/dxf/Makefile \
+		src/md5/Makefile \
 		src/srsinit/Makefile \
 		src/srsinit/epsg_update/Makefile \
 		src/virtualtext/Makefile \

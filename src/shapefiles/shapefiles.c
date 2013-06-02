@@ -83,6 +83,21 @@ the terms of any one of the MPL, the GPL or the LGPL.
 #define FRMT64 "%lld"
 #endif
 
+struct auxdbf_fld
+{
+/* auxiliary DBF field struct */
+    char already_used;
+    gaiaDbfFieldPtr dbf_field;
+    struct auxdbf_fld *next;
+};
+
+struct auxdbf_list
+{
+/* auxiliary DBF struct */
+    struct auxdbf_fld *first;
+    struct auxdbf_fld *last;
+};
+
 struct dupl_column
 {
 /* a column value in a duplicated row */
@@ -269,16 +284,75 @@ check_dupl_blob (struct dupl_row *str, int pos, const void *blob, int size)
     return 0;
 }
 
-static gaiaDbfFieldPtr
-getDbfField (gaiaDbfListPtr list, char *name)
+static struct auxdbf_list *
+alloc_auxdbf (gaiaDbfListPtr dbf_list)
 {
-/* find a DBF attribute by name */
-    gaiaDbfFieldPtr fld = list->First;
+/* allocating the auxiliary DBF struct */
+    gaiaDbfFieldPtr fld;
+    struct auxdbf_fld *fld_ex;
+    struct auxdbf_list *auxdbf = malloc (sizeof (struct auxdbf_list));
+    auxdbf->first = NULL;
+    auxdbf->last = NULL;
+    fld = dbf_list->First;
     while (fld)
       {
-	  if (strcasecmp (fld->Name, name) == 0)
-	      return fld;
+	  fld_ex = malloc (sizeof (struct auxdbf_fld));
+	  fld_ex->already_used = 0;
+	  fld_ex->dbf_field = fld;
+	  fld_ex->next = NULL;
+	  if (auxdbf->first == NULL)
+	      auxdbf->first = fld_ex;
+	  if (auxdbf->last != NULL)
+	      auxdbf->last->next = fld_ex;
+	  auxdbf->last = fld_ex;
 	  fld = fld->Next;
+      }
+    return auxdbf;
+}
+
+static void
+free_auxdbf (struct auxdbf_list *auxdbf)
+{
+/* freeing an auxiliary DBF struct */
+    struct auxdbf_fld *n_fld;
+    struct auxdbf_fld *fld = auxdbf->first;
+    while (fld != NULL)
+      {
+	  n_fld = fld->next;
+	  free (fld);
+	  fld = n_fld;
+      }
+    free (auxdbf);
+}
+
+static gaiaDbfFieldPtr
+getDbfField (struct auxdbf_list *aux, char *name)
+{
+/* find a DBF attribute by name */
+    struct auxdbf_fld *fld = aux->first;
+    while (fld)
+      {
+	  if (strcasecmp (fld->dbf_field->Name, name) == 0)
+	    {
+		fld->already_used = 1;
+		return fld->dbf_field;
+	    }
+	  fld = fld->next;
+      }
+    fld = aux->first;
+    while (fld)
+      {
+	  if (fld->already_used)
+	    {
+		fld = fld->next;
+		continue;
+	    }
+	  if (strncasecmp (fld->dbf_field->Name, name, 9) == 0)
+	    {
+		fld->already_used = 1;
+		return fld->dbf_field;
+	    }
+	  fld = fld->next;
       }
     return NULL;
 }
@@ -576,6 +650,10 @@ load_shapefile_ex (sqlite3 * sqlite, char *shp_path, char *table, char *charset,
 	  if (dup)
 	    {
 		xdummy = sqlite3_mprintf ("COL_%d", seed++);
+		spatialite_e
+		    ("Warning: duplicated fieldName \"%s\" in shapefile \"%s\": "
+		     "renaming the second occurence in table \"%s\" as \"%s\".\n",
+		     dummy, shp_path, table, xdummy);
 		dummy = xdummy;
 	    }
 	  len = strlen (dummy);
@@ -2521,6 +2599,7 @@ dump_shapefile (sqlite3 * sqlite, char *table, char *column, char *shp_path,
     char *table_name = NULL;
     char *xprefix;
     char *xxtable;
+    struct auxdbf_list *auxdbf = NULL;
 
     if (geom_type)
       {
@@ -2858,6 +2937,8 @@ dump_shapefile (sqlite3 * sqlite, char *table, char *column, char *shp_path,
 	    {
 		if (max_len > 19)
 		    max_len = 19;
+		if (max_len < 8)
+		    max_len = 8;
 		gaiaAddDbfField (dbf_list, fld->AttributeFieldName, 'N', offset,
 				 max_len, 6);
 		offset += max_len;
@@ -2897,6 +2978,7 @@ dump_shapefile (sqlite3 * sqlite, char *table, char *column, char *shp_path,
 		    n_cols = sqlite3_column_count (stmt);
 		rows++;
 		dbf_write = gaiaCloneDbfEntity (dbf_list);
+		auxdbf = alloc_auxdbf (dbf_write);
 		for (i = 0; i < n_cols; i++)
 		  {
 		      if (strcasecmp
@@ -2919,7 +3001,7 @@ dump_shapefile (sqlite3 * sqlite, char *table, char *column, char *shp_path,
 			      }
 			}
 		      dummy = (char *) sqlite3_column_name (stmt, i);
-		      dbf_field = getDbfField (dbf_write, dummy);
+		      dbf_field = getDbfField (auxdbf, dummy);
 		      if (!dbf_field)
 			  continue;
 		      if (sqlite3_column_type (stmt, i) == SQLITE_NULL)
@@ -2977,6 +3059,8 @@ dump_shapefile (sqlite3 * sqlite, char *table, char *column, char *shp_path,
 			      };
 			}
 		  }
+		free_auxdbf (auxdbf);
+		auxdbf = NULL;
 		if (!gaiaWriteShpEntity (shp, dbf_write))
 		    spatialite_e ("shapefile write error\n");
 		gaiaFreeDbfList (dbf_write);
@@ -2984,6 +3068,8 @@ dump_shapefile (sqlite3 * sqlite, char *table, char *column, char *shp_path,
 	  else
 	      goto sql_error;
       }
+    if (auxdbf != NULL)
+	free_auxdbf (auxdbf);
     sqlite3_finalize (stmt);
     gaiaFlushShpHeaders (shp);
     gaiaFreeShapefile (shp);
@@ -3003,6 +3089,8 @@ dump_shapefile (sqlite3 * sqlite, char *table, char *column, char *shp_path,
     return 1;
   sql_error:
 /* some SQL error occurred */
+    if (auxdbf != NULL)
+	free_auxdbf (auxdbf);
     sqlite3_finalize (stmt);
     free (xtable);
     free (xcolumn);
@@ -3022,6 +3110,8 @@ dump_shapefile (sqlite3 * sqlite, char *table, char *column, char *shp_path,
     return 0;
   no_file:
 /* shapefile can't be created/opened */
+    if (auxdbf != NULL)
+	free_auxdbf (auxdbf);
     free (xtable);
     free (xcolumn);
     gaiaFreeVectorLayersList (list);
@@ -3605,6 +3695,7 @@ dump_dbf (sqlite3 * sqlite, char *table, char *dbf_path, char *charset,
     int ret;
     char *db_prefix = NULL;
     char *table_name = NULL;
+    struct auxdbf_list *auxdbf = NULL;
 
     shp_parse_table_name (table, &db_prefix, &table_name);
 /*
@@ -3751,10 +3842,11 @@ dump_dbf (sqlite3 * sqlite, char *table, char *dbf_path, char *charset,
 	    {
 		rows++;
 		dbf_write = gaiaCloneDbfEntity (dbf->Dbf);
+		auxdbf = alloc_auxdbf (dbf_write);
 		for (i = 0; i < n_cols; i++)
 		  {
 		      dummy = (char *) sqlite3_column_name (stmt, i);
-		      dbf_field = getDbfField (dbf_write, dummy);
+		      dbf_field = getDbfField (auxdbf, dummy);
 		      if (!dbf_field)
 			  continue;
 		      if (sqlite3_column_type (stmt, i) == SQLITE_NULL
@@ -3812,6 +3904,8 @@ dump_dbf (sqlite3 * sqlite, char *table, char *dbf_path, char *charset,
 			      };
 			}
 		  }
+		free_auxdbf (auxdbf);
+		auxdbf = NULL;
 		if (!gaiaWriteDbfEntity (dbf, dbf_write))
 		    spatialite_e ("DBF write error\n");
 		gaiaFreeDbfList (dbf_write);
@@ -3819,6 +3913,8 @@ dump_dbf (sqlite3 * sqlite, char *table, char *dbf_path, char *charset,
 	  else
 	      goto sql_error;
       }
+    if (auxdbf != NULL)
+	free_auxdbf (auxdbf);
     sqlite3_finalize (stmt);
     gaiaFlushDbfHeader (dbf);
     gaiaFreeDbf (dbf);
@@ -3834,6 +3930,8 @@ dump_dbf (sqlite3 * sqlite, char *table, char *dbf_path, char *charset,
     return 1;
   sql_error:
 /* some SQL error occurred */
+    if (auxdbf != NULL)
+	free_auxdbf (auxdbf);
     free (xtable);
     sqlite3_finalize (stmt);
     if (dbf_export_list)
@@ -3853,6 +3951,8 @@ dump_dbf (sqlite3 * sqlite, char *table, char *dbf_path, char *charset,
     return 0;
   no_file:
 /* DBF can't be created/opened */
+    if (auxdbf != NULL)
+	free_auxdbf (auxdbf);
     free (xtable);
     if (dbf_export_list)
 	gaiaFreeDbfList (dbf_export_list);
@@ -3871,6 +3971,8 @@ dump_dbf (sqlite3 * sqlite, char *table, char *dbf_path, char *charset,
     return 0;
   empty_result_set:
 /* the result set is empty - nothing to do */
+    if (auxdbf != NULL)
+	free_auxdbf (auxdbf);
     if (get_default_dbf_fields
 	(sqlite, xtable, db_prefix, table_name, &dbf_list))
 	goto continue_exporting;
@@ -4244,28 +4346,23 @@ do_delete_duplicates2 (sqlite3 * sqlite, sqlite3_stmt * stmt1,
       {
 	  if (col->type == SQLITE_BLOB)
 	    {
-		xname = gaiaDoubleQuotedSql (col->name);
-		sql = sqlite3_mprintf (", \"%s\"", xname);
-		free (xname);
+		sql = sqlite3_mprintf (", %s", col->name);
 		gaiaAppendToOutBuffer (&sql_statement, sql);
 		sqlite3_free (sql);
 		col->query_pos = qcnt++;
 	    }
 	  else if (col->type == SQLITE_NULL)
 	    {
-		xname = gaiaDoubleQuotedSql (col->name);
 		if (first)
 		  {
 		      first = 0;
-		      sql = sqlite3_mprintf ("\"%s\"", xname);
-		      free (xname);
+		      sql = sqlite3_mprintf ("%s", col->name);
 		      gaiaAppendToOutBuffer (&condition, sql);
 		      sqlite3_free (sql);
 		  }
 		else
 		  {
-		      sql = sqlite3_mprintf (" AND \"%s\"", xname);
-		      free (xname);
+		      sql = sqlite3_mprintf (" AND %s", col->name);
 		      gaiaAppendToOutBuffer (&condition, sql);
 		      sqlite3_free (sql);
 		  }
@@ -4275,19 +4372,16 @@ do_delete_duplicates2 (sqlite3 * sqlite, sqlite3_stmt * stmt1,
 	    }
 	  else
 	    {
-		xname = gaiaDoubleQuotedSql (col->name);
 		if (first)
 		  {
 		      first = 0;
-		      sql = sqlite3_mprintf ("\"%s\"", xname);
-		      free (xname);
+		      sql = sqlite3_mprintf ("%s", col->name);
 		      gaiaAppendToOutBuffer (&condition, sql);
 		      sqlite3_free (sql);
 		  }
 		else
 		  {
-		      sql = sqlite3_mprintf (" AND \"%s\"", xname);
-		      free (xname);
+		      sql = sqlite3_mprintf (" AND %s", col->name);
 		      gaiaAppendToOutBuffer (&condition, sql);
 		      sqlite3_free (sql);
 		  }

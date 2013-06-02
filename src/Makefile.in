@@ -99,9 +99,9 @@ am__DEPENDENCIES_1 =
 libspatialite_la_DEPENDENCIES = ./gaiaaux/libgaiaaux.la \
 	./gaiaexif/libgaiaexif.la ./gaiageo/libgaiageo.la \
 	./geopackage/libgeopackage.la ./spatialite/libsplite.la \
-	./shapefiles/libshapefiles.la ./srsinit/libsrsinit.la \
-	./virtualtext/libvirtualtext.la ./wfs/libwfs.la \
-	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+	./shapefiles/libshapefiles.la ./dxf/libdxf.la ./md5/libmd5.la \
+	./srsinit/libsrsinit.la ./virtualtext/libvirtualtext.la \
+	./wfs/libwfs.la $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_libspatialite_la_OBJECTS = version.lo
 libspatialite_la_OBJECTS = $(am_libspatialite_la_OBJECTS)
 libspatialite_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
@@ -305,7 +305,9 @@ SUBDIRS = headers \
 	shapefiles \
 	srsinit \
 	virtualtext \
-	wfs
+	wfs \
+	dxf \
+	md5
 
 INCLUDES = @CFLAGS@ -I$(top_srcdir)/src/headers -I$(top_srcdir)
 lib_LTLIBRARIES = libspatialite.la
@@ -313,9 +315,9 @@ libspatialite_la_SOURCES = versioninfo/version.c
 libspatialite_la_LIBADD = ./gaiaaux/libgaiaaux.la \
 	./gaiaexif/libgaiaexif.la ./gaiageo/libgaiageo.la \
 	./geopackage/libgeopackage.la ./spatialite/libsplite.la \
-	./shapefiles/libshapefiles.la ./srsinit/libsrsinit.la \
-	./virtualtext/libvirtualtext.la ./wfs/libwfs.la @LIBXML2_LIBS@ \
-	$(am__append_1) $(am__append_2)
+	./shapefiles/libshapefiles.la ./dxf/libdxf.la ./md5/libmd5.la \
+	./srsinit/libsrsinit.la ./virtualtext/libvirtualtext.la \
+	./wfs/libwfs.la @LIBXML2_LIBS@ $(am__append_1) $(am__append_2)
 @ANDROID_FALSE@@MINGW_FALSE@libspatialite_la_LDFLAGS = -version-info 6:0:1
 @ANDROID_TRUE@@MINGW_FALSE@libspatialite_la_LDFLAGS = -version-info 6:0:1
 @MINGW_TRUE@libspatialite_la_LDFLAGS = -version-info 4:1:0 -no-undefined

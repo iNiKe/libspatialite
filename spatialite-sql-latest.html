@@ -138,6 +138,12 @@
 			<tr><td><b>CreateUUID</b></td>
 				<td>CreateUUID( void ) : <i>Text</i></td>
 				<td colspan="3">returns a Version 4 (random) UUID (<a href="http://en.wikipedia.org/wiki/Universally_unique_identifier">Universally unique identifier</a>).</td></tr>
+			<tr><td><b>MD5Checksum</b></td>
+				<td>MD5Checksum( BLOB | TEXT ) : <i>Text</i></td>
+				<td colspan="3">returns the <a href="http://en.wikipedia.org/wiki/MD5">MD5 checksum</a> corresponding to the input value.<br>Will return <b>NULL</b> for non-BLOB or non-TEXT input.</td></tr>
+			<tr><td><b>MD5TotalChecksum</b></td>
+				<td>MD5TotalChecksum( BLOB | TEXT ) : <i>Text</i></td>
+				<td colspan="3">returns a cumulative MD5 checksum.<br><b><u>aggregate function</u></b></td></tr>
 			<tr><td colspan="5" align="center" bgcolor="#f0e0c0">
 				<h3><a name="math">SQL math functions</a></h3></td></tr>
 			<tr><th bgcolor="#d0d0d0">Function</th>
@@ -464,6 +470,75 @@
 				<td>a Linestring Geometry will be returned connecting all the input Points (accordingly to input sequence); <b>direction=FALSE</b> implies <u>reverse order</u>.<br>
 				<u>Please note</u>: similar to the previuous one, but this one is an ordinary (not aggregate) function; a MultiPoint input is always expected.</b><hr>
 				NULL will be returned if any error is encountered</td></tr>
+                        <tr><td><b>MakeCircle</b></td>
+				<td>MakeCircle( cx <i>Double precision</i> , cy <i>Double precision</i> ,
+				radius <i>Double precision</i> [ , SRID <i>Integer</i> [ , 
+                                step <i>Double precision</i> ] ] ) : <i>Geometry</i></td>
+				<td></td>
+				<td align="center" bgcolor="#d0f0d0">base</td>
+				<td>will return a closed LINESTRING approximating the Circle defined by <b>cx, cy</b> and <b>radius</b>.<br>
+                                The optional argument <b>step</b> if specified defines how many points will be interpolated on the circumference; a point will be set every <b>step</b> degrees.<br>
+                                The implicit default setting corresponds to a point every <u>10</u> degrees.</td></tr>
+                        <tr><td><b>MakeEllipse</b></td>
+				<td>MakeEllipse( cx <i>Double precision</i> , cy <i>Double precision</i> ,
+				x_axis <i>Double precision</i> , y_axis <i>Double precisin</i> [ , SRID <i>Integer</i> [ , 
+                                step <i>Double precision</i> ] ] ) : <i>Geometry</i></td>
+				<td></td>
+				<td align="center" bgcolor="#d0f0d0">base</td>
+				<td>will return a closed LINESTRING approximating the Ellipse defined by <b>cx, cy</b> and <b>x_axis, y_axis</b>.<br>
+                                The optional argument <b>step</b> if specified defines how many points will be interpolated on the ellipse; a point will be set every <b>step</b> degrees.<br>
+                                The implicit default setting corresponds to a point every <u>10</u> degrees.</td></tr>
+                        <tr><td><b>MakeArc</b></td>
+				<td>MakeArc( cx <i>Double precision</i> , cy <i>Double precision</i> ,
+				radius <i>Double precision</i> , 
+                                start <i>Double precision</i> , stop <i>Double precision</i> [ , SRID <i>Integer</i> [ , 
+                                step <i>Double precision</i> ] ] ) : <i>Geometry</i></td>
+				<td></td>
+				<td align="center" bgcolor="#d0f0d0">base</td>
+				<td>will return a LINESTRING approximating the Circular Arc defined by <b>cx, cy</b> and <b>radius</b>; the arc's extremities will be defined by <b>start, stop</b> angles expressed in degrees.<br>
+                                The optional argument <b>step</b> if specified defines how many points will be interpolated on the circumference; a point will be set every <b>step</b> degrees.<br>
+                                The implicit default setting corresponds to a point every <u>10</u> degrees.</td></tr>
+                        <tr><td><b>MakeEllipticArc</b></td>
+				<td>MakeEllipticArc( cx <i>Double precision</i> , cy <i>Double precision</i> ,
+				x_axis <i>Double precision</i> , y_axis <i>Double precision</i> , 
+                                start <i>Double precision</i> , stop <i>Double precision</i> [ , SRID <i>Integer</i> [ , 
+                                step <i>Double precision</i> ] ] ) : <i>Geometry</i></td>
+				<td></td>
+				<td align="center" bgcolor="#d0f0d0">base</td>
+				<td>will return a LINESTRING approximating the Elliptic Arc defined by <b>cx, cy</b> and <b>x_axis, y_axis</b>; the arc's extremities will be defined by <b>start, stop</b> angles expressed in degrees.<br>
+                                The optional argument <b>step</b> if specified defines how many points will be interpolated on the ellipse; a point will be set every <b>step</b> degrees.<br>
+                                The implicit default setting corresponds to a point every <u>10</u> degrees.</td></tr>
+                        <tr><td><b>MakeCircularSector</b></td>
+				<td>MakeCircularSector( cx <i>Double precision</i> , cy <i>Double precision</i> ,
+				radius <i>Double precision</i> , 
+                                start <i>Double precision</i> , stop <i>Double precision</i> [ , SRID <i>Integer</i> [ , 
+                                step <i>Double precision</i> ] ] ) : <i>Geometry</i></td>
+				<td></td>
+				<td align="center" bgcolor="#d0f0d0">base</td>
+				<td>will return a POLYGON approximating the Circular Sector defined by <b>cx, cy</b> and <b>radius</b>; the arc's extremities will be defined by <b>start, stop</b> angles expressed in degrees.<br>
+                                The optional argument <b>step</b> if specified defines how many points will be interpolated on the circumference; a point will be set every <b>step</b> degrees.<br>
+                                The implicit default setting corresponds to a point every <u>10</u> degrees.</td></tr>
+                        <tr><td><b>MakeEllipticSector</b></td>
+				<td>MakeEllipticSector( cx <i>Double precision</i> , cy <i>Double precision</i> ,
+				x_axis <i>Double precision</i> , y_axis <i>Double precision</i> , 
+                                start <i>Double precision</i> , stop <i>Double precision</i> [ , SRID <i>Integer</i> [ , 
+                                step <i>Double precision</i> ] ] ) : <i>Geometry</i></td>
+				<td></td>
+				<td align="center" bgcolor="#d0f0d0">base</td>
+				<td>will return a POLYGON approximating the Elliptic Sector defined by <b>cx, cy</b> and <b>x_axis, y_axis</b>; the arc's extremities will be defined by <b>start, stop</b> angles expressed in degrees.<br>
+                                The optional argument <b>step</b> if specified defines how many points will be interpolated on the ellipse; a point will be set every <b>step</b> degrees.<br>
+                                The implicit default setting corresponds to a point every <u>10</u> degrees.</td></tr>
+                        <tr><td><b>MakeCircularStripe</b></td>
+				<td>MakeCircularStripe( cx <i>Double precision</i> , cy <i>Double precision</i> ,
+				radius_1 <i>Double precision</i> , radius_2 <i>Double precision</i> , 
+                                start <i>Double precision</i> , stop <i>Double precision</i> [ , SRID <i>Integer</i> [ , 
+                                step <i>Double precision</i> ] ] ) : <i>Geometry</i></td>
+				<td></td>
+				<td align="center" bgcolor="#d0f0d0">base</td>
+				<td>will return a POLYGON approximating the Circular Stripe delimited by two arcs sharing the same Centre [<b>cx</b>, <b>cy</b>]
+                                but having different radii [<b>radius_1</b>, <b>radius_2</b>]; the arc's extremities will be defined by <b>start, stop</b> angles expressed in degrees.<br>
+                                The optional argument <b>step</b> if specified defines how many points will be interpolated on the circumference; a point will be set every <b>step</b> degrees.<br>
+                                The implicit default setting corresponds to a point every <u>10</u> degrees.</td></tr>
 			<tr><td><b>SquareGrid</b></td>
 				<td>SquareGrid( geom <i>ArealGeometry</i> , size <i>Double precision</i> [ , edges_only <i>Boolean</i> , [ origing <i>PointGeometry</i> ] ] ) : <i>Geometry</i><hr>
                                     ST_SquareGrid( geom <i>ArealGeometry</i> , size <i>Double precision</i> [ , edges_only <i>Boolean</i> , [ origing <i>PointGeometry</i> ] ] ) : <i>Geometry</i></td>
@@ -863,7 +938,23 @@ a Geometry will be returned representing the MBR for the corresponding GARS area
 				<td>GeomFromFGF( fgfGeometry <i>Binary</i> [ , SRID <i>Integer</i>] ) : <i>Geometry</i></td>
 				<td></td>
 				<td align="center" bgcolor="#d0f0d0">base</td>
-				<td>construct a geometric object given its FGF binary Representation</td></tr>	
+				<td>construct a geometric object given its FGF binary Representation</td></tr>
+			<tr><td><b>ExportDXF</b></td>
+				<td>ExportDXF( out_dir <i>String</i> , filename <i>String</i> , sql_query <i>String</i> , layer_col_name <i>String</i> , 
+                                geom_col_name <i>String</i> , label_col_name <i>String</i> , text_height_col_name <i>String</i> , 
+                                text_rotation_col_name <i>String</i> , geom_filter <i>Geometry</i> [ , precision <i>Integer</i> ] ) : <i>Integer</i></td>
+				<td colspan="3">Will export a whole DXF file.<ul>
+                                        <li>The output file path is controlled by <b>out_dir</b> and <b>filename</b>.</li>
+					<li><b>sql_query</b> is a complete SQL Statement returning the dataset to be exported.</li>
+					<li><b>layer_col_name</b>, <b>geom_col_name</b>, <b>label_col_name</b>, <b>text_height_col_name</b> 
+					and <b>text_rotation_col_name</b> must specify the corresponding <u>column names</u> within the resultset
+					returned by <b>sql_query</b> (<i>label_col_name</i>, <i>text_height_col_name</i> and <i>text_rotation_col_name</i> could be eventually <b>NULL</b>).</li>
+					<li><b>geom_filter</b> acts as a <u>spatial filter</u> selecting which entities have to be exported (could be <b>NULL</b>).</li>
+					<li>the optional argument <b>precision</b> specificies how many <u>decimal digits</u> are required for coordinate values: if not specified the default is <b>3</b>.</li>
+					</ul>
+					Will return <b>0</b> (i.e. <b>FALSE</b>) on failure, any other value (i.e. <b>TRUE</b>) on success.<hr>
+                                        <u>Please note well</u>: this SQL function open the doors to many potential security issues, and thus is always <i>disabled by default</i>.<br>
+                                        Explicitly setting the environmente variable <b>SPATIALITE_SECURITY=relaxed</b> is absolutely required in order to effectively enable this function.</td></tr>	
 			<tr><td colspan="5" align="center" bgcolor="#f0f0c0">
 				<h3><a name="p4">SQL functions on type Geometry</a></h3></td></tr>
 			<tr><th bgcolor="#d0d0d0">Function</th>

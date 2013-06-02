@@ -12,6 +12,7 @@ check_PROGRAMS = check_endian \
 		check_fdo2 \
 		check_fdo3 \
                 check_fdo_bufovflw \
+		check_md5 \
 		check_dbf_load \
 		check_shp_load \
 		check_shp_load_3d \
@@ -38,13 +39,15 @@ check_PROGRAMS = check_endian \
 		check_mbrcache \
 		check_spatialindex \
 		check_exif \
+		check_exif2 \
 		check_relations_fncts \
 		check_extra_relations_fncts \
 		check_geoscvt_fncts \
 		check_libxml2 \
 		check_styling \
 		check_virtualxpath \
-		check_wfsin 
+		check_wfsin \
+		check_dxf 
 if ENABLE_GEOPACKAGE
 check_PROGRAMS += \
 		check_createBaseTables \
@@ -159,11 +162,14 @@ EXTRA_DIST = asprintf4win.h \
 	raster_se.xml thunderstorm_mild.svg \
 	tile000.jpeg  tile101.jpeg  tile111.jpeg \
 	test.webp tile100.jpeg  tile110.jpeg \
-	empty.png  empty.tif \
+	Apple-iPhone-4.jpg empty.png  empty.tif \
 	test.wfs testDescribeFeatureType.wfs \
 	getcapabilities-1.0.0.wfs \
 	getcapabilities-1.1.0.wfs \
-	describefeaturetype.wfs	
+	describefeaturetype.wfs	\
+	22.dxf f06.dxf l02.dxf p05.dxf \
+	archaic.dxf linked.dxf hatch.dxf \
+	symbol.dxf
 
 SUBDIRS = sql_stmt_geosadvanced_tests sql_stmt_geos_tests \
 	sql_stmt_geostrunk_tests sql_stmt_libxml2_tests \
