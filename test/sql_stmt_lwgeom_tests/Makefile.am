@@ -268,4 +268,23 @@ EXTRA_DIST = 3ddistance10.testcase \
 	st_split6.testcase \
 	st_split7.testcase \
 	st_split8.testcase \
-	st_split9.testcase 
+	st_split9.testcase \
+	st_node1.testcase \
+	st_node2.testcase \
+	st_node3.testcase \
+	st_node4.testcase \
+	st_node5.testcase \
+	st_node6.testcase \
+	st_node7.testcase \
+	st_node8.testcase \
+	st_node9.testcase \
+	st_self1.testcase \
+	st_self2.testcase \
+	st_self3.testcase \
+	st_self4.testcase \
+	st_self5.testcase \
+	st_self6.testcase \
+	st_self7.testcase \
+	st_self8.testcase \
+	st_self9.testcase
+

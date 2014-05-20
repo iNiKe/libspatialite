@@ -7,16 +7,17 @@ SUBDIRS = headers \
 	spatialite \
 	shapefiles \
 	srsinit \
+	connection_cache \
 	virtualtext \
 	wfs \
 	dxf \
 	md5
 
-INCLUDES = @CFLAGS@
-INCLUDES += -I$(top_srcdir)/src/headers
-INCLUDES += -I$(top_srcdir)
+AM_CPPFLAGS = @CFLAGS@
+AM_CPPFLAGS += -I$(top_srcdir)/src/headers
+AM_CPPFLAGS += -I$(top_srcdir)
 
-lib_LTLIBRARIES = libspatialite.la
+lib_LTLIBRARIES = libspatialite.la mod_spatialite.la
 
 libspatialite_la_SOURCES = versioninfo/version.c
 
@@ -29,18 +30,51 @@ libspatialite_la_LIBADD = ./gaiaaux/libgaiaaux.la \
 	./dxf/libdxf.la \
 	./md5/libmd5.la \
 	./srsinit/libsrsinit.la \
+	./connection_cache/libconnection_cache.la \
 	./virtualtext/libvirtualtext.la \
 	./wfs/libwfs.la @LIBXML2_LIBS@
 
 if MINGW
-libspatialite_la_LDFLAGS = -version-info 4:1:0 -no-undefined
+libspatialite_la_LDFLAGS = -version-info 4:2:0 -no-undefined
 else 
 if ANDROID
-libspatialite_la_LDFLAGS = -version-info 6:0:1
+libspatialite_la_LDFLAGS = -version-info 6:0:2
 libspatialite_la_LIBADD += -ldl
 else
-libspatialite_la_LDFLAGS = -version-info 6:0:1
+libspatialite_la_LDFLAGS = -version-info 6:0:2
 libspatialite_la_LIBADD += -lpthread -ldl
+endif
+endif
+
+mod_spatialite_la_SOURCES = versioninfo/version.c
+
+mod_spatialite_la_LIBADD = ./gaiaaux/gaiaaux.la \
+	./gaiaexif/gaiaexif.la \
+	./gaiageo/gaiageo.la \
+	./geopackage/geopackage.la \
+	./spatialite/splite.la \
+	./shapefiles/shapefiles.la \
+	./dxf/dxf.la \
+	./md5/md5.la \
+	./srsinit/srsinit.la \
+	./connection_cache/connection_cache.la \
+	./virtualtext/virtualtext.la \
+	./wfs/wfs.la @LIBXML2_LIBS@
+
+mod_spatialite_la_CPPFLAGS = @CFLAGS@
+mod_spatialite_la_CPPFLAGS += -I$(top_srcdir)/src/headers -I.
+mod_spatialite_la_CPPFLAGS += -DLOADABLE_EXTENSION
+mod_spatialite_la_LIBTOOLFLAGS = --tag=disable-static
+
+if MINGW
+mod_spatialite_la_LDFLAGS = -module -avoid-version -no-undefined
+else 
+if ANDROID
+mod_spatialite_la_LDFLAGS = -module -version-info 6:0:2
+mod_spatialite_la_LIBADD += -ldl
+else
+mod_spatialite_la_LDFLAGS = -module -version-info 6:0:2
+mod_spatialite_la_LIBADD += -lpthread -ldl
 endif
 endif
 

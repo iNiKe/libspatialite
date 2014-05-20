@@ -709,6 +709,8 @@ EXTRA_DIST = addpoint10.testcase \
 	fromgml58.testcase \
 	fromgml59.testcase \
 	fromgml5.testcase \
+	fromgml60.testcase \
+	fromgml61.testcase \
 	fromgml6.testcase \
 	fromgml7.testcase \
 	fromgml8.testcase \
@@ -1030,6 +1032,28 @@ EXTRA_DIST = addpoint10.testcase \
 	ismeasured4.testcase \
 	ismeasured5.testcase \
 	ismeasured6.testcase \
+	ispopulatedcoverage1.testcase \
+	ispopulatedcoverage2.testcase \
+	isvalidnodata1.testcase \
+	isvalidnodata2.testcase \
+	isvalidnodata3.testcase \
+	isvalidnodata4.testcase \
+	isvalidpalette1.testcase \
+	isvalidpalette2.testcase \
+	isvalidpalette3.testcase \
+	isvalidrasterstats1.testcase \
+	isvalidrasterstats2.testcase \
+	isvalidrasterstats3.testcase \
+	isvalidrasterstats4.testcase \
+	isvalidrasterstats5.testcase \
+	isvalidrasterstats6.testcase \
+	isvalidrasterstats7.testcase \
+	isvalidrastertile1.testcase \
+	isvalidrastertile2.testcase \
+	isvalidrastertile3.testcase \
+	isvalidrastertile4.testcase \
+	isvalidrastertile5.testcase \
+	isvalidrastertile6.testcase \
 	isXblob5.testcase \
 	isXblob6.testcase \
 	isXblob7.testcase \
@@ -1163,15 +1187,6 @@ EXTRA_DIST = addpoint10.testcase \
 	makecircle7.testcase \
 	makecircle8.testcase \
 	makecircle9.testcase \
-	makecircle10.testcase \
-	makecircle11.testcase \
-	makecircle12.testcase \
-	makecircle13.testcase \
-	makecircle14.testcase \
-	makecircle15.testcase \
-	makecircle16.testcase \
-	makecircle17.testcase \
-	makecircle18.testcase \
 	makeellipse1.testcase \
 	makeellipse2.testcase \
 	makeellipse3.testcase \
@@ -1184,15 +1199,12 @@ EXTRA_DIST = addpoint10.testcase \
 	makeellipse10.testcase \
 	makeellipse11.testcase \
 	makeellipse12.testcase \
-	makeellipse13.testcase \
 	makeellipse14.testcase \
 	makeellipse15.testcase \
 	makeellipse16.testcase \
-	makeellipse17.testcase \
 	makeellipse18.testcase \
 	makeellipse19.testcase \
 	makeellipse20.testcase \
-	makeellipse21.testcase \
 	makearc1.testcase \
 	makearc2.testcase \
 	makearc3.testcase \
@@ -1207,15 +1219,12 @@ EXTRA_DIST = addpoint10.testcase \
 	makearc12.testcase \
 	makearc13.testcase \
 	makearc14.testcase \
-	makearc15.testcase \
 	makearc16.testcase \
 	makearc17.testcase \
 	makearc18.testcase \
-	makearc19.testcase \
 	makearc20.testcase \
 	makearc21.testcase \
 	makearc22.testcase \
-	makearc23.testcase \
 	makeellipticarc1.testcase \
 	makeellipticarc2.testcase \
 	makeellipticarc3.testcase \
@@ -1233,15 +1242,12 @@ EXTRA_DIST = addpoint10.testcase \
 	makeellipticarc15.testcase \
 	makeellipticarc16.testcase \
 	makeellipticarc17.testcase \
-	makeellipticarc18.testcase \
 	makeellipticarc19.testcase \
 	makeellipticarc20.testcase \
 	makeellipticarc21.testcase \
-	makeellipticarc22.testcase \
 	makeellipticarc23.testcase \
 	makeellipticarc24.testcase \
 	makeellipticarc25.testcase \
-	makeellipticarc26.testcase \
 	makecircularsector1.testcase \
 	makecircularsector2.testcase \
 	makecircularsector3.testcase \
@@ -1256,15 +1262,12 @@ EXTRA_DIST = addpoint10.testcase \
 	makecircularsector12.testcase \
 	makecircularsector13.testcase \
 	makecircularsector14.testcase \
-	makecircularsector15.testcase \
 	makecircularsector16.testcase \
 	makecircularsector17.testcase \
 	makecircularsector18.testcase \
-	makecircularsector19.testcase \
 	makecircularsector20.testcase \
 	makecircularsector21.testcase \
 	makecircularsector22.testcase \
-	makecircularsector23.testcase \
 	makecircularstripe1.testcase \
 	makecircularstripe2.testcase \
 	makecircularstripe3.testcase \
@@ -1279,15 +1282,12 @@ EXTRA_DIST = addpoint10.testcase \
 	makecircularstripe12.testcase \
 	makecircularstripe13.testcase \
 	makecircularstripe14.testcase \
-	makecircularstripe15.testcase \
 	makecircularstripe16.testcase \
 	makecircularstripe17.testcase \
 	makecircularstripe18.testcase \
-	makecircularstripe19.testcase \
 	makecircularstripe20.testcase \
 	makecircularstripe21.testcase \
 	makecircularstripe22.testcase \
-	makecircularstripe23.testcase \
 	makecircularstripe24.testcase \
 	makecircularstripe25.testcase \
 	makecircularstripe26.testcase \
@@ -1308,15 +1308,12 @@ EXTRA_DIST = addpoint10.testcase \
 	makeellipticsector15.testcase \
 	makeellipticsector16.testcase \
 	makeellipticsector17.testcase \
-	makeellipticsector18.testcase \
 	makeellipticsector19.testcase \
 	makeellipticsector20.testcase \
 	makeellipticsector21.testcase \
-	makeellipticsector22.testcase \
 	makeellipticsector23.testcase \
 	makeellipticsector24.testcase \
 	makeellipticsector25.testcase \
-	makeellipticsector26.testcase \
 	maxm1.testcase \
 	maxm2.testcase \
 	maxm3.testcase \
@@ -1828,4 +1825,85 @@ EXTRA_DIST = addpoint10.testcase \
 	wkttosql1.testcase \
 	wkttosql2.testcase \
 	wkttosql3.testcase \
-	yd_m.testcase 
+	yd_m.testcase \
+	getlayerextent1.testcase \
+	getlayerextent2.testcase \
+	getlayerextent3.testcase \
+	getlayerextent4.testcase \
+	getlayerextent5.testcase \
+	getlayerextent6.testcase \
+	getlayerextent7.testcase \
+	getlayerextent8.testcase \
+	getlayerextent9.testcase \
+	getlayerextent10.testcase \
+	getlayerextent11.testcase \
+	getlayerextent12.testcase \
+	getlayerextent13.testcase \
+	getlayerextent14.testcase \
+	invalidatestats1.testcase \
+	invalidatestats2.testcase \
+	invalidatestats3.testcase \
+	invalidatestats4.testcase \
+	invalidatestats5.testcase \
+	invalidatestats6.testcase \
+	invalidatestats7.testcase \
+	invalidatestats8.testcase \
+	invalidatestats9.testcase \
+	invalidatestats10.testcase \
+	updatestats1.testcase \
+	updatestats2.testcase \
+	updatestats3.testcase \
+	updatestats4.testcase \
+	updatestats5.testcase \
+	updatestats6.testcase \
+	updatestats7.testcase \
+	updatestats8.testcase \
+	updatestats9.testcase \
+	updatestats10.testcase \
+	makepolygon1.testcase \
+	makepolygon2.testcase \
+	makepolygon3.testcase \
+	makepolygon4.testcase \
+	makepolygon5.testcase \
+	makepolygon7.testcase \
+	makepolygon8.testcase \
+	makepolygon9.testcase \
+	makepolygon10.testcase \
+	makepolygon11.testcase \
+	makepolygon12.testcase \
+	makepolygon13.testcase \
+	makepolygon14.testcase \
+	makepolygon15.testcase \
+	makepolygon16.testcase \
+	makepolygon17.testcase \
+	makepolygon18.testcase \
+	makepolygon19.testcase \
+	makepolygon20.testcase \
+	makepolygon21.testcase \
+	makepolygon22.testcase \
+	makepolygon23.testcase \
+	makepolygon24.testcase \
+	makepolygon25.testcase \
+	makepolygon26.testcase \
+	todms1.testcase \
+	todms2.testcase \
+	todms3.testcase \
+	todms4.testcase \
+	todms5.testcase \
+	todms6.testcase \
+	todms7.testcase \
+	todms8.testcase \
+	todms9.testcase \
+	todms10.testcase \
+	todms11.testcase \
+	todms12.testcase \
+	todms13.testcase \
+	fromdms1.testcase \
+	fromdms2.testcase \
+	fromdms3.testcase \
+	fromdms4.testcase \
+	fromdms5.testcase \
+	fromdms6.testcase \
+	fromdms7.testcase \
+	fromdms8.testcase \
+	fromdms9.testcase

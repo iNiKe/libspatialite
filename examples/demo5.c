@@ -180,7 +180,6 @@ do_help ()
     fprintf (stderr,
 	     "-g or --geometry  column_name  geometry column [optional]\n\n");
     fprintf (stderr, "you can specify one of the following modes:\n");
-    fprintf (stderr, "-f or --fast                    FAST mode [default]\n");
     fprintf (stderr, "-o or --optimistic              OPTIMISTIC mode\n");
     fprintf (stderr, "-p or --pessimistic             PESSIMISTIC mode\n");
 }
@@ -193,13 +192,16 @@ main (int argc, char *argv[])
     sqlite3 *handle;
     int i;
     int next_arg = ARG_NONE;
-    int mode = GAIA_VECTORS_LIST_FAST;
+    int mode = GAIA_VECTORS_LIST_OPTIMISTIC;
     int error = 0;
     const char *db_path = NULL;
     const char *table = NULL;
     const char *geometry = NULL;
     gaiaVectorLayersListPtr list;
     void *cache;
+
+    if (argc > 1 || argv[0] == NULL)
+	argc = 1;		/* silencing stupid compiler warnings */
 
     for (i = 1; i < argc; i++)
       {
@@ -249,13 +251,6 @@ main (int argc, char *argv[])
 	      || strcmp (argv[i], "--pessimistic") == 0)
 	    {
 		mode = GAIA_VECTORS_LIST_PESSIMISTIC;
-		next_arg = ARG_NONE;
-		continue;
-	    }
-	  if (strcasecmp (argv[i], "-f") == 0
-	      || strcmp (argv[i], "--fast") == 0)
-	    {
-		mode = GAIA_VECTORS_LIST_FAST;
 		next_arg = ARG_NONE;
 		continue;
 	    }
@@ -326,5 +321,6 @@ trying to connect the test DB:
       }
     spatialite_cleanup_ex (cache);
     printf ("\n\nsample successfully terminated\n");
+    spatialite_shutdown();
     return 0;
 }

@@ -1,4 +1,4 @@
-INCLUDES = @CFLAGS@ @GEOS_CFLAGS@ @LIBXML2_CFLAGS@
+AM_CPPFLAGS = @CFLAGS@ @GEOS_CFLAGS@ @LIBXML2_CFLAGS@
 
 check_PROGRAMS = check_endian \
 		check_version \
@@ -7,11 +7,11 @@ check_PROGRAMS = check_endian \
 		check_geom_aux \
 		check_geometry_cols \
 		check_create \
-                check_bufovflw \
+		check_bufovflw \
 		check_fdo1 \
 		check_fdo2 \
 		check_fdo3 \
-                check_fdo_bufovflw \
+		check_fdo_bufovflw \
 		check_md5 \
 		check_dbf_load \
 		check_shp_load \
@@ -29,13 +29,14 @@ check_PROGRAMS = check_endian \
 		check_extension \
 		check_recover_geom \
 		check_sql_stmt \
+		check_multithread \
 		check_virtualtable1 \
 		check_virtualtable2 \
 		check_virtualtable3 \
 		check_virtualtable4 \
 		check_virtualtable5 \
 		check_virtualtable6 \
-                check_virtual_ovflw \
+		check_virtual_ovflw \
 		check_mbrcache \
 		check_spatialindex \
 		check_exif \
@@ -46,16 +47,26 @@ check_PROGRAMS = check_endian \
 		check_libxml2 \
 		check_styling \
 		check_virtualxpath \
+		check_virtualbbox \
 		check_wfsin \
-		check_dxf 
+		check_dxf \
+		check_metacatalog
+		
 if ENABLE_GEOPACKAGE
 check_PROGRAMS += \
 		check_createBaseTables \
+		check_gpkgCreateTilesTable \
+		check_gpkgCreateTilesTableMissingSRID \
+		check_gpkgCreateTilesZoomLevel \
+		check_gpkgInsertEpsgSRID \
+		check_gpkgCreateFeaturesTable \
+		check_gpkg_base_core_container_data_file_format_application_id \
+		check_gpkg_base_core_spatial_ref_sys_data_table_def \
+		check_gpkg_base_core_spatial_ref_sys_data_values_default \
+		check_gpkg_base_core_contents_data_table_def \
+		check_gpkg_opt_extension_mechanism_extensions_data_table_def \
 		check_add_tile_triggers \
 		check_add_tile_triggers_bad_table_name \
-		check_add_rt_metadata_triggers_bad_table_name \
-		check_add_rt_metadata_triggers_wrong_arg_type \
-		check_add_rt_metadata_triggers \
 		check_get_normal_row \
 		check_get_normal_row_bad_geopackage \
 		check_get_normal_row_bad_geopackage2 \
@@ -63,22 +74,14 @@ check_PROGRAMS += \
 		check_get_normal_zoom_extension_load \
 		check_get_normal_zoom_bad_geopackage \
 		check_get_normal_zoom_bad_geopackage2 \
-		check_point_to_tile_wrong_arg_type \
-		check_point_to_tile \
-		check_point_to_tile_integer_coordinates \
-		check_point_to_tile_bad_tablename \
-		check_point_to_tile_broken_geopackage \
-		check_point_to_tile_broken_geopackage2 \
-		check_point_to_tile_no_tile \
-		check_point_to_tile_multiresult \
-		check_point_to_tile_different_srid \
-		check_point_to_tile_broken_srid \
 		check_gpkgGetImageFormat \
 		check_gpkgGetImageFormat_nonimage \
 		check_gpkgGetImageFormat_nonblob \
 		check_gpkgGetImageFormat_png \
 		check_gpkgGetImageFormat_tiff \
-		check_gpkgGetImageFormat_webp
+		check_gpkgGetImageFormat_webp \
+		check_gpkgConvert \
+		check_gpkgVirtual
 endif
 
 AM_CFLAGS = -I@srcdir@/../src/headers -I@srcdir@
@@ -103,6 +106,7 @@ EXTRA_DIST = asprintf4win.h \
 	test-legacy-2.3.1.sqlite \
 	test-legacy-3.0.1.sqlite \
 	test-invalid.sqlite \
+	test_geos.sqlite \
 	shp/new-caledonia/buildings.dbf \
 	shp/new-caledonia/buildings.prj \
 	shp/new-caledonia/buildings.shp \
@@ -159,7 +163,7 @@ EXTRA_DIST = asprintf4win.h \
 	books.xml books.xsd opera.xml opera.xsd \
 	movies.xml movies.xsd books-bad.xml books-bad.xsd \
 	inspire-data-example.xml stazioni_se.xml \
-	raster_se.xml thunderstorm_mild.svg \
+	raster_se.xml sld_sample.xml thunderstorm_mild.svg \
 	tile000.jpeg  tile101.jpeg  tile111.jpeg \
 	test.webp tile100.jpeg  tile110.jpeg \
 	Apple-iPhone-4.jpg empty.png  empty.tif \
@@ -169,10 +173,10 @@ EXTRA_DIST = asprintf4win.h \
 	describefeaturetype.wfs	\
 	22.dxf f06.dxf l02.dxf p05.dxf \
 	archaic.dxf linked.dxf hatch.dxf \
-	symbol.dxf
+	symbol.dxf gpkg_test.sqlite gpkg_test.gpkg
 
 SUBDIRS = sql_stmt_geosadvanced_tests sql_stmt_geos_tests \
-	sql_stmt_geostrunk_tests sql_stmt_libxml2_tests \
-	sql_stmt_lwgeom_tests sql_stmt_mathsql_tests \
-	sql_stmt_proj_tests sql_stmt_security_tests \
-	sql_stmt_tests sql_stmt_xmlsec_tests
+	sql_stmt_libxml2_tests sql_stmt_lwgeom_tests \
+	sql_stmt_mathsql_tests sql_stmt_proj_tests \
+	sql_stmt_security_tests sql_stmt_tests \
+	sql_stmt_xmlsec_tests sql_stmt_geopackage_tests

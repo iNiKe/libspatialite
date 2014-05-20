@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT(libspatialite, 4.1.1, a.furieri@lqt.it)
+AC_INIT(libspatialite, 4.2.0-rc0, a.furieri@lqt.it)
 AC_LANG(C)
 AC_CONFIG_MACRO_DIR([m4])
 
@@ -53,6 +53,8 @@ AH_TEMPLATE([ENABLE_GEOPACKAGE],
             [Should be defined in order to enable GeoPackage support.])
 AH_TEMPLATE([POSTGIS_2_1],
             [Should be defined when linking liblwgeom from PostGIS 2.1 (or later).])
+AH_TEMPLATE([TARGET_CPU],
+            [Should contain a text-string describing the intended target CPU])
 
 # Checks for header files.
 AC_CHECK_HEADERS(stdlib.h,, [AC_MSG_ERROR([cannot find stdlib.h, bailing out])])
@@ -118,13 +120,15 @@ AC_CONFIG_FILES([Makefile \
 		src/md5/Makefile \
 		src/srsinit/Makefile \
 		src/srsinit/epsg_update/Makefile \
+		src/connection_cache/Makefile \
+		src/connection_cache/generator/Makefile \
 		src/virtualtext/Makefile \
 		src/wfs/Makefile \
 		test/Makefile \
 		test/sql_stmt_tests/Makefile \
 		test/sql_stmt_geos_tests/Makefile \
 		test/sql_stmt_geosadvanced_tests/Makefile \
-		test/sql_stmt_geostrunk_tests/Makefile \
+		test/sql_stmt_geopackage_tests/Makefile \
 		test/sql_stmt_proj_tests/Makefile \
 		test/sql_stmt_mathsql_tests/Makefile \
 		test/sql_stmt_lwgeom_tests/Makefile \
@@ -134,6 +138,11 @@ AC_CONFIG_FILES([Makefile \
 		examples/Makefile \
 		Doxyfile \
 		spatialite.pc])
+
+# exporting the TARGET_CPU string
+splite_cpu=`$CC -dumpmachine`
+AC_DEFINE_UNQUOTED([TARGET_CPU], ["$splite_cpu"])
+
 
 #-----------------------------------------------------------------------
 #   --enable-mathsql
@@ -168,6 +177,7 @@ AC_ARG_ENABLE(proj, [AS_HELP_STRING(
 if test x"$enable_proj" != "xno"; then
   AC_CHECK_HEADERS(proj_api.h,, [AC_MSG_ERROR([cannot find proj_api.h, bailing out])])
   AC_SEARCH_LIBS(pj_init_plus,proj,,AC_MSG_ERROR(['libproj' is required but it doesn't seem to be installed on this system.]),-lm)
+  AC_SEARCH_LIBS(pj_init_ctx,proj,,AC_MSG_ERROR(['libproj' is required but the version on this system does not support the required features (Version 4.8.0 or later is needed).]),-lm)
 else
   AC_DEFINE(OMIT_PROJ)
 fi
@@ -261,9 +271,9 @@ if test x"$enable_geos" != "xno"; then
   # Ensure we can link against libgeos_c
   LIBS_SAVE="$LIBS"
   LIBS="$GEOS_LDFLAGS"
-  AC_SEARCH_LIBS(GEOSTopologyPreserveSimplify,geos_c,,AC_MSG_ERROR([could not find libgeos_c - you may need to specify the directory of a geos-config file using --with-geosconfig]))
+  AC_SEARCH_LIBS(GEOSCoveredBy,geos_c,,AC_MSG_ERROR([could not find libgeos_c (or obsolete 'libgeos_c' < v.3.3.0 found) - you may need to specify the directory of a geos-config file using --with-geosconfig]))
   LIBS="$LIBS_SAVE"
-  LIBS=$LIBS$GEOS_LDFLAGS' -lgeos_c'
+  LIBS="$LIBS $GEOS_LDFLAGS -lgeos_c"
 
   #-----------------------------------------------------------------------
   #   --enable-geosadvanced
@@ -272,21 +282,9 @@ if test x"$enable_geos" != "xno"; then
 	  [--enable-geosadvanced], [enables GEOS advanced features [default=yes]])],
 	  [], [enable_geosadvanced=yes])
   if test x"$enable_geosadvanced" != "xno"; then
-	  AC_SEARCH_LIBS(GEOSCoveredBy,geos_c,,AC_MSG_ERROR([obsolete 'libgeos_c' (< v.3.3.0). please retry specifying: --disable-geosadvanced.]))
+	  AC_SEARCH_LIBS(GEOSDelaunayTriangulation,geos_c,,AC_MSG_ERROR(['libgeos_c' (>= v.3.4.0) is required but it doesn't seem to be installed on this system.]))
 	  AC_DEFINE(GEOS_ADVANCED)
   fi
-
-  #-----------------------------------------------------------------------
-  #   --enable-geostrunk
-  #
-  AC_ARG_ENABLE(geostrunk, [AS_HELP_STRING(
-	  [--enable-geostrunk], [enables GEOS-trunk experimental features [default=no]])],
-	  [], [enable_geostrunk=no])
-  if test x"$enable_geostrunk" != "xno"; then
-	  AC_SEARCH_LIBS(GEOSDelaunayTriangulation,geos_c,,AC_MSG_ERROR(['libgeos_c' (>= v.3.4.0) is required but it doesn't seem to be installed on this system.]))
-	  AC_DEFINE(GEOS_TRUNK)
-  fi
-
 
   #-----------------------------------------------------------------------
   #   --enable-lwgeom
@@ -317,8 +315,8 @@ fi
 #   --enable-libxml2
 #
 AC_ARG_ENABLE(libxml2, [AS_HELP_STRING(
-  [--enable-libxml2], [enables libxml2 inclusion [default=no]])],
-  [], [enable_libxml2=no])
+  [--enable-libxml2], [enables libxml2 inclusion [default=yes]])],
+  [], [enable_libxml2=yes])
 if test x"$enable_libxml2" != "xno"; then
   PKG_CHECK_MODULES([LIBXML2], [libxml-2.0], , AC_MSG_ERROR(['libxml2' is required but it doesn't seem to be installed on this system.]))
   AC_SUBST(LIBXML2_CFLAGS)
@@ -330,8 +328,8 @@ fi
 #   --enable-geopackage
 #
 AC_ARG_ENABLE(geopackage, [AS_HELP_STRING(
-  [--enable-geopackage], [enables experimental GeoPackage raster function support [default=no]])],
-  [], [enable_geopackage=no])
+  [--enable-geopackage], [enables GeoPackage support [default=yes]])],
+  [], [enable_geopackage=yes])
 if test x"$enable_geopackage" != "xno"; then
   AC_DEFINE(ENABLE_GEOPACKAGE)
 fi

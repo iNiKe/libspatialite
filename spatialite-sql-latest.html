@@ -2,7 +2,7 @@
 <html><head>
 
 	
-		<meta content="text/html; charset=ISO-8859-1" http-equiv="content-type">
+		<meta content="text/html; charset=UTF-8" http-equiv="content-type">
 		<title>SpatiaLite SQL functions reference list</title>
 		<style type="text/css">
 			h2 {color:navy; text-align:center;} 
@@ -11,13 +11,15 @@
 			i {color:navy;}
 		</style>
 	</head><body bgcolor="#fffff0">
-		<h2>SpatiaLite 4.1.0&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SQL functions reference list</h2>
+		<h2>SpatiaLite 4.2.0&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SQL functions reference list</h2>
 		<a href="https://www.gaia-gis.it/fossil/libspatialite">back</a>
 		<ul>
 			<li><a href="#version">SQL Version Info [and build options testing] functions</a></li>
 			<li><a href="#generic">Generic SQL utility functions</a></li>
 			<li><a href="#math">SQL math functions</a></li>
+			<li><a href="#error">SQL functions reporting GEOS / LWGEOM errors and warnings</a></li>
 			<li><a href="#length_cvt">SQL length/distance unit-conversion functions</a></li>
+			<li><a href="#dms_cvt">SQL conversion functions from DD/DMS notations (longitude/latitude)</a></li>
 			<li><a href="#blob">SQL utility functions for BLOB objects</a></li>
 			<li><a href="#p0">SQL utility functions [non-standard] for geometric objects</a></li>
 			<li><a href="#p1">SQL functions for constructing a geometric object given its Well-known Text Representation</a></li>
@@ -39,14 +41,16 @@
 			<li><a href="#p12">SQL functions that test spatial relationships</a></li>
 			<li><a href="#p13">SQL functions for distance relationships</a></li>
 			<li><a href="#p14">SQL functions that implement spatial operators</a></li>
-			<li><a href="#p14b">SQL functions that implement spatial operators [GEOS advanced features]</a></li>
-			<li><a href="#p14c">SQL functions that implement spatial operators [GEOS experimental features]</a></li>
+			<li><a href="#p14b">SQL functions that implement spatial operators [GEOS specific features]</a></li>
+			<li><a href="#p14c">SQL functions that implement spatial operators [GEOS advanced features]</a></li>
 			<li><a href="#p14d">SQL functions that implement spatial operators [LWGEOM features]</a></li>
 			<li><a href="#p15">SQL functions for coordinate transformations</a></li>
 			<li><a href="#p16">SQL functions for Spatial-MetaData and Spatial-Index handling</a></li>
-			<li><a href="#p16style">SQL functions supporting SLDE/SE Styled Layers</a></li>
+			<li><a href="#p16metacatalog">SQL functions supporting the MetaCatalog and related Statistics</a></li>
+			<li><a href="#p16style">SQL functions supporting SLD/SE Styled Layers</a></li>
 			<li><a href="#p16isometa">SQL functions supporting ISO Metadata</a></li>
 			<li><a href="#p16fdo">SQL functions implementing FDO/OGR compatibility</a></li>
+			<li><a href="#p16gpkg">SQL functions implementing OGC GeoPackage compatibility</a></li>
 			<li><a href="#p17">SQL functions for MbrCache-based queries</a></li>
 			<li><a href="#p18">SQL functions for R*Tree-based queries (Geometry Callbacks)</a></li>
 			<li><a href="#xmlBlob">SQL functions supporting XmlBLOB</a></li>
@@ -60,6 +64,9 @@
 			<tr><td><b>spatialite_version</b></td>
 				<td>spatialite_version( void ) : <i>String</i></td>
 				<td colspan="3">returns the current <b>SpatiaLite</b> version as a text string</td></tr>
+			<tr><td><b>spatialite_target_cpu</b></td>
+				<td>spatialite_target_cpu( void ) : <i>String</i></td>
+				<td colspan="3">returns the current <b>SpatiaLite</b> Target CPU as a text string</td></tr>
 			<tr><td><b>proj4_version</b></td>
 				<td>proj4_version( void ) : <i>String</i></td>
 				<td colspan="3">returns the current <b>PROJ.4</b> version as a text string<br>
@@ -109,6 +116,9 @@
 			<tr><td><b>HasFreeXL</b></td>
 				<td>HasFreeXL( void ) : <i>Boolean</i></td>
 				<td colspan="3">TRUE if the underlaying library was built enabling <b>FREEXL</b></td></tr>
+			<tr><td><b>HasGeoPackage</b></td>
+				<td>HasGeoPackage( void ) : <i>Boolean</i></td>
+				<td colspan="3">TRUE if the underlaying library was built enabling <b>GeoPackage</b> support (<b>GPKG</b>)</b>)</td></tr>
 			<tr><td colspan="5" align="center" bgcolor="#f0e0c0">
 				<h3><a name="generic">Generic SQL functions</a></h3></td></tr>
 			<tr><th bgcolor="#d0d0d0">Function</th>
@@ -211,9 +221,6 @@
 			<tr><td><b>Radians</b></td>
 				<td>Radians( x <i>Double precision</i> ) : <i>Double precision</i></td>
 				<td colspan="3">returns the argument <b>x</b>, converted from degrees to radians</td></tr>
-			<tr><td><b>Round</b></td>
-				<td>Round( x <i>Double precision</i> ) : <i>Double precision</i></td>
-				<td colspan="3">returns the integer value nearest to <b>x</b></td></tr>
 			<tr><td><b>Sign</b></td>
 				<td>Sign( x <i>Double precision</i> ) : <i>Double precision</i></td>
 				<td colspan="3">returns the sign of the argument as -1, 0, or 1, 
@@ -241,6 +248,44 @@
 				<td>Var_samp( x <i>Double precision</i> ) : <i>Double precision</i></td>
 				<td colspan="3">returns the sample variance of the input values (<i>square of the sample standard deviation</i>)<br>
 				<b><u>aggregate function</u></b></td></tr>
+			<tr><td colspan="5" align="center" bgcolor="#f0e0c0">
+				<h3><a name="error">SQL functions reporting GEOS / LWGEOM errors and warnings</a></h3></td></tr>
+			<tr><th bgcolor="#d0d0d0">Function</th>
+				<th bgcolor="#d0d0d0">Syntax</th>
+				<th colspan="3" bgcolor="#d0d0d0">Summary</th></tr>
+			<tr><td><b>GEOS_GetLastWarningMsg</b></td>
+				<td>GEOS_GetLastWarningMsg( <i>void</i> ) : <i>String</i></td>
+				<td align="center" bgcolor="#f0d0d0">GEOS</td>
+				<td colspan="2">Will return the most recent warning message returned by GEOS (if any).<hr>
+				<b>NULL</b> will be returned if there is no pending GEOS warning.</td></tr>
+			<tr><td><b>GEOS_GetLastErrorMsg</b></td>
+				<td>GEOS_GetLastErrorMsg( <i>void</i> ) : <i>String</i></td>
+				<td align="center" bgcolor="#f0d0d0">GEOS</td>
+				<td colspan="2">Will return the most recent error message returned by GEOS (if any).<hr>
+				<b>NULL</b> will be returned if there is no pending GEOS error.</td></tr>
+			<tr><td><b>GEOS_GetLastAuxErrorMsg</b></td>
+				<td>GEOS_GetLastAuxErrorMsg( <i>void</i> ) : <i>String</i></td>
+				<td align="center" bgcolor="#f0d0d0">GEOS</td>
+				<td colspan="2">Will return the most recent error message (auxiliary) returned by GEOS (if any).<hr>
+				<b>NULL</b> will be returned if there is no pending GEOS (auxiliary) error.</td></tr>
+			<tr><td><b>GEOS_GetCriticalPointFromMsg</b></td>
+				<td>GEOS_GetCriticalPointFromMsg( <i>void</i> ) : <i>Point</i><hr>
+				GEOS_GetCriticalPointFromMsg( SRID <i>Integer</i> ) : <i>Point</i></td>
+				<td align="center" bgcolor="#f0d0d0">GEOS</td>
+				<td colspan="2">Will (possibly) return a Point Geometry extracted from the latest error / warning
+				message returned by GEOS.<hr>
+				<b>NULL</b> will be returned if there is no pending GEOS message, or if the current GEOS message
+				doesn't contain a critical Point.</td></tr>
+			<tr><td><b>LWGEOM_GetLastWarningMsg</b></td>
+				<td>LWGEOM_GetLastWarningMsg( <i>void</i> ) : <i>String</i></td>
+				<td align="center" bgcolor="#f0d0f0">LWGEOM</td>
+				<td colspan="2">Will return the most recent warning message returned by LWGEOM (if any).<hr>
+				<b>NULL</b> will be returned if there is no pending LWGEOM warning.</td></tr>
+			<tr><td><b>LWGEOM_GetLastErrorMsg</b></td>
+				<td>LWGEOM_GetLastErrorMsg( <i>void</i> ) : <i>String</i></td>
+				<td align="center" bgcolor="#f0d0f0">LWGEOM</td>
+				<td colspan="2">Will return the most recent error message returned by LWGEOM (if any).<hr>
+				<b>NULL</b> will be returned if there is no pending LWGEOM error.</td></tr>
 			<tr><td colspan="5" align="center" bgcolor="#f0e0c0">
 				<h3><a name="length_cvt">SQL length/distance unit-conversion functions</a></h3></td></tr>
 			<tr><th bgcolor="#d0d0d0">Function</th>
@@ -327,6 +372,20 @@
 					CvtFromIndCh( x <i>Double precision</i> ) : <i>Double precision</i></td>
 				<td colspan="3"><b>meters</b> / <b>indian chains</b></td></tr>
 			<tr><td colspan="5" align="center" bgcolor="#f0e0c0">
+				<h3><a name="dms_cvt">SQL conversion functions from DD/DMS notations (longitude/latitude)</a></h3></td></tr>
+			<tr><th bgcolor="#d0d0d0">Function</th>
+				<th bgcolor="#d0d0d0">Syntax</th>
+				<th colspan="3" bgcolor="#d0d0d0">Summary</th></tr>
+			<tr><td><b>DD to DMS</b></td>
+				<td>LongLatToDMS( longitude <i>Double precision</i> , latitude <i>Double precision</i> ) : <i>String</i></td>
+				<td colspan="3">will return a DMS string (Degrees, Minutes and Seconds) starting from DD (Decimal Degrees) input coordinates<hr>
+                                <b>NULL</b> will be returned on invalid input.</tr>
+			<tr><td><b>DMS to DD</b></td>
+				<td>LongitudeFromDMS( dms_expression <i>Sting</i> ) : <i>Double precision</i><hr>
+                                    LatitudeFromDMS( dms_expression <i>Sting</i> ) : <i>Double precision</i></td>
+				<td colspan="3">will return the DD coordinates from within a DMS expression<hr>
+                                <b>NULL</b> will be returned on invalid input.</tr>
+			<tr><td colspan="5" align="center" bgcolor="#f0e0c0">
 				<h3><a name="blob">SQL utility functions for BLOB objects</a></h3></td></tr>
 			<tr><th bgcolor="#d0d0d0">Function</th>
 				<th bgcolor="#d0d0d0">Syntax</th>
@@ -392,7 +451,7 @@
 					Otherwise NULL will be returned.<br>
 					<u>Please note:</u> SQLite doesn't support BLOB values bigger than SQLITE_MAX_LENGTH (usually, 1 GB).<hr>
                                         <u>Please note well</u>: this SQL function open the doors to many potential security issues, and thus is always <i>disabled by default</i>.<br>
-                                        Explicitly setting the environmente variable <b>SPATIALITE_SECURITY=relaxed</b> is absolutely required in order to effectively enable this function.</td></tr>
+                                        Explicitly setting the environment variable <b>SPATIALITE_SECURITY=relaxed</b> is absolutely required in order to effectively enable this function.</td></tr>
 			<tr><td><b>BlobToFile</b></td>
 				<td>BlobToFile( payload <i>BLOB</i> , filepath <i>String</i> ) : <i>Integer</i></td>
 				<td colspan="3">If <i>payload</i> is of the BLOB-type, and if <i>filepath</i> corresponds to some valid pathname 
@@ -400,7 +459,7 @@
 					contain the <i>payload</i>.<br>
 					The return type is Integer, with a return value of 1 for success, 0 for failure.<hr>
                                         <u>Please note well</u>: this SQL function open the doors to many potential security issues, and thus is always <i>disabled by default</i>.<br>
-                                        Explicitly setting the environmente variable <b>SPATIALITE_SECURITY=relaxed</b> is absolutely required in order to effectively enable this function.</td></tr>
+                                        Explicitly setting the environment variable <b>SPATIALITE_SECURITY=relaxed</b> is absolutely required in order to effectively enable this function.</td></tr>
 			<tr><td><b>CountUnsafeTriggers</b></td>
 				<td>CountUnsafeTriggers( ) : <i>Integer</i></td>
 				<td colspan="3">This SQL function checks if the currently connected DB does contain any potentially malicious Trigger;
@@ -543,7 +602,7 @@
 				<td>SquareGrid( geom <i>ArealGeometry</i> , size <i>Double precision</i> [ , edges_only <i>Boolean</i> , [ origing <i>PointGeometry</i> ] ] ) : <i>Geometry</i><hr>
                                     ST_SquareGrid( geom <i>ArealGeometry</i> , size <i>Double precision</i> [ , edges_only <i>Boolean</i> , [ origing <i>PointGeometry</i> ] ] ) : <i>Geometry</i></td>
 				<td></td>
-				<td align="center" bgcolor="#f0d0b0">GEOS-advanced</td>
+				<td align="center" bgcolor="#f0d0d0">GEOS</td>
 				<td>return a grid of square cells (having the edge length of <i>size</i>) precisely covering the input Geometry.<br>
                                 The returned Geometry will usually be of the <b>MultiPolygon</b> type (a collection of Squares), but will be a <b>MultiLinestring</b> if the optional <b>edges_only</b> argument is set to <b>TRUE</b><br>
                                 If the optional <b>origin</b> argument (expected to be a Point) is not specified then the (0,0) grid origin will be assumed by default.<hr>
@@ -552,7 +611,7 @@
 				<td>TriangularGrid( geom <i>ArealGeometry</i> , size <i>Double precision</i> [ , edges_only <i>Boolean</i> , [ origing <i>PointGeometry</i> ] ] ) : <i>Geometry</i><hr>
                                     ST_TriangularGrid( geom <i>ArealGeometry</i> , size <i>Double precision</i> [ , edges_only <i>Boolean</i> , [ origing <i>PointGeometry</i> ] ] ) : <i>Geometry</i></td>
 				<td></td>
-				<td align="center" bgcolor="#f0d0b0">GEOS-advanced</td>
+				<td align="center" bgcolor="#f0d0d0">GEOS</td>
 				<td>return a grid of triangular cells (having the edge length of <i>size</i>) precisely covering the input Geometry.<br>
                                 The returned Geometry will usually be of the <b>MultiPolygon</b> type (a collection of Squares), but will be a <b>MultiLinestring</b> if the optional <b>edges_only</b> argument is set to <b>TRUE</b><br>
                                 If the optional <b>origin</b> argument (expected to be a Point) is not specified then the (0,0) grid origin will be assumed by default.<hr>
@@ -561,7 +620,7 @@
 				<td>HexagonalGrid( geom <i>ArealGeometry</i> , size <i>Double precision</i> [ , edges_only <i>Boolean</i> , [ origing <i>PointGeometry</i> ] ] ) : <i>Geometry</i><hr>
                                     ST_HexagonalGrid( geom <i>ArealGeometry</i> , size <i>Double precision</i> [ , edges_only <i>Boolean</i> , [ origing <i>PointGeometry</i> ] ] ) : <i>Geometry</i></td>
 				<td></td>
-				<td align="center" bgcolor="#f0d0b0">GEOS-advanced</td>
+				<td align="center" bgcolor="#f0d0d0">GEOS</td>
 				<td>return a grid of hexagonal cells (having the edge length of <i>size</i>) precisely covering the input Geometry.<br>
                                 The returned Geometry will usually be of the <b>MultiPolygon</b> type (a collection of Squares), but will be a <b>MultiLinestring</b> if the optional <b>edges_only</b> argument is set to <b>TRUE</b><br>
                                 If the optional <b>origin</b> argument (expected to be a Point) is not specified then the (0,0) grid origin will be assumed by default.<hr>
@@ -632,8 +691,8 @@ a Geometry will be returned representing the MBR for the corresponding GARS area
 				<td align="center" bgcolor="#d0f0d0">base</td>
 				<td>return the y-coordinate for <i>geom</i> MBR's <u>uppermost side</u> as a double precision number.<hr>
                                 NULL will be returned if <i>geom</i> isn't a valid Geometry.</td></tr>
-			<tr><td><b>ST_MinZ</b></td>
-				<td>MinZ( geom <i>Geometry</i>) : <i>Double precision</i></td>
+			<tr><td><b>MinZ</b></td>
+				<td>ST_MinZ( geom <i>Geometry</i>) : <i>Double precision</i></td>
 				<td></td>
 				<td align="center" bgcolor="#d0f0d0">base</td>
 				<td>return the minimum Z-coordinate value for <i>geom</i> as a double precision number.<hr>
@@ -954,7 +1013,7 @@ a Geometry will be returned representing the MBR for the corresponding GARS area
 					</ul>
 					Will return <b>0</b> (i.e. <b>FALSE</b>) on failure, any other value (i.e. <b>TRUE</b>) on success.<hr>
                                         <u>Please note well</u>: this SQL function open the doors to many potential security issues, and thus is always <i>disabled by default</i>.<br>
-                                        Explicitly setting the environmente variable <b>SPATIALITE_SECURITY=relaxed</b> is absolutely required in order to effectively enable this function.</td></tr>	
+                                        Explicitly setting the environment variable <b>SPATIALITE_SECURITY=relaxed</b> is absolutely required in order to effectively enable this function.</td></tr>	
 			<tr><td colspan="5" align="center" bgcolor="#f0f0c0">
 				<h3><a name="p4">SQL functions on type Geometry</a></h3></td></tr>
 			<tr><th bgcolor="#d0d0d0">Function</th>
@@ -1280,7 +1339,7 @@ Starting since v.4.0.0 this function will simply consider Linestrings and MultiL
 					ST_Length( c <i>Curve</i> , use_ellipsoid <i>Boolean</i> ) : <i>Double precision</i>
 				</td>
 				<td align="center" bgcolor="#d0f0d0">X</td>
-				<td align="center" bgcolor="#f0d0b0">GEOS-advanced</td>
+				<td align="center" bgcolor="#f0d0d0">GEOS</td>
 				<td>return the length of c (measured in meters).<br>
 If the <b>use_ellipsoid</b> argument is set to <b>TRUE</b> the precise (but slower) length will be computed on the Ellipsoid, otherwise will be computed on the Great Cicle (approximative, but faster).<hr>
 This function only supports Long/Lat coordinates, and will return NULL for any planar CRS<hr>
@@ -1297,7 +1356,7 @@ Starting since v.4.0.0 this function will simply consider Polygons and MultiPoly
 					ST_Perimeter( s <i>Surface</i> , use_ellipsoid <i>Boolean</i> ) : <i>Double precision</i>
 				</td>
 				<td align="center" bgcolor="#d0f0d0">X</td>
-				<td align="center" bgcolor="#f0d0b0">GEOS-advanced</td>
+				<td align="center" bgcolor="#f0d0d0">GEOS</td>
 				<td>return the perimeter of s (measured in meters).<br>
 If the <b>use_ellipsoid</b> argument is set to <b>TRUE</b> the precise (but slower) perimeter will be computed on the Ellipsoid, otherwise will be computed on the Great Cicle (approximative, but faster).<hr>
 This function only supports Long/Lat coordinates, and will return NULL for any planar CRS<hr>
@@ -1466,7 +1525,7 @@ This function only supports Long/Lat coordinates, and will return NULL for any p
 					ST_NumGeometries( geom <i>GeomCollection</i> ) : <i>Integer</i></td>
 				<td align="center" bgcolor="#d0f0d0">X</td>
 				<td align="center" bgcolor="#d0f0d0">base</td>
-				<td>return the number of interiorRings</td></tr>
+				<td>return the number of individual Geometries</td></tr>
 			<tr><td><b>GeometryN</b></td>
 				<td>GeometryN( geom <i>GeomCollection</i> , n <i>Integer</i> ) : <i>Geometry</i><hr>
 					ST_GeometryN( geom <i>GeomCollection</i> , n <i>Integer</i> ) : <i>Geometry</i></td>
@@ -1620,7 +1679,7 @@ This function only supports Long/Lat coordinates, and will return NULL for any p
 				<td>Covers( geom1 <i>Geometry</i> , geom2 <i>Geometry</i> ) : <i>Integer</i><hr>
 					ST_Covers( geom1 <i>Geometry</i> , geom2 <i>Geometry</i> ) : <i>Integer</i></td>
 				<td></td>
-				<td align="center" bgcolor="#f0d0b0">GEOS-advanced</td>
+				<td align="center" bgcolor="#f0d0d0">GEOS</td>
 				<td>The return type is Integer, with a return value of 1 for TRUE, 0 for FALSE, 
 					and &#8211;1 for UNKNOWN corresponding to a function invocation on NULL arguments;<hr>
 					convenience predicate: TRUE if g1 completely covers g2</td></tr>
@@ -1628,7 +1687,7 @@ This function only supports Long/Lat coordinates, and will return NULL for any p
 				<td>CoveredBy( geom1 <i>Geometry</i> , geom2 <i>Geometry</i> ) : <i>Integer</i><hr>
 					ST_CoveredBy( geom1 <i>Geometry</i> , geom2 <i>Geometry</i> ) : <i>Integer</i></td>
 				<td></td>
-				<td align="center" bgcolor="#f0d0b0">GEOS-advanced</td>
+				<td align="center" bgcolor="#f0d0d0">GEOS</td>
 				<td>The return type is Integer, with a return value of 1 for TRUE, 0 for FALSE, 
 					and &#8211;1 for UNKNOWN corresponding to a function invocation on NULL arguments;<hr>
 					convenience predicate: TRUE if g1 is completely covered by g2</td></tr>
@@ -1656,7 +1715,7 @@ This function only supports Long/Lat coordinates, and will return NULL for any p
 			<tr><td>Distance( geom1 <i>Geometry</i> , geom2 <i>Geometry</i> , use_ellipsoid <i>Boolean</i> ) : <i>Double precision</i><hr>
 					ST_Distance( geom1 <i>Geometry</i> , geom2 <i>Geometry</i> , use_ellipsoid <i>Boolean</i> ) : <i>Double precision</i></td>
 				<td align="center" bgcolor="#d0f0d0">X</td>
-				<td align="center" bgcolor="#f0d0b0">GEOS-advanced</td>
+				<td align="center" bgcolor="#f0d0d0">GEOS</td>
 				<td>return the distance between geom1 and geom2 (measured in meters).<br>
 If the <b>use_ellipsoid</b> argument is set to <b>TRUE</b> the precise (but slower) distance will be computed on the Ellipsoid, otherwise will be computed on the Great Cicle (approximative, but faster).<hr>
 This function only supports Long/Lat coordinates, and will return NULL for any planar CRS</td></tr>
@@ -1729,19 +1788,19 @@ This function only supports Long/Lat coordinates, and will return NULL for any p
 				<td align="center" bgcolor="#f0d0d0">GEOS</td>
 				<td>return a geometric object that is the convex hull of geom</td></tr>
 			<tr><td colspan="5" align="center" bgcolor="#f0f0c0">
-				<h3><a name="p14b">SQL functions that implement spatial operators<br>[GEOS advanced features]</a></h3></td></tr>
+				<h3><a name="p14b">SQL functions that implement spatial operators<br>[GEOS specific features]</a></h3></td></tr>
 			<tr><td><b>HausdorffDistance</b></td>
 				<td>HausdorffDistance( geom1 <i>Geometry</i> , geom2 <i>Geometry</i> ) : <i>Double precision</i><hr>
 					ST_HausdorffDistance( geom1 <i>Geometry</i> , geom2 <i>Geometry</i> ) : <i>Double precision</i></td>
-				<td>X</td>
-				<td align="center" bgcolor="#f0d0b0">GEOS-advanced</td>
+				<td></td>
+				<td align="center" bgcolor="#f0d0d0">GEOS</td>
 				<td>return the Hausdorff distance between geom1 and geom2<br>
 <a href="http://en.wikipedia.org/wiki/Hausdorff_distance">learn more</a></td></tr>
 			<tr><td><b>OffestCurve</b></td>
 				<td>OffsetCurve( geom <i>Curve</i> , radius <i>Double precision</i> , left_or_right <i>Integer</i> ) : <i>Curve</i><hr>
 					ST_OffsetCurve( geom <i>Curve</i> , radius <i>Double precision</i> , left_or_right <i>Integer</i> ) : <i>Curve</i></td>
 				<td></td>
-				<td align="center" bgcolor="#f0d0b0">GEOS-advanced</td>
+				<td align="center" bgcolor="#f0d0d0">GEOS</td>
 				<td>return a geometric object representing the corresponding <i>left-</i> (or <i>right-sided</i>) offset curve<br>
 					NULL is returned whenever is not possible deriving an offset curve from the original geometry<br>
 					[a single not-closed LINESTRING is expected as input]</td></tr>
@@ -1749,7 +1808,7 @@ This function only supports Long/Lat coordinates, and will return NULL for any p
 				<td>SingleSidedBuffer( geom <i>Curve</i> , radius <i>Double precision</i> , left_or_right <i>Integer</i> ) : <i>Curve</i><hr>
 					ST_SingleSidedBuffer( geom <i>Curve</i> , radius <i>Double precision</i> , left_or_right <i>Integer</i> ) : <i>Curve</i></td>
 				<td></td>
-				<td align="center" bgcolor="#f0d0b0">GEOS-advanced</td>
+				<td align="center" bgcolor="#f0d0d0">GEOS</td>
 				<td>return a geometric object representing the corresponding <i>left-</i> (or <i>right-sided</i>) single-sided buffer<br>
 					NULL is returned whenever is not possible deriving a single-sided buffer from the original geometry<br>
 					[a single not-closed LINESTRING is expected as input]</td></tr>
@@ -1757,14 +1816,14 @@ This function only supports Long/Lat coordinates, and will return NULL for any p
 				<td>SharedPaths( geom1 <i>Geometry</i> , geom2 <i>Geomety</i> ) : <i>Geometry</i><hr>
 					ST_SharedPaths( geom1 <i>Geometry</i> , geom2 <i>Geomety</i> ) : <i>Geometry</i></td>
 				<td></td>
-				<td align="center" bgcolor="#f0d0b0">GEOS-advanced</td>
+				<td align="center" bgcolor="#f0d0d0">GEOS</td>
 				<td>return a geometric object (of the MULTILINESTRING type) representing any <i>common lines</i> shared by both geometries<br>
 					NULL is returned is no common line exists</td></tr>
 			<tr><td><b>Line_Interpolate_Point</b></td>
 				<td>Line_Interpolate_Point( line <i>Curve</i> , fraction <i>Double precision</i> ) : <i>Point</i><hr>
 					ST_Line_Interpolate_Point( line <i>Curve</i> , fraction <i>Double precision</i> ) : <i>Point</i></td>
 				<td></td>
-				<td align="center" bgcolor="#f0d0b0">GEOS-advanced</td>
+				<td align="center" bgcolor="#f0d0d0">GEOS</td>
 				<td>return a point interpolated along a line.<br>
 					Second argument (between <b>0.0</b> and <b>1.0</b>) representing fraction of total length of linestring 
 					the point has to be located.<br>
@@ -1773,7 +1832,7 @@ This function only supports Long/Lat coordinates, and will return NULL for any p
 				<td>Line_Interpolate_Equidistant_Points( line <i>Curve</i> , distance <i>Double precision</i>) : <i>MultiPoint</i><hr>
 					ST_Line_Interpolate_Equidistant_Points( line <i>Curve</i> , distance <i>Double precision</i> ) : <i>MultiPoint</i></td>
 				<td></td>
-				<td align="center" bgcolor="#f0d0b0">GEOS-advanced</td>
+				<td align="center" bgcolor="#f0d0d0">GEOS</td>
 				<td>return a set of equidistant points interpolated along a line; the returned geometry
 					always corresponds to a MULTIPOINT supporting the M coordinate (representing the
                                         progressive distance for each interpolated Point).<br>
@@ -1783,7 +1842,7 @@ This function only supports Long/Lat coordinates, and will return NULL for any p
 				<td>Line_Locate_Point( line <i>Curve</i> , point <i>Point</i> ) : <i>Double precision</i><hr>
 					ST_Line_Locate_Point( line <i>Curve</i> , point <i>Point</i> ) : <i>Double precision</i></td>
 				<td></td>
-				<td align="center" bgcolor="#f0d0b0">GEOS-advanced</td>
+				<td align="center" bgcolor="#f0d0d0">GEOS</td>
 				<td>return a number (between <b>0.0</b> and <b>1.0</b>) representing the location of the closest 
 					point on LineString to the given Point, as a fraction of total 2d line length.<br>
 					NULL is returned for invalid arguments</td></tr>
@@ -1793,7 +1852,7 @@ This function only supports Long/Lat coordinates, and will return NULL for any p
 					ST_Line_Substring( line <i>Curve</i> , start_fraction <i>Double precision</i> , 
 					end_fraction <i>Double precision</i> ) : <i>Curve</i></td>
 				<td></td>
-				<td align="center" bgcolor="#f0d0b0">GEOS-advanced</td>
+				<td align="center" bgcolor="#f0d0d0">GEOS</td>
 				<td>Return a Linestring being a substring of the input one starting and ending at the given fractions of total 2d length.<br>
 					Second and third arguments are expected to be in the range between <b>0.0</b> and <b>1.0</b>.<br>
 					NULL is returned for invalid arguments</td></tr>
@@ -1801,21 +1860,21 @@ This function only supports Long/Lat coordinates, and will return NULL for any p
 				<td>ClosesetPoint( geom1 <i>Geometry</i> , geom2 <i>Geometry</i> ) : <i>Point</i><hr>
 					ST_ClosesetPoint( geom1 <i>Geometry</i> , geom2 <i>Geometry</i> ) : <i>Point</i></td>
 				<td></td>
-				<td align="center" bgcolor="#f0d0b0">GEOS-advanced</td>
+				<td align="center" bgcolor="#f0d0d0">GEOS</td>
 				<td>Returns the Point on geom1 that is closest to geom2.<br>
 					NULL is returned for invalid arguments (or if distance is ZERO)</td></tr>
 			<tr><td><b>ShortestLine</b></td>
 				<td>ShortestLine( geom1 <i>Geometry</i> , geom2 <i>Geometry</i> ) : <i>Curve</i><hr>
 					ST_ShortestLine( geom1 <i>Geometry</i> , geom2 <i>Geometry</i> ) : <i>Curve</i></td>
 				<td></td>
-				<td align="center" bgcolor="#f0d0b0">GEOS-advanced</td>
+				<td align="center" bgcolor="#f0d0d0">GEOS</td>
 				<td>Returns the shortest line between two geometries.<br>
 					NULL is returned for invalid arguments (or if distance is ZERO)</td></tr>
 			<tr><td><b>Snap</b></td>
 				<td>Snap( geom1 <i>Geometry</i> , geom2 <i>Geometry</i> , tolerance <i>Double precision</i> ) : <i>Geometry</i><hr>
 					ST_Snap( geom1 <i>Geometry</i> , geom2 <i>Geometry</i> , tolerance <i>Double precision</i> ) : <i>Geometry</i></td>
 				<td></td>
-				<td align="center" bgcolor="#f0d0b0">GEOS-advanced</td>
+				<td align="center" bgcolor="#f0d0d0">GEOS</td>
 				<td>Returns a new Geometry representing a modified <b>geom1</b>, so to "snap" vertices and segments to <b>geom2</b> vertices;
 					a snap distance tolerance is used to control where snapping is performed.<br>
 					NULL is returned for invalid arguments</td></tr>
@@ -1823,14 +1882,14 @@ This function only supports Long/Lat coordinates, and will return NULL for any p
 				<td>Collect( geom1 <i>Geometry</i> , geom2 <i>Geometry</i> ) : <i>Geometry</i><hr>
 					ST_Collect( geom1 <i>Geometry</i> , geom2 <i>Geometry</i> ) : <i>Geometry</i></td>
 				<td></td>
-				<td align="center" bgcolor="#f0d0b0">GEOS-advanced</td>
+				<td align="center" bgcolor="#f0d0d0">GEOS</td>
 				<td>a generic Geometry (possibly a GEOMETRYCOLLECTION) will be returned merging <b>geom1</b> and <b>geom2</b><hr>
 				NULL will be returned if any error is encountered</td></tr>
 			<tr><td><b>Collect</b></td>
 				<td>Collect( geom <i>Geometry</i> ) : <i>Geometry</i><hr>
 					ST_Collect( geom <i>Geometry</i> ) : <i>Geometry</i></td>
 				<td></td>
-				<td align="center" bgcolor="#f0d0b0">GEOS-advanced</td>
+				<td align="center" bgcolor="#f0d0d0">GEOS</td>
 				<td>a generic Geometry (possibly a GEOMETRYCOLLECTION) will be returned merging input Geometries all together<br>
 				<b><u>aggregate function</u></b><hr>
 				NULL will be returned if any error is encountered</td></tr>
@@ -1838,7 +1897,7 @@ This function only supports Long/Lat coordinates, and will return NULL for any p
 				<td>LineMerge( geom <i>Geometry</i> ) : <i>Geometry</i><hr>
 					ST_LineMerge( geom <i>Geometry</i> ) : <i>Geometry</i></td>
 				<td></td>
-				<td align="center" bgcolor="#f0d0b0">GEOS-advanced</td>
+				<td align="center" bgcolor="#f0d0d0">GEOS</td>
 				<td>a Geometry (actually corresponding to a <i>LINESTRING</i> or <i>MULTILINESTRING</i>) will be returned.<br>
 				The input Geometry is expected to represent a <i>LINESTRING</i> or a <i>MULTILINESTRING</i>.<br> 
 				The input Geometry can be an arbitrary collection of sparse line fragments: this
@@ -1848,7 +1907,7 @@ This function only supports Long/Lat coordinates, and will return NULL for any p
 				<td>BuildArea( geom <i>Geometry</i> ) : <i>Geometry</i><hr>
 					ST_BuildArea( geom <i>Geometry</i> ) : <i>Geometry</i></td>
 				<td></td>
-				<td align="center" bgcolor="#f0d0b0">GEOS-advanced</td>
+				<td align="center" bgcolor="#f0d0d0">GEOS</td>
 				<td>a Geometry (actually corresponding to a <i>POLYGON</i> or <i>MULTIPOLYGON</i>) will be returned.<br>
 				The input Geometry is expected to represent a <i>LINESTRING</i> or a <i>MULTILINESTRING</i>.<br> 
 				The input Geometry can be an arbitrary collection of sparse Linestrings: this
@@ -1858,14 +1917,23 @@ This function only supports Long/Lat coordinates, and will return NULL for any p
 				<td>Polygonize( geom <i>Geometry</i> ) : <i>Geometry</i><hr>
 					ST_Polygonize( geom <i>Geometry</i> ) : <i>Geometry</i></td>
 				<td></td>
-				<td align="center" bgcolor="#f0d0b0">GEOS-advanced</td>
+				<td align="center" bgcolor="#f0d0d0">GEOS</td>
 				<td>Exactly the same as <b>ST_BuildArea</b>, but implemented as an <b><u>aggregate function</u></b>.<hr>
+				NULL will be returned if any error is encountered</td></tr>
+			<tr><td><b>MakePolygon</b></td>
+				<td>MakePolygon( geom1 <i>Geometry</i> [ , geom2 <i>Geometry</i> ] ) : <i>Geometry</i><hr>
+					ST_MakePolygon( geom1 <i>Geometry</i> [ , geom2 <i>Geometry</i> ] ) : <i>Geometry</i></td>
+				<td></td>
+				<td align="center" bgcolor="#d0f0d0">base</td>
+				<td>Kind of lightweight/simplified <b>ST_BuildArea</b>: the first input Geometry is always expected to represent a closed <i>LINESTRING</i> assumed to identify the output polygon's Exterior Ring.<br>
+                                The second input Geometry (if any) is expected to be a <i>LINESTRING</i> or <i>MULTILINESTRING</i> identifying any polygon's Interior Ring (and all them are expected to be correctly closed).<br>
+                                <b><u>Please note well</u></b>: this function doesn't perform any internal topology check, so it could possibly return an invalid polygon on invalid input.<hr>
 				NULL will be returned if any error is encountered</td></tr>
 			<tr><td><b>UnaryUnion</b></td>
 				<td>UnaryUnion( geom <i>Geometry</i> ) : <i>Geometry</i><hr>
 					ST_UnaryUnion( geom <i>Geometry</i> ) : <i>Geometry</i></td>
 				<td></td>
-				<td align="center" bgcolor="#f0d0b0">GEOS-advanced</td>
+				<td align="center" bgcolor="#f0d0d0">GEOS</td>
 				<td>Exactely the same as <b><u>ST_Union</u></b>, but applied to a single Geometry.<br>
 					(<i>set union of elementary Geometries within a MULTI- or GEOMETRYCOLLECTION complex Geometry</i>)<hr>
 				NULL will be returned if any error is encountered</td></tr>
@@ -1901,7 +1969,7 @@ This function only supports Long/Lat coordinates, and will return NULL for any p
 				NULL will be returned if any error is encountered</td></tr>
 			<tr><td><b>LinesCutAtNodes</b></td>
 				<td>LinesCutAtNodes( geom1 <i>Geometry</i> , geom2 <i>Geometry</i> ) : <i>Geometry</i><hr>
-					ST_LinesCutAtNodess( geom1 <i>Geometry</i> , geom2 <i>Geometry</i> ) : <i>Geometry</i></td>
+					ST_LinesCutAtNodes( geom1 <i>Geometry</i> , geom2 <i>Geometry</i> ) : <i>Geometry</i></td>
 				<td></td>
 				<td align="center" bgcolor="#d0f0d0">base</td>
 				<td>a Geometry (actually corresponding to a <i>LINESTRING</i> or <i>MULTILINESTRING</i>) 
@@ -1951,7 +2019,7 @@ This function only supports Long/Lat coordinates, and will return NULL for any p
 				NULL will be returned if any error is encountered (or when no element corresponding to the given range of measures is found).<br>
                                 <u>Please note</u>: NULL will be returned if geom doesn't contain M-dimension, or if geom contains a Polygon, or if geom is a GeometryCollection.</td></tr>
 			<tr><td colspan="5" align="center" bgcolor="#f0f0c0">
-				<h3><a name="p14c">SQL functions that implement spatial operators<br>[GEOS trunk features]</a></h3></td></tr>
+				<h3><a name="p14c">SQL functions that implement spatial operators<br>[GEOS advanced features]</a></h3></td></tr>
 			<tr><th bgcolor="#d0d0d0">Function</th>
 				<th bgcolor="#d0d0d0">Syntax</th>
 				<th bgcolor="#d0d0d0">OGC<br>defined</th>
@@ -1961,7 +2029,7 @@ This function only supports Long/Lat coordinates, and will return NULL for any p
 				<td>DelaunayTriangulation( geom <i>Geometry</i> [ , edges_only <i>Boolean</i> [ , tolerance <i>Double precision</i> ] ] ) : <i>Geometry</i><hr>
 					ST_DelaunayTriangulation( geom <i>Geometry</i> [ , edges_only <i>Boolean</i> [ , tolerance <i>Double precision</i> ] ] ) : <i>Geometry</i></td>
 				<td></td>
-				<td align="center" bgcolor="#f07070">GEOS-trunk</td>
+				<td align="center" bgcolor="#f0d0b0">GEOS-advanced</td>
 				<td>return a geometric object representing the Delaunay Triangulation corresponding to the input Geometry<hr>
 					The input Geometry could have any arbitrary type; eventually all Linestring's / Polygon's vertices will be dissolved into Points, so to implicitly always get a MultiPoint.<br>
 					The returned Geometry will usually be of the <b>MultiPolygon</b> type (a collection of Triangles), but will be a <b>MultiLinestring</b> if the optional <b>edges_only</b> argument is set to <b>TRUE</b><br>
@@ -1971,7 +2039,7 @@ This function only supports Long/Lat coordinates, and will return NULL for any p
 				<td>VoronojDiagram( geom <i>Geometry</i> [ , edges_only <i>Boolean</i> [ , frame_extra_size <i>Double precision</i> [ , tolerance <i>Double precision</i> ] ] ] ) : <i>Geometry</i><hr>
 					ST_VoronojDiagram( geom <i>Geometry</i> [ , edges_only <i>Boolean</i>  [ , frame_extra_size <i>Double precision</i> [ , tolerance <i>Double precision</i> ] ] ] ) : <i>Geometry</i></td>
 				<td></td>
-				<td align="center" bgcolor="#f07070">GEOS-trunk</td>
+				<td align="center" bgcolor="#f0d0b0">GEOS-advanced</td>
 				<td>return a geometric object representing the Voronoj Diagram corresponding to the input Geometry<hr>
 					The input Geometry could have any arbitrary type; eventually all Linestring's / Polygon's vertices will be dissolved into Points, so to implicitly always get a MultiPoint.<br>
 					The returned Geometry will usually be of the <b>MultiPolygon</b> type, but will be a <b>MultiLinestring</b> if the optional <b>edges_only</b> argument is set to <b>TRUE</b><br>
@@ -1982,7 +2050,7 @@ This function only supports Long/Lat coordinates, and will return NULL for any p
 				<td>ConcaveHull( geom <i>Geometry</i> [ , factor <i>Double precision</i> [ , allow_holes <i>Boolean</i> [ , tolerance <i>Double precision</i> ] ] ] ) : <i>Geometry</i><hr>
 					ST_ConcaveHull( geom <i>Geometry</i> [ , factor <i>Double precision</i> [ , allow_holes <i>Boolean</i> [ , tolerance <i>Double precision</i> ] ] ] ) : <i>Geometry</i></td>
 				<td></td>
-				<td align="center" bgcolor="#f07070">GEOS-trunk</td>
+				<td align="center" bgcolor="#f0d0b0">GEOS-advanced</td>
 				<td>return a geometric object representing the ConcaveHull corresponding to the input Geometry<hr>
 					The input Geometry could have any arbitrary type; eventually all Linestring's / Polygon's vertices will be dissolved into Points, so to implicitly always get a MultiPoint.<br>
 					The returned Geometry will always be of the <b>Polygon</b> or <b>MultiPolygon</b> type.<br>
@@ -2113,6 +2181,20 @@ This function only supports Long/Lat coordinates, and will return NULL for any p
 				<td></td>
 				<td align="center" bgcolor="#f0d0f0">LWGEOM</td>
 				<td>return the max 3D-distance between geom1 and geom2 (Z coordinates will be considered)</td></tr>
+			<tr><td><b>ST_Node</b></td>
+				<td>ST_Node( geom <i>Geometry</i> ) : <i>Geometry</i></td>
+				<td></td>
+				<td align="center" bgcolor="#f0d0f0">LWGEOM</td>
+				<td>Fully nodes a set of linestrings using the least possible number of nodes while preserving all of the input ones.<br>
+                                <b>NULL</b> will be returned if the input Geometry isn't a set of linestrings or if any other error occurs.</td></tr>
+			<tr><td><b>SelfIntersections</b></td>
+				<td>SelfIntersections( geom <i>Geometry</i> ) : <i>Geometry</i><hr>
+                                	ST_SelfIntersections( geom <i>Geometry</i> ) : <i>Geometry</i></td>
+				<td></td>
+				<td align="center" bgcolor="#f0d0f0">LWGEOM</td>
+				<td>Returns a MultiPoint Geometry representing any self-intersection found within the input geometry
+					[expected to be of the Linestring or MultiLinestring type].<br>
+                                <b>NULL</b> will be returned for invalid arguments, or when no self-intersections were found.</td></tr>
 			<tr><td colspan="5" align="center" bgcolor="#f0f0c0">
 				<h3><a name="p15">SQL functions for coordinate transformations</a></h3></td></tr>
 			<tr><th bgcolor="#d0d0d0">Function</th>
@@ -2281,7 +2363,8 @@ the return type is Integer, with a return value of 1 for TRUE or 0 for FALSE</td
 				<td align="center" bgcolor="#d0f0d0">base</td>
 				<td>Builds an RTree <b>Spatial Index</b> on a <u>geometry column</u>, creating any required <u>trigger</u>
 required in order to enforce full data coherency between the main table and Spatial Index<hr>
-the return type is Integer, with a return value of 1 for TRUE or 0 for FALSE</td></tr>
+the return type is Integer, with a return value of 1 for TRUE or 0 for FALSE<hr>
+-1 will be returned if any physical column named "rowid" (caseless) shadowing the real ROWID is detected.</td></tr>
 			<tr><td><b>CreateMbrCache</b></td>
 				<td>CreateMbrCache( table <i>String</i> , column <i>String</i> ) : <i>Integer</i></td>
 				<td></td>
@@ -2295,6 +2378,13 @@ the return type is Integer, with a return value of 1 for TRUE or 0 for FALSE</td
 				<td align="center" bgcolor="#d0f0d0">base</td>
 				<td>Disables an RTree <b>Spatial Index</b> or <b>MbrCache</b>, removing any related <u>trigger</u><hr>
 the return type is Integer, with a return value of 1 for TRUE or 0 for FALSE</td></tr>
+		<tr><td><b>CheckShadowedRowid</b></td>
+				<td>CheckShadowedRowid( table <i>String</i> ) : <i>Integer</i></td>
+				<td></td>
+				<td align="center" bgcolor="#d0f0d0">base</td>
+				<td>Checks if some table has a physical column named "rowid" (caseless) shadowing the real ROWID.<hr>
+the return type is Integer, with a return value of 1 for TRUE or 0 for FALSE<br>
+NULL will be returned if the requested table doesn't exist.</td></tr>
 		<tr><td><b>CheckSpatialIndex</b></td>
 				<td>CheckSpatialIndex( void ) : <i>Integer</i><hr>
 					CheckSpatialIndex( table <i>String</i> , column <i>String</i> ) : <i>Integer</i></td>
@@ -2306,7 +2396,8 @@ the return type is Integer, with a return value of 1 for TRUE or 0 for FALSE</td
 					<li>otherwise only the RTree corresponding to <b>table</b> and <b>column</b> will be checked</li>
 				</ul><hr>
 the return type is Integer, with a return value of 1 for TRUE or 0 for FALSE<br>
-NULL will be returned if the requested RTree doesn't exists</td></tr>
+NULL will be returned if the requested RTree doesn't exist<hr>
+-1 will be returned if any physical column named "rowid" (caseless) shadowing the real ROWID is detected.</td></tr>
 		<tr><td><b>RecoverSpatialIndex</b></td>
 				<td>RecoverSpatialIndex( [ no_check : <i>Integer</i> ] ) : <i>Integer</i><hr>
 					RecoverSpatialIndex( table <i>String</i> , column <i>String</i> [ , no_check : <i>Integer</i> ] ) : <i>Integer</i></td>
@@ -2324,7 +2415,22 @@ NULL will be returned if the requested RTree doesn't exists</td></tr>
 						</ul></li>
 				</ul><hr>
 the return type is Integer, with a return value of 1 for TRUE or 0 for FALSE<br>
-NULL will be returned if the requested RTree doesn't exists</td></tr>
+NULL will be returned if the requested RTree doesn't exist<hr>
+-1 will be returned if any physical column named "rowid" (caseless) shadowing the real ROWID is detected.</td></tr>
+		<tr><td><b>InvalidateLayerStatistics</b></td>
+				<td>InvalidateLayerStatistics( [ void ) : <i>Integer</i><hr>
+					InvalidateLayerStatistics( table <i>String</i> [ , column <i>String</i> ] ) : <i>Integer</i></td>
+				<td></td>
+				<td align="center" bgcolor="#d0f0d0">base</td>
+				<td>Immediately and unconditionally invalidates the internal Layer Statistics<ul>
+					<li>if no arguments are passed, then internal statistics will be invalidated 
+						for any possible Geometry Column defined in the current DB</li>
+					<li>otherwise statistics will be updated only for Geometry Columns
+						corresponding to the given table</li>
+					</ul><hr>
+the return type is Integer, with a return value of 1 for TRUE or 0 for FALSE<hr>
+				<u>Please note</u>: will effectively work only on behalf DB-files supporting the more recent metatables layout introduced 
+				starting since version <b>4.x</b>; in any other case will always return an error and no action will happen.</td></tr>
 		<tr><td><b>UpdateLayerStatistics</b></td>
 				<td>UpdateLayerStatistics( [ void ) : <i>Integer</i><hr>
 					UpdateLayerStatistics( table <i>String</i> [ , column <i>String</i> ] ) : <i>Integer</i></td>
@@ -2370,6 +2476,37 @@ the return type is Integer, with a return value of 1 for TRUE (success) or 0 for
 				<td>Creates the <b>raster_coverages</b> table required by <b>RasterLite-2</b><hr>
 the return type is Integer, with a return value of 1 for TRUE (success) or 0 for FALSE (failure)</td></tr>
 			<tr><td colspan="5" align="center" bgcolor="#f0f0c0">
+				<h3><a name="p16metacatalog">SQL functions supporting the MetaCatalog and related Statistics</a></h3></td></tr>
+			<tr><th bgcolor="#d0d0d0">Function</th>
+				<th bgcolor="#d0d0d0">Syntax</th>
+				<th bgcolor="#d0d0d0">OGC<br>defined</th>
+				<th bgcolor="#d0d0d0">required<br>module</th>
+				<th bgcolor="#d0d0d0">Summary</th></tr>
+			<tr><td><b>CreateMetaCatalogTables</b></td>
+				<td>CreateMetaCatalogTables( transaction <i>Integer</i> ) : <i>Integer</i></td>
+				<td></td>
+				<td align="center" bgcolor="#d0f0d0">base</td>
+				<td>Creates both <b>splite_metacatalog</b> and <b>splite_metacatalog_statistics</b> tables;
+                                <i>splite_metacatalog</i> will be populated so to describe every table/column currently defined within the DB.<br>
+                                if the first argument <b>transaction</b> is set to <b>TRUE</b> the whole operation will be
+                                handled as a single <i>Transaction</i> (faster): the default setting is <b>transaction=FALSE</b> (slower, but safer).<br>
+                                the return type is Integer, with a return value of 1 for TRUE or 0 for FALSE</td></tr>
+			<tr><td><b>UpdateMetaCatalogStatistics</b></td>
+				<td>UpdateMetaCatalogStatistics( transaction <i>Integer</i> , table_name <i>String</i> , column_name <i>String</i> ) : <i>Integer</i><hr>
+                                UpdateMetaCatalogStatistics( transaction <i>Integer</i> , master_table <i>String</i> , table_name <i>String</i> , column_name <i>String</i> ) : <i>Integer</i></td>
+				<td></td>
+				<td align="center" bgcolor="#d0f0d0">base</td>
+				<td>Updates the <b>splite_metacatalog_statistics</b> table by computing the statistic summary for the required table/column.<br>
+                                if the first argument <b>transaction</b> is set to <b>TRUE</b> the whole operation will be
+                                handled as a single <i>Transaction</i> (faster): the default setting is <b>transaction=FALSE</b> (slower, but safer).<hr>
+                                the first form (using <i>three</i> arguments) will simply attempt to update the statistic summary for a single 
+                                table/column as identified by their names: a matching row is expected to be found in <i>splite_metacatalog</i>.<hr>
+                                the second form (using <i>four</i> arguments) allows to update the statistic summary for many table/columns in a single pass.<br>
+                                in this case <i>master_table</i> should identify an existing table: <i>table_name</i> and <i>column_name</i> should identify two columns belonging to this tables.<br>
+                                the statistic summary for every table/columns fetched from the master table will then be updated:
+                                any mismatching table/column will be simply ignored.<hr>
+                                the return type is Integer, with a return value of 1 for TRUE or 0 for FALSE</td></tr>
+			<tr><td colspan="5" align="center" bgcolor="#f0f0c0">
 				<h3><a name="p16style">SQL functions supporting SLD/SE Styled Layers</a></h3></td></tr>
 			<tr><th bgcolor="#d0d0d0">Function</th>
 				<th bgcolor="#d0d0d0">Syntax</th>
@@ -2387,7 +2524,7 @@ the return type is Integer, with a return value of 1 for TRUE (success) or 0 for
 					a <i>relaxed</i> version of the validating Triggers will be installed.</li>
 				</ul><hr>
 the return type is Integer, with a return value of 1 for TRUE (success) or 0 for FALSE (failure): -1 will be
-				returned on invalid argumentes.<hr>
+				returned on invalid arguments.<hr>
 <i>Please note</i>: will implicitly invoke <b>CreateRasterCoverages()</b> if the <b>raster_coverages</b> table has not yet been created.</td></tr>
 		<tr><td><b>RegisterExternalGraphic</b></td>
 				<td>RegisterExternalGraphic( xlink_href <i>String</i> , resource <i>BLOB</i> ) : <i>Integer</i><hr>
@@ -2401,7 +2538,7 @@ the return type is Integer, with a return value of 1 for TRUE (success) or 0 for
 					<li>the optional arguments <b>title</b>, <b>abstract</b> and <b>file_name</b> could be eventually specified for better human readability.</li>
 				</ul><hr>
 the return type is Integer, with a return value of 1 for TRUE (success) or 0 for FALSE (failure): -1 will be
-				returned on invalid argumentes.</td></tr>
+				returned on invalid arguments.</td></tr>
 		<tr><td><b>RegisterVectorStyledLayer</b></td>
 				<td>RegisterVectorStyledLayer( f_table_name <i>String</i> , f_geometry_column <i>String</i> , style <i>BLOB</i> ) : <i>Integer</i><hr>
 					RegisterVectorStyledLayer( f_table_name <i>String</i> , f_geometry_column <i>String</i> , style_id <i>Integer</i>  , style <i>BLOB</i> ) : <i>Integer</i></td>
@@ -2417,7 +2554,7 @@ the return type is Integer, with a return value of 1 for TRUE (success) or 0 for
 					If no <b>style_id</b> argument is specified then a new Styled Layer will be created, and the <b>style_id</b> value will be automatically set so to ensure univocity.</li>
 				</ul><hr>
 the return type is Integer, with a return value of 1 for TRUE (success) or 0 for FALSE (failure): -1 will be
-				returned on invalid argumentes.</td></tr>
+				returned on invalid arguments.</td></tr>
 		<tr><td><b>RegisterRasterStyledLayer</b></td>
 				<td>RegisterRasterStyledLayer( coverage_name <i>String</i> , style <i>BLOB</i> ) : <i>Integer</i><hr>
 					RegisterRasterStyledLayer( coverage_name <i>String</i> , style_id <i>Integer</i>  , style <i>BLOB</i> ) : <i>Integer</i></td>
@@ -2433,24 +2570,24 @@ the return type is Integer, with a return value of 1 for TRUE (success) or 0 for
 					If no <b>style_id</b> argument is specified then a new Styled Layer will be created, and the <b>style_id</b> value will be automatically set so to ensure univocity.</li>
 				</ul><hr>
 the return type is Integer, with a return value of 1 for TRUE (success) or 0 for FALSE (failure): -1 will be
-				returned on invalid argumentes.</td></tr>
+				returned on invalid arguments.</td></tr>
 		<tr><td><b>RegisterStyledGroup</b></td>
-				<td>RegisterStyledGroup( group_name <i>String</i> , f_table_name <i>String</i> , f_geometry_column <i>String</i> , style_id <i>Integer</i> [ , paint_order <i>Integer</i> ] ) : <i>Integer</i><hr>
-					RegisterStyledGroup( group_name <i>String</i> , coverage_name <i>String</i> , style_id <i>Integer</i>  [ , paint_order <i>Integer</i> ] ) : <i>Integer</i></td>
+				<td>RegisterStyledGroup( group_name <i>String</i> , f_table_name <i>String</i> , f_geometry_column <i>String</i> [ , paint_order <i>Integer</i> ] ) : <i>Integer</i><hr>
+					RegisterStyledGroup( group_name <i>String</i> , coverage_name <i>String</i> [ , paint_order <i>Integer</i> ] ) : <i>Integer</i></td>
 				<td></td>
 				<td align="center" bgcolor="#99d099">libxml2</td>
 				<td>Inserts (or updates) a <b>Styled Group</b> definition.
 				<ul>
 					<li><b>group_name</b> must identify a Styled Group: if the Styled Group doesn't yet exists it will be implicitly created.</li>
-					<li><b>f_table_name</b>, <b>f_geometry_column</b> and <b>style_id</b> must identify an existing Vectore Styled Layer.</li>
-					<li>or alternatively: <b>coverage_name</b> and <b>style_id</b> must identify an existing Raster Styled Layer.</li>
+					<li><b>f_table_name</b> and <b>f_geometry_column</b> must identify an existing Vector Layer.</li>
+					<li>or alternatively: <b>coverage_name</b> must identify an existing Raster Layer.</li>
 					<li>the optional <b>paint_order</b> argument could be used to explicitly reference an already defined group item (this implying <u>updating</u> the previous registration)<br>
 					If <b>paint_order</b> is not specified or if a <i>negative</i> value is passed 
 					then the next available order position will be automatically assigned (this always implying <u>inserting</u> a new registration).<br>
 					<u>Please note</u>: the painting order will follow the <b>Painter rule</b>, i.e. a lower paint-order value will always be painted before painting any higher value.
 				</ul><hr>
 the return type is Integer, with a return value of 1 for TRUE (success) or 0 for FALSE (failure): -1 will be
-				returned on invalid argumentes.</td></tr>
+				returned on invalid arguments.</td></tr>
 		<tr><td><b>SetStyledGroupInfos</b></td>
 				<td>SetStyledGroupInfos( group_name <i>String</i> , title <i>String</i> , abstract <i>String</i> ) : <i>Integer</i></td>
 				<td></td>
@@ -2461,7 +2598,23 @@ the return type is Integer, with a return value of 1 for TRUE (success) or 0 for
 					<li><b>title</b> and <b>abstract</b> represent the descriptive infos to be set.</li>
 				</ul><hr>
 the return type is Integer, with a return value of 1 for TRUE (success) or 0 for FALSE (failure): -1 will be
-				returned on invalid argumentes.</td></tr>
+				returned on invalid arguments.</td></tr>
+		<tr><td><b>RegisterGroupStyle</b></td>
+				<td>RegisterGroupStyle( group_name <i>String</i> , style <i>BLOB</i> ) : <i>Integer</i><hr>
+					RegisterGroupStyle( group_name <i>String</i> , style_id <i>Integer</i>  , style <i>BLOB</i> ) : <i>Integer</i></td>
+				<td></td>
+				<td align="center" bgcolor="#99d099">libxml2</td>
+				<td>Inserts (or updates) a <b>Group Style</b> definition.
+				<ul>
+					<li><b>group_name</b> must identify an existing Styled Group.</li>
+					<li><b>style</b> is expected to be an XmlBLOB containing a valid SLD Style.<br>
+					If <b>CreatedStylingTables()</b> was invoked without specifying the <i>relaxed</i> option this XmlBLOB is expected to have succesfully passed a formal XML Schema Validation.</li>
+					<li>The same Styled Group could eventually support more than a single Style; in this case 
+					the optional argument <b>style_id</b> can be explicitly set in order to identify an individual Style.<br>
+					If no <b>style_id</b> argument is specified then a new Style will be created, and the <b>style_id</b> value will be automatically set so to ensure univocity.</li>
+				</ul><hr>
+the return type is Integer, with a return value of 1 for TRUE (success) or 0 for FALSE (failure): -1 will be
+				returned on invalid arguments.</td></tr>
 			<tr><td colspan="5" align="center" bgcolor="#f0f0c0">
 				<h3><a name="p16isometa">SQL functions supporting ISO Metadata</a></h3></td></tr>
 			<tr><th bgcolor="#d0d0d0">Function</th>
@@ -2480,7 +2633,7 @@ the return type is Integer, with a return value of 1 for TRUE (success) or 0 for
 					a <i>relaxed</i> version of the validating Triggers will be installed.</li>
 				</ul><hr>
 the return type is Integer, with a return value of 1 for TRUE (success) or 0 for FALSE (failure): -1 will be
-				returned on invalid argumentes.</td></tr>
+				returned on invalid arguments.</td></tr>
 		<tr><td><b>RegisterIsoMetadata</b></td>
 				<td>RegisterIsoMetadata( scope <i>String</i> , metadata <i>BLOB</i> ) : <i>Integer</i><hr>
 				RegisterIsoMetadata( scope <i>String</i> , metadata <i>BLOB</i> , id Integer ) : <i>Integer</i><hr>
@@ -2497,7 +2650,7 @@ the return type is Integer, with a return value of 1 for TRUE (success) or 0 for
 					<li>the first form (two arguments only) always performs an <i>INSERT</i>; if one the optional arguments <b>id</b> or <b>fileIdentifier</b> an <i>UPDATE</i> could be eventually performed if a corresponding metadata row is already defined.</li>
 				</ul><hr>
 the return type is Integer, with a return value of 1 for TRUE (success) or 0 for FALSE (failure): -1 will be
-				returned on invalid argumentes.</td></tr>
+				returned on invalid arguments.</td></tr>
 		<tr><td><b>GetIsoMetadataId</b></td>
 				<td>GetIsoMetadataId( fileIdentifier <i>String</i> ) : <i>Integer</i></td>
 				<td></td>
@@ -2579,6 +2732,201 @@ the return type is Integer, with a return value of 1 for TRUE or 0 for FALSE</td
 the column itself still continues to exist untouched as an ordinary column<hr>
 the return type is Integer, with a return value of 1 for TRUE or 0 for FALSE</td></tr>
 			<tr><td colspan="5" align="center" bgcolor="#f0f0c0">
+				<h3><a name="p16gpkg">SQL functions implementing OGC GeoPackage compatibility</a></h3></td></tr>
+			<tr><th bgcolor="#d0d0d0">Function</th>
+				<th bgcolor="#d0d0d0">Syntax</th>
+				<th bgcolor="#d0d0d0">OGC<br>defined</th>
+				<th bgcolor="#d0d0d0">required<br>module</th>
+				<th bgcolor="#d0d0d0">Summary</th></tr>
+			<tr><td><b>CheckGeoPackageMetaData</b></td>
+				<td>CheckGeoPackageMetaData( void ) : <i>Integer</i></td>
+				<td></td>
+				<td align="center" bgcolor="#d0f0d0">base</td>
+				<td>This function will inspect the DB layout checking if it corresponds to the GPKG own style<hr>
+the return type is Integer, with a return value of 1 for TRUE, 0 for FALSE</td></tr>
+			<tr><td><b>AutoGPKGStart</b></td>
+				<td>AutoGPKGStart( void ) : <i>Integer</i></td>
+				<td></td>
+				<td align="center" bgcolor="#d0f0ff">GeoPackage</td>
+				<td>This function will inspect the DB layout, then automatically creating/refreshing a <b>VirtualGPKG</b>
+				wrapper for each GPKG geometry table<hr>
+the return type is Integer [how many VirtualGPKG tables have been created]</td></tr>
+			<tr><td><b>AutoGPKGStop</b></td>
+				<td>AutoGPKGStop( void ) : <i>Integer</i></td>
+				<td></td>
+				<td align="center" bgcolor="#d0f0ff">GeoPackage</td>
+				<td>This function will inspect the DB layout, then automatically destroying any <b>VirtualGPKG</b>
+				wrapper found<hr>
+the return type is Integer [how many VirtualGPKG tables have been destroyed]</td></tr>
+			<tr><td><b>gpkgCreateBaseTables</b></td>
+				<td>gpkgCreateBaseTables( void ) : <i>void</i></td>
+				<td></td>
+				<td align="center" bgcolor="#d0f0ff">GeoPackage</td>
+				<td>This function will create base tables for an "empty" GeoPackage<hr>
+returns nothing on success, raises exception on error</td></tr>
+			<tr><td><b>gpkgInsertEpsgSRID</b></td>
+				<td>gpkgInsertEpsgSRID( srid <i>Integer</i> ) : <i>void</i></td>
+				<td></td>
+				<td align="center" bgcolor="#d0f0ff">GeoPackage</td>
+				<td>This function will add a spatial reference system entry for the specified EPSG identifier;
+				it is an error to try to add the entry if it already exists<hr>
+returns nothing on success, raises exception on error</td></tr>
+			<tr><td><b>gpkgCreateTilesTable</b></td>
+				<td>gpkgCreateTilesTable( tile_table_name <i>String</i> , srid <i>Integer</i> , min_x <i>Double precision</i> ,
+				min_y <i>Double precision</i> , max_x <i>Double precision</i> , max_y <i>Double precision</i> ) : <i>void</i></td>
+				<td></td>
+				<td align="center" bgcolor="#d0f0ff">GeoPackage</td>
+				<td>This function will create a new (empty) Tiles table and the triggers for that table;
+				It also adds in the matching entries into gpkg_contents and gpkg_tile_matrix_set.<br>
+				This function assumes usual tile conventions, including that the tiles are power-of-two-zoom.<hr>
+returns nothing on success, raises exception on error</td></tr>
+			<tr><td><b>gpkgCreateTilesZoomLevel</b></td>
+				<td>gpkgCreateTilesZoomLevel( tile_table_name <i>String</i>, zoom_level <i>Integer</i> , extent_width <i>Double precision</i> ,
+				extent_height <i>Double precision</i> ) : <i>void</i></td>
+				<td></td>
+				<td align="center" bgcolor="#d0f0ff">GeoPackage</td>
+				<td>This function will add a zoom level for the specified table.<br>
+				This function assumes usual tile conventions, including that the tiles are power-of-two-zoom,
+				256x256 pixels, 1 tile at the top level (zoom level 0).<hr>
+returns nothing on success, raises exception on error</td></tr>
+			<tr><td><b>gpkgAddTileTriggers</b></td>
+				<td>gpkgAddTileTriggers( tile_table_name <i>String</i> ) : <i>void</i></td>
+				<td></td>
+				<td align="center" bgcolor="#d0f0ff">GeoPackage</td>
+				<td>This function will add Geopackage tile table triggers for the named table.<hr>
+returns nothing on success, raises exception on error</td></tr>
+			<tr><td><b>gpkgGetNormalZoom</b></td>
+				<td>gpkgGetNormalZoom( tile_table_name <i>String</i> , inverted_zoom_level <i>Integer</i> ) : <i>Integer</i></td>
+				<td></td>
+				<td align="center" bgcolor="#d0f0ff">GeoPackage</td>
+				<td>This function will return the normal integer zoom level for data stored in the specified table.<br>
+				Note that this function can also be used to convert from a normal zoom level
+				to an inverted zoom level - this conversion is symmetric.<hr>
+				Raises a SQL exception if inverted zoom level is outside the range of
+				tile_matrix_metadata table normal zoom levels defined for the tile_table</td></tr>
+			<tr><td><b>gpkgGetNormalRow</b></td>
+				<td>gpkgGetNormalRow( tile_table_name <i>String</i> , normal_zoom_level <i>Integer</i> , inverted_row_number <i>Integer</i> ) : <i>Integer</i></td>
+				<td></td>
+				<td align="center" bgcolor="#d0f0ff">GeoPackage</td>
+				<td>This function will return the normal integer row number for the specified table, normal zoom level
+				and inverted row number.<br>
+				Note that this function can also be used to convert from a normal row number
+				to an inverted row number - this conversion is symmetric.<hr>
+				Raises a SQL exception if no zoom level row record in tile_matrix_metadata</td></tr>
+			<tr><td><b>gpkgGetImageType</b></td>
+				<td>gpkgGetImageType( image <i>Blob</i> ) : <i>String</i></td>
+				<td></td>
+				<td align="center" bgcolor="#d0f0ff">GeoPackage</td>
+				<td>This function will return the image type (as a string) of the blob argument, or "unknown" if
+				the image type is not one of the PNG, JPEG, TIFF or WebP format types that are supported in GeoPackage.
+				The result will be one of:
+				<ul>
+				<li><b>"png"</b> for PNG</li>
+				<li><b>"jpeg"</b> for JPEG</li>
+				<li><b>"tiff"</b> for TIFF</li>
+				<li><b>"x-webp"</b> for WebP</li>
+				</ul>
+				These are the mime type for the image format (without the "image/" prefix).<hr>
+				This function raises exception on error (e.g. wrong argument type).</td></tr>
+			<tr><td><b>gpkgAddGeometryColumn</b></td>
+				<td>gpkgAddGeomtryColumn( table_name <i>Sting</i>, geometry_column_name <i>String</i> , geometry_type <i>String</i> , 
+					with_z <i>Integer</i> , with_m <i>Integer</i> , srs_id <i>Integer</i> ) : <i>void</i></td>
+				<td></td>
+				<td align="center" bgcolor="#d0f0ff">GeoPackage</td>
+				<td>Adds a geometry column to the specified table:
+				<ul>
+					<li><b>geometry_type</b> is a normal WKT name:
+						<ul>
+							<li><b>"GEOMETRY"</b></li>
+							<li><b>"POINT"</b></li>
+							<li><b>"LINESTRING"</b></li>
+							<li><b>"POLYGON"</b></li>
+							<li><b>"MULTIPOINT"</b></li>
+							<li><b>"MULTILINESTRING"</b></li>
+							<li><b>"MULTIPOLYGON"</b></li>
+							<li><b>"GEOMETRYCOLLECTION"</b></li>
+						</ul></li>
+					<li><b>with_z</b> is a flag (0 for no z values, 1 for mandatory z values, 2 for optional z values)</li>
+					<li><b>with_m</b> is a flag (0 for no m values, 1 for mandatory m values, 2 for optional m values)</li>
+				</ul><hr>
+				returns nothing on success, raises exception on error</td></tr>
+			<tr><td><b>gpkgAddGeometryTriggers</b></td>
+				<td>gpkgAddGeometryTriggers( table_name <i>String</i> , geometry_column_name <i>String</i> ) : <i>void</i></td>
+				<td></td>
+				<td align="center" bgcolor="#d0f0ff">GeoPackage</td>
+				<td>This function will add Geopackage geometry table triggers for the named table.<hr>
+returns nothing on success, raises exception on error</td></tr>
+			<tr><td><b>gpkgAddSpatialIndex</b></td>
+				<td>gpkgAddSpatialIndex( table_name <i>String</i> , geometry_column_name <i>String</i> ) : <i>void</i></td>
+				<td></td>
+				<td align="center" bgcolor="#d0f0ff">GeoPackage</td>
+				<td>This function will add Geopackage Spatial Index support for the named table.<hr>
+returns nothing on success, raises exception on error</td></tr>
+			<tr><td><b>gpkgMakePoint</b></td>
+				<td>gpkgMakePoint (x <i>Double precision</i> , y <i>Double precision</i> ) : <i>GPKG Blob Geometry</i><hr>
+				gpkgMakePoint (x <i>Double precision</i> , y <i>Double precision</i> , srid <i>Integer</i> ) : <i>GPKG Blob Geometry</i></td>
+				<td></td>
+				<td align="center" bgcolor="#d0f0ff">GeoPackage</td>
+				<td>This function will create a GeoPackage geometry POINT.<hr>
+				Raises a SQL exception on error</td></tr>
+			<tr><td><b>gpkgMakePointZ</b></td>
+				<td>gpkgMakePointZ (x <i>Double precision</i> , y <i>Double precision</i> , z <i>Double precision</i> ) : <i>GPKG Blob Geometry</i><hr>
+				gpkgMakePointZ (x <i>Double precision</i> , y <i>Double precision</i> , z <i>Double precision</i> , srid <i>Integer</i> ) : <i>GPKG Blob Geometry</i></td>
+				<td></td>
+				<td align="center" bgcolor="#d0f0ff">GeoPackage</td>
+				<td>This function will create a GeoPackage geometry POINT Z.<hr>
+				Raises a SQL exception on error</td></tr>
+			<tr><td><b>gpkgMakePointM</b></td>
+				<td>gpkgMakePointM (x <i>Double precision</i> , y <i>Double precision</i> , m <i>Double precision</i> ) : <i>GPKG Blob Geometry</i><hr>
+				gpkgMakePointM (x <i>Double precision</i> , y <i>Double precision</i> , m <i>Double precision</i> , srid <i>Integer</i> ) : <i>GPKG Blob Geometry</i></td>
+				<td></td>
+				<td align="center" bgcolor="#d0f0ff">GeoPackage</td>
+				<td>This function will create a GeoPackage geometry POINT M.<hr>
+				Raises a SQL exception on error</td></tr>
+			<tr><td><b>gpkgMakePointZM</b></td>
+				<td>gpkgMakePointZM (x <i>Double precision</i> , y <i>Double precision</i> , z <i>Double precision</i> , m <i>Double precision</i> ) : <i>GPKG Blob Geometry</i><hr>
+				gpkgMakePointZM (x <i>Double precision</i> , y <i>Double precision</i> , z <i>Double precision</i> , m <i>Double precision</i> , srid <i>Integer</i> ) : <i>GPKG Blob Geometry</i></td>
+				<td></td>
+				<td align="center" bgcolor="#d0f0ff">GeoPackage</td>
+				<td>This function will create a GeoPackage geometry POINT ZM.<hr>
+				Raises a SQL exception on error</td></tr>
+			<tr><td><b>IsValidGPB</b></td>
+				<td>IsValidGPB( geom <i>Blob</i> ) : <i>Integer</i></td>
+				<td></td>
+				<td align="center" bgcolor="#d0f0ff">GeoPackage</td>
+				<td>This function will inspect a BLOB then checking if it really corresponds to a GPKG own Geometry<hr>
+the return type is Integer, with a return value of 1 for TRUE, 0 for FALSE</td></tr>
+			<tr><td><b>AsGPB</b></td>
+				<td>AsGPB( geom <i>BLOB encoded geometry</i> ) : <i>GPKG Blob Geometry</i></td>
+				<td></td>
+				<td align="center" bgcolor="#d0f0ff">GeoPackage</td>
+				<td>This function will convert a SpatiaLite geometry blob into a GeoPackage format geometry blob.<hr>
+				Will return NULL if any error is encountered</td></tr>
+			<tr><td><b>GeomFromGPB</b></td>
+				<td>GeomFromGPB( geom <i>GPKG Blob Geometry</i> ) : <i>BLOB encoded geometry</i></td>
+				<td></td>
+				<td align="center" bgcolor="#d0f0ff">GeoPackage</td>
+				<td>This function will convert a GeoPackage format geometry blob into a SpatiaLite geometry blob.<hr>
+				Will return NULL if any error is encountered</td></tr>
+			<tr><td><b>CastAutomagic</b></td>
+				<td>CastAutomagic( geom <i>Blob</i> ) : <i>BLOB encoded geometry</i></td>
+				<td></td>
+				<td align="center" bgcolor="#d0f0ff">GeoPackage</td>
+				<td>This function will indifferently accept on input:
+				<ul>
+					<li>a SpatiaLite own BLOB Geometry</li>
+					<li>a GPKG own BLOB Geometry</li>
+				</ul>
+				then returning a SpatiaLite own BLOB geometry.<hr>
+				Will return NULL if any error is encountered or on invalid / mismatching argument</td></tr>	
+			<tr><td><b>GPKG_IsAssignable</b></td>
+				<td>GPKG_IsAssignable( expected_type_name <i>String</i> , actual_type_name <i>String</i> ) : <i>Integer</i></td>
+				<td></td>
+				<td align="center" bgcolor="#d0f0ff">GeoPackage</td>
+				<td>This function will check if <b>expected_type</b> is the same or is a super-type of <b>actual_type</b>;
+				this function is required by the standard implementation of GPKG Geometry validation Triggers.<hr>
+the return type is Integer, with a return value of 1 for TRUE, 0 for FALSE</td></tr>					
+			<tr><td colspan="5" align="center" bgcolor="#f0f0c0">
 				<h3><a name="p17">SQL functions for MbrCache-based queries</a></h3></td></tr>
 			<tr><th bgcolor="#d0d0d0">Function</th>
 				<th bgcolor="#d0d0d0">Syntax</th>
@@ -2653,6 +3001,11 @@ the return type is Integer, with a return value of 1 for TRUE or 0 for FALSE</td
 				the square circumscribed on the given circle (<b>x y</b> center, <b>radius)</b></td></tr>
                         <tr><td colspan="5" align="center" bgcolor="#f0f0c0">
 				<h3><a name="xmlBlob">SQL functions supporting XmlBLOB</a></h3></td></tr>
+			<tr><th bgcolor="#d0d0d0">Function</th>
+				<th bgcolor="#d0d0d0">Syntax</th>
+				<th bgcolor="#d0d0d0">OGC<br>defined</th>
+				<th bgcolor="#d0d0d0">required<br>module</th>
+				<th bgcolor="#d0d0d0">Summary</th></tr>
 			<tr><td><b>XB_Create</b></td>
 				<td>XB_Create(  xmlPayload <i>BLOB</i> ) : <i>XmlBLOB</i><hr>
 				XB_Create(  xmlPayload <i>BLOB</i> , compressed <i>Boolean</i> ) : <i>XmlBLOB</i><hr>
@@ -2878,7 +3231,7 @@ the return type is Integer, with a return value of 1 for TRUE or 0 for FALSE</td
 					Otherwise NULL will be returned.<br>
 					<u>Please note:</u> SQLite doesn't support BLOB values bigger than SQLITE_MAX_LENGTH (usually, 1 GB).<hr>
                                         <u>Please note well</u>: this SQL function open the doors to many potential security issues, and thus is always <i>disabled by default</i>.<br>
-                                        Explicitly setting the environmente variable <b>SPATIALITE_SECURITY=relaxed</b> is absolutely required in order to effectively enable this function.<br>
+                                        Explicitly setting the environment variable <b>SPATIALITE_SECURITY=relaxed</b> is absolutely required in order to effectively enable this function.<br>
 					Please see: <b>CountUnsafeTriggers()</b></td></tr>
 			<tr><td><b>XB_StoreXML</b></td>
 				<td>XB_StoreXML( XmlObject <i>XmlBLOB</i> , filepath <i>String</i> ) : <i>Integer</i><hr>
@@ -2893,7 +3246,7 @@ the return type is Integer, with a return value of 1 for TRUE or 0 for FALSE</td
                                 XmlDocument to be returned as a single line. (default setting is <i>negative</i> indenting, i.e. not reformatting at all).<hr>
 					The return type is Integer, with a return value of 1 for success, 0 for failure and -1 for invalid arguments.<hr>
                                         <u>Please note well</u>: this SQL function open the doors to many potential security issues, and thus is always <i>disabled by default</i>.<br>
-                                        Explicitly setting the environmente variable <b>SPATIALITE_SECURITY=relaxed</b> is absolutely required in order to effectively enable this function.<br>
+                                        Explicitly setting the environment variable <b>SPATIALITE_SECURITY=relaxed</b> is absolutely required in order to effectively enable this function.<br>
 					Please see: <b>CountUnsafeTriggers()</b></td></tr>
 		</tbody></table>
 		<a href="https://www.gaia-gis.it/fossil/libspatialite">back</a>

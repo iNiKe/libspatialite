@@ -1091,7 +1091,7 @@ gaiaFromSpatiaLiteBlobWkb (const unsigned char *blob, unsigned int size)
     else if (*(blob + 1) == GAIA_BIG_ENDIAN)
 	little_endian = 0;
     else
-	return NULL;		/* unknown encoding; nor litte-endian neither big-endian */
+	return NULL;		/* unknown encoding; nor little-endian neither big-endian */
     type = gaiaImport32 (blob + 39, little_endian, endian_arch);
     geo = gaiaAllocGeomColl ();
     geo->Srid = gaiaImport32 (blob + 2, little_endian, endian_arch);
@@ -4792,9 +4792,7 @@ gaiaToEWKB (gaiaOutBufferPtr out_buf, gaiaGeomCollPtr geom)
     gaiaPolygonPtr polyg = NULL;
 
 /* precomputing the required size */
-    sprintf (buf, "SRID=%d;", geom->Srid);
-    size = strlen (buf);	/* the header size */
-    size++;			/* terminating '\0' */
+    size = 5;			/* SRID and terminating '\0' */
     pt = geom->FirstPoint;
     while (pt)
       {
@@ -4935,10 +4933,7 @@ gaiaToEWKB (gaiaOutBufferPtr out_buf, gaiaGeomCollPtr geom)
 	  polyg = polyg->Next;
       }
 /* and finally we build the EWKB expression */
-    sprintf (buf, "SRID=%d;", geom->Srid);
-    gaiaAppendToOutBuffer (out_buf, buf);
     ptr = buf;
-
     *ptr++ = '0';		/* little endian byte order */
     *ptr++ = '1';
     gaiaExport32 (endian_buf, type, 1, endian_arch);	/* the main CLASS TYPE */
@@ -4949,16 +4944,34 @@ gaiaToEWKB (gaiaOutBufferPtr out_buf, gaiaGeomCollPtr geom)
 	  *ptr++ = byte[0];
 	  *ptr++ = byte[1];
       }
-/* marking M/Z presence */
+/* marking dimensions and M/Z presence */
     if (geom->DimensionModel == GAIA_XY_Z)
-	*ptr++ = '8';
+      {
+	  *ptr++ = 'A';
+	  *ptr++ = '0';
+      }
     else if (geom->DimensionModel == GAIA_XY_M)
-	*ptr++ = '4';
+      {
+	  *ptr++ = '6';
+	  *ptr++ = '0';
+      }
     else if (geom->DimensionModel == GAIA_XY_Z_M)
-	*ptr++ = 'C';
+      {
+	  *ptr++ = 'E';
+	  *ptr++ = '0';
+      }
     else
-	*ptr++ = '0';
-    *ptr++ = '0';
+      {
+	  *ptr++ = '2';
+	  *ptr++ = '0';
+      }
+    gaiaExport32 (endian_buf, geom->Srid, 1, endian_arch);
+    for (i = 0; i < 4; i++)
+      {
+	  sprintf (byte, "%02X", endian_buf[i]);
+	  *ptr++ = byte[0];
+	  *ptr++ = byte[1];
+      }
     *ptr++ = '\0';
     gaiaAppendToOutBuffer (out_buf, buf);
     ptr = buf;

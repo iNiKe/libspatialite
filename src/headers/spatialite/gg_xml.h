@@ -66,13 +66,17 @@ extern "C"
 /** XmlBLOB internal marker: END */
 #define GAIA_XML_END		0xDD
 /** XmlBLOB internal marker: HEADER */
-#define GAIA_XML_HEADER		0xAB
+#define GAIA_XML_HEADER		0xAC
+/** XmlBLOB internal marker: LEGACY HEADER */
+#define GAIA_XML_LEGACY_HEADER	0xAB
 /** XmlBLOB internal marker: SCHEMA */
 #define GAIA_XML_SCHEMA		0xBA
 /** XmlBLOB internal marker: FILEID */
 #define GAIA_XML_FILEID		0xCA
 /** XmlBLOB internal marker: PARENTID */
 #define GAIA_XML_PARENTID	0xDA
+/** XmlBLOB internal marker: TITLE */
+#define GAIA_XML_NAME		0xDE
 /** XmlBLOB internal marker: TITLE */
 #define GAIA_XML_TITLE		0xDB
 /** XmlBLOB internal marker: ABSTRACT */
@@ -98,6 +102,8 @@ extern "C"
 #define GAIA_XML_SLD_SE_RASTER_STYLE	0x10
 /** XmlBLOB FLAG - SLDSE VECTOR STYLE bitmask */
 #define GAIA_XML_SLD_SE_VECTOR_STYLE	0x40
+/** XmlBLOB FLAG - SLD STYLE bitmask */
+#define GAIA_XML_SLD_STYLE		0x48
 /** XmlBLOB FLAG - SVG bitmask */
 #define GAIA_XML_SVG			0x20
 
@@ -143,9 +149,9 @@ extern "C"
  so you are responsible to free() it [unless SQLite will take care
  of memory cleanup via buffer binding].
  */
-    GAIAGEO_DECLARE void gaiaXmlToBlob (void *p_cache, const unsigned char *xml,
-					int xml_len, int compressed,
-					const char *schemaURI,
+    GAIAGEO_DECLARE void gaiaXmlToBlob (const void *p_cache,
+					const unsigned char *xml, int xml_len,
+					int compressed, const char *schemaURI,
 					unsigned char **result, int *size,
 					char **parsing_errors,
 					char **schema_validation_errors);
@@ -211,7 +217,8 @@ extern "C"
 
  \sa gaiaIsCompressedXmlBlob, gaiaIsSchemaValidatedXmlBlob, 
  gaiaIsIsoMetadataXmlBlob, gaiaIsSldSeVectorStyleXmlBlob, 
- gaiaIsSldSeRasterStyleXmlBlob, gaiaIsSvgXmlBlob
+ gaiaIsSldSeRasterStyleXmlBlob, gaiaIsSldStyleXmlBlob,
+ gaiaIsSvgXmlBlob
  */
     GAIAGEO_DECLARE int gaiaIsValidXmlBlob (const unsigned char *blob,
 					    int size);
@@ -226,7 +233,8 @@ extern "C"
 
  \sa gaiaIsValidXmlBlob, gaiaIsSchemaValidatedXmlBlob, 
  gaiaIsIsoMetadataXmlBlob, gaiaIsSldSeVectorStyleXmlBlob, 
- gaiaIsSldSeRasterStyleXmlBlob, gaiaIsSvgXmlBlob
+ gaiaIsSldSeRasterStyleXmlBlob, gaiaIsSldStyleXmlBlob,
+ gaiaIsSvgXmlBlob
  */
     GAIAGEO_DECLARE int gaiaIsCompressedXmlBlob (const unsigned char *blob,
 						 int size);
@@ -241,7 +249,8 @@ extern "C"
 
  \sa gaiaIsValidXmlBlob, gaiaIsSchemaValidatedXmlBlob, 
  gaiaIsCompressedXmlBlob, gaiaIsSldSeVectorStyleXmlBlob, 
- gaiaIsSldSeRasterStyleXmlBlob, gaiaIsSvgXmlBlob
+ gaiaIsSldSeRasterStyleXmlBlob, gaiaIsSldStyleXmlBlob,
+ gaiaIsSvgXmlBlob
  */
     GAIAGEO_DECLARE int gaiaIsIsoMetadataXmlBlob (const unsigned char *blob,
 						  int size);
@@ -252,7 +261,8 @@ extern "C"
  \param blob pointer to the XmlBLOB buffer.
  \param size XmlBLOB's size (in bytes).
 
- \return TRUE or FALSE if the BLOB actually is a valid XmlBLOB; -1 in any other case.
+ \return TRUE or FALSE if the BLOB actually is a valid XmlBLOB of the 
+ Vector type; -1 in any other case.
 
  \sa gaiaIsValidXmlBlob, gaiaIsSchemaValidatedXmlBlob, 
  gaiaIsCompressedXmlBlob, gaiaIsIsoMetadataXmlBlob, 
@@ -267,14 +277,33 @@ extern "C"
  \param blob pointer to the XmlBLOB buffer.
  \param size XmlBLOB's size (in bytes).
 
- \return TRUE or FALSE if the BLOB actually is a valid XmlBLOB; -1 in any other case.
+ \return TRUE or FALSE if the BLOB actually is a valid XmlBLOB of the
+ Raster type; -1 in any other case.
 
  \sa gaiaIsValidXmlBlob, gaiaIsSchemaValidatedXmlBlob, 
  gaiaIsCompressedXmlBlob, gaiaIsIsoMetadataXmlBlob, 
- gaiaIsSldSeVectorStyleXmlBlob, gaiaIsSvgXmlBlob
+ gaiaIsSldSeVectorStyleXmlBlob, gaiaIsSldStyleXmlBlob,
+ gaiaIsSvgXmlBlob
  */
     GAIAGEO_DECLARE int gaiaIsSldSeRasterStyleXmlBlob (const unsigned char
 						       *blob, int size);
+
+/**
+ Checks if a valid XmlBLOB buffer does contain an SLD Style or not
+
+ \param blob pointer to the XmlBLOB buffer.
+ \param size XmlBLOB's size (in bytes).
+
+ \return TRUE or FALSE if the BLOB actually is a valid XmlBLOB of the
+ SLD type; -1 in any other case.
+
+ \sa gaiaIsValidXmlBlob, gaiaIsSchemaValidatedXmlBlob, 
+ gaiaIsCompressedXmlBlob, gaiaIsIsoMetadataXmlBlob, 
+ gaiaIsSldSeVectorStyleXmlBlob, gaiaIsSldSeRasterXmlBlob,
+ gaiaIsSvgXmlBlob
+ */
+    GAIAGEO_DECLARE int gaiaIsSldStyleXmlBlob (const unsigned char
+					       *blob, int size);
 
 /**
  Checks if a valid XmlBLOB buffer does contain an SVG Symbol or not
@@ -286,7 +315,8 @@ extern "C"
 
  \sa gaiaIsValidXmlBlob, gaiaIsSchemaValidatedXmlBlob, 
  gaiaIsCompressedXmlBlob, gaiaIsIsoMetadataXmlBlob, 
- gaiaIsSldSeVectorStyleXmlBlob, gaiaIsSldSeRasterStyleXmlBlob
+ gaiaIsSldSeVectorStyleXmlBlob, gaiaIsSldStyleXmlBlob,
+ gaiaIsSldSeRasterStyleXmlBlob
  */
     GAIAGEO_DECLARE int gaiaIsSvgXmlBlob (const unsigned char *blob, int size);
 
@@ -322,7 +352,8 @@ extern "C"
 
  \sa gaiaIsValidXmlBlob, gaiaIsSvgXmlBlob, 
  gaiaIsCompressedXmlBlob, gaiaIsIsoMetadataXmlBlob, 
- gaiaIsSldSeVectorStyleXmlBlob, gaiaIsSldSeRasterStyleXmlBlob
+ gaiaIsSldSeVectorStyleXmlBlob, gaiaIsSldSeRasterStyleXmlBlob,
+ gaiaIsSldStyleXmlBlob 
  */
     GAIAGEO_DECLARE int gaiaIsSchemaValidatedXmlBlob (const unsigned char *blob,
 						      int size);
@@ -371,7 +402,7 @@ extern "C"
  \note the returned SchemaURI corresponds to dynamically allocated memory:
  so you are responsible to free() it before or after.
  */
-    GAIAGEO_DECLARE char *gaiaXmlGetInternalSchemaURI (void *p_cache,
+    GAIAGEO_DECLARE char *gaiaXmlGetInternalSchemaURI (const void *p_cache,
 						       const unsigned char *xml,
 						       int xml_len);
 
@@ -426,9 +457,9 @@ extern "C"
  \note the output XmlBLOB corresponds to dynamically allocated memory:
  so you are responsible to free() it before or after.
  */
-    GAIAGEO_DECLARE int gaiaXmlBlobSetFileId (void *p_cache, const unsigned char
-					      *blob, int size,
-					      const char *identifier,
+    GAIAGEO_DECLARE int gaiaXmlBlobSetFileId (const void *p_cache,
+					      const unsigned char *blob,
+					      int size, const char *identifier,
 					      unsigned char **new_blob,
 					      int *new_size);
 
@@ -449,7 +480,7 @@ extern "C"
  \note the returned XmlBLOB corresponds to dynamically allocated memory:
  so you are responsible to free() it before or after.
  */
-    GAIAGEO_DECLARE int gaiaXmlBlobSetParentId (void *p_cache,
+    GAIAGEO_DECLARE int gaiaXmlBlobSetParentId (const void *p_cache,
 						const unsigned char *blob,
 						int size,
 						const char *identifier,
@@ -477,9 +508,9 @@ extern "C"
  \note the output XmlBLOB corresponds to dynamically allocated memory:
  so you are responsible to free() it before or after.
  */
-    GAIAGEO_DECLARE int gaiaXmlBlobAddFileId (void *p_cache, const unsigned char
-					      *blob, int size,
-					      const char *identifier,
+    GAIAGEO_DECLARE int gaiaXmlBlobAddFileId (const void *p_cache,
+					      const unsigned char *blob,
+					      int size, const char *identifier,
 					      const char *ns_id,
 					      const char *uri_id,
 					      const char *ns_charstr,
@@ -508,7 +539,7 @@ extern "C"
  \note the returned XmlBLOB corresponds to dynamically allocated memory:
  so you are responsible to free() it before or after.
  */
-    GAIAGEO_DECLARE int gaiaXmlBlobAddParentId (void *p_cache,
+    GAIAGEO_DECLARE int gaiaXmlBlobAddParentId (const void *p_cache,
 						const unsigned char *blob,
 						int size,
 						const char *identifier,
@@ -520,6 +551,24 @@ extern "C"
 						int *new_size);
 
 /**
+ Return the Name from a valid XmlBLOB buffer
+
+ \param blob pointer to the XmlBLOB buffer.
+ \param size XmlBLOB's size (in bytes).
+
+ \return the Name for any valid XmlBLOB containing a Name; 
+  NULL in any other case.
+
+ \sa gaiaIsIsoMetadataXmlBlob, gaiaIsSldSeVectorStyleXmlBlob, 
+ gaiaIsSldSeRasterStyleXmlBlob, gaiaIsSldStyleXmlBlob
+
+ \note the returned Name corresponds to dynamically allocated memory:
+ so you are responsible to free() it before or after.
+ */
+    GAIAGEO_DECLARE char *gaiaXmlBlobGetName (const unsigned char
+					      *blob, int size);
+
+/**
  Return the Title from a valid XmlBLOB buffer
 
  \param blob pointer to the XmlBLOB buffer.
@@ -529,7 +578,7 @@ extern "C"
   NULL in any other case.
 
  \sa gaiaIsIsoMetadataXmlBlob, gaiaIsSldSeVectorStyleXmlBlob, 
- gaiaIsSldSeRasterStyleXmlBlob
+ gaiaIsSldSeRasterStyleXmlBlob, gaiaIsSldStyleXmlBlob
 
  \note the returned Title corresponds to dynamically allocated memory:
  so you are responsible to free() it before or after.
@@ -547,7 +596,7 @@ extern "C"
   NULL in any other case.
 
  \sa gaiaIsIsoMetadataXmlBlob, gaiaIsSldSeVectorStyleXmlBlob, 
- gaiaIsSldSeRasterStyleXmlBlob
+ gaiaIsSldSeRasterStyleXmlBlob, gaiaIsSldStyleXmlBlob
 
  \note the returned Abstract corresponds to dynamically allocated memory:
  so you are responsible to free() it before or after.
@@ -605,7 +654,7 @@ extern "C"
  \note the returned error/warning message corresponds to dynamically allocated memory:
  so you are responsible to free() it before or after.
  */
-    GAIAGEO_DECLARE char *gaiaXmlBlobGetLastParseError (void *p_cache);
+    GAIAGEO_DECLARE char *gaiaXmlBlobGetLastParseError (const void *p_cache);
 
 /**
  Return the most recent XML Validate error/warning (if any)
@@ -621,7 +670,7 @@ extern "C"
  \note the returned error/warning message corresponds to dynamically allocated memory:
  so you are responsible to free() it before or after.
  */
-    GAIAGEO_DECLARE char *gaiaXmlBlobGetLastValidateError (void *p_cache);
+    GAIAGEO_DECLARE char *gaiaXmlBlobGetLastValidateError (const void *p_cache);
 
 /**
  Checks if a Text string could be a valid XPathExpression
@@ -634,7 +683,7 @@ extern "C"
 
  \sa gaiaXmlBlobGetLastXPathError
  */
-    GAIAGEO_DECLARE int gaiaIsValidXPathExpression (void *p_cache,
+    GAIAGEO_DECLARE int gaiaIsValidXPathExpression (const void *p_cache,
 						    const char *xpath_expr);
 
 /**
@@ -651,7 +700,7 @@ extern "C"
  \note the returned error/warning message corresponds to dynamically allocated memory:
  so you are responsible to free() it before or after.
  */
-    GAIAGEO_DECLARE char *gaiaXmlBlobGetLastXPathError (void *p_cache);
+    GAIAGEO_DECLARE char *gaiaXmlBlobGetLastXPathError (const void *p_cache);
 
 /**
  Load an external XML Document
@@ -669,7 +718,8 @@ extern "C"
  so you are responsible to free() it [unless SQLite will take care
  of memory cleanup via buffer binding].
  */
-    GAIAGEO_DECLARE int gaiaXmlLoad (void *p_cache, const char *path_or_url,
+    GAIAGEO_DECLARE int gaiaXmlLoad (const void *p_cache,
+				     const char *path_or_url,
 				     unsigned char **result, int *size,
 				     char **parsing_errors);
 

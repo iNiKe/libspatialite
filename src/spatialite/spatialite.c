@@ -85,6 +85,7 @@ Regione Toscana - Settore Sistema Informativo Territoriale ed Ambientale
 #include <spatialite/gaiaexif.h>
 #include <spatialite/geopackage.h>
 #include <spatialite/spatialite.h>
+#include <spatialite/gg_advanced.h>
 #include <spatialite/gg_dxf.h>
 #include <spatialite.h>
 #include <spatialite_private.h>
@@ -154,6 +155,13 @@ struct fdo_table
     struct fdo_table *next;
 };
 
+struct gpkg_table
+{
+/* a struct to implement a linked-list for OGC GeoPackage table names */
+    char *table;
+    struct gpkg_table *next;
+};
+
 static void
 fnct_spatialite_version (sqlite3_context * context, int argc,
 			 sqlite3_value ** argv)
@@ -165,6 +173,22 @@ fnct_spatialite_version (sqlite3_context * context, int argc,
 */
     int len;
     const char *p_result = spatialite_version ();
+    GAIA_UNUSED ();		/* LCOV_EXCL_LINE */
+    len = strlen (p_result);
+    sqlite3_result_text (context, p_result, len, SQLITE_TRANSIENT);
+}
+
+static void
+fnct_spatialite_target_cpu (sqlite3_context * context, int argc,
+			    sqlite3_value ** argv)
+{
+/* SQL function:
+/ spatialite_target_cpu()
+/
+/ return a text string representing the current SpatiaLite Target CPU
+*/
+    int len;
+    const char *p_result = spatialite_target_cpu ();
     GAIA_UNUSED ();		/* LCOV_EXCL_LINE */
     len = strlen (p_result);
     sqlite3_result_text (context, p_result, len, SQLITE_TRANSIENT);
@@ -429,6 +453,22 @@ fnct_has_libxml2 (sqlite3_context * context, int argc, sqlite3_value ** argv)
 */
     GAIA_UNUSED ();		/* LCOV_EXCL_LINE */
 #ifdef ENABLE_LIBXML2		/* LIBXML2 is supported */
+    sqlite3_result_int (context, 1);
+#else
+    sqlite3_result_int (context, 0);
+#endif
+}
+
+static void
+fnct_has_geopackage (sqlite3_context * context, int argc, sqlite3_value ** argv)
+{
+/* SQL function:
+/ HasGeoPackage()
+/
+/ return 1 if built including GeoPackage support (GPKG); otherwise 0
+*/
+    GAIA_UNUSED ();		/* LCOV_EXCL_LINE */
+#ifdef ENABLE_GEOPACKAGE		/* GEOPACKAGE is supported */
     sqlite3_result_int (context, 1);
 #else
     sqlite3_result_int (context, 0);
@@ -957,11 +997,133 @@ fnct_IsValidNoDataPixel (sqlite3_context * context, int argc,
 */
     GAIA_UNUSED ();		/* LCOV_EXCL_LINE */
     if (sqlite3_value_type (argv[0]) != SQLITE_BLOB)
-	sqlite3_result_int (context, -1);
+      {
+	  sqlite3_result_int (context, -1);
+	  return;
+      }
     if (sqlite3_value_type (argv[1]) != SQLITE_TEXT)
-	sqlite3_result_int (context, -1);
+      {
+	  sqlite3_result_int (context, -1);
+	  return;
+      }
     if (sqlite3_value_type (argv[2]) != SQLITE_INTEGER)
-	sqlite3_result_int (context, -1);
+      {
+	  sqlite3_result_int (context, -1);
+	  return;
+      }
+    sqlite3_result_int (context, 0);
+}
+
+static void
+fnct_IsValidRasterPalette (sqlite3_context * context, int argc,
+			   sqlite3_value ** argv)
+{
+/* SQL function:
+/ IsValidRasterPalette(BLOBencoded palette, text sample_type)
+/
+/ basic version intended to be overloaded by RasterLite-2
+/ always return 0 (FALSE)
+/ or -1 (INVALID ARGS)
+/
+*/
+    GAIA_UNUSED ();		/* LCOV_EXCL_LINE */
+    if (sqlite3_value_type (argv[0]) != SQLITE_BLOB)
+      {
+	  sqlite3_result_int (context, -1);
+	  return;
+      }
+    if (sqlite3_value_type (argv[1]) != SQLITE_TEXT)
+      {
+	  sqlite3_result_int (context, -1);
+	  return;
+      }
+    sqlite3_result_int (context, 0);
+}
+
+static void
+fnct_IsValidRasterStatistics (sqlite3_context * context, int argc,
+			      sqlite3_value ** argv)
+{
+/* SQL function:
+/ IsValidRasterStatistics(text coverage, BLOBencoded statistics)
+/   or
+/ IsValidRasterStatistics(BLOBencoded statistics, text sample_type, int num_bands)
+/
+/ basic version intended to be overloaded by RasterLite-2
+/ always return 0 (FALSE)
+/ or -1 (INVALID ARGS)
+/
+*/
+    GAIA_UNUSED ();		/* LCOV_EXCL_LINE */
+    if (argc == 2)
+      {
+	  if (sqlite3_value_type (argv[0]) != SQLITE_TEXT)
+	    {
+		sqlite3_result_int (context, -1);
+		return;
+	    }
+	  if (sqlite3_value_type (argv[1]) != SQLITE_BLOB)
+	    {
+		sqlite3_result_int (context, -1);
+		return;
+	    }
+      }
+    else
+      {
+	  if (sqlite3_value_type (argv[0]) != SQLITE_BLOB)
+	    {
+		sqlite3_result_int (context, -1);
+		return;
+	    }
+	  if (sqlite3_value_type (argv[1]) != SQLITE_TEXT)
+	    {
+		sqlite3_result_int (context, -1);
+		return;
+	    }
+	  if (sqlite3_value_type (argv[2]) != SQLITE_INTEGER)
+	    {
+		sqlite3_result_int (context, -1);
+		return;
+	    }
+      }
+    sqlite3_result_int (context, 0);
+}
+
+static void
+fnct_IsValidRasterTile (sqlite3_context * context, int argc,
+			sqlite3_value ** argv)
+{
+/* SQL function:
+/ IsValidRasterTile(text coverage, integer level, BLOBencoded tile_odd,
+/   BLOBencoded tile_even)
+/
+/ basic version intended to be overloaded by RasterLite-2
+/ always return 0 (FALSE)
+/ or -1 (INVALID ARGS)
+/
+*/
+    GAIA_UNUSED ();		/* LCOV_EXCL_LINE */
+    if (sqlite3_value_type (argv[0]) != SQLITE_TEXT)
+      {
+	  sqlite3_result_int (context, -1);
+	  return;
+      }
+    if (sqlite3_value_type (argv[1]) != SQLITE_INTEGER)
+      {
+	  sqlite3_result_int (context, -1);
+	  return;
+      }
+    if (sqlite3_value_type (argv[2]) != SQLITE_BLOB)
+      {
+	  sqlite3_result_int (context, -1);
+	  return;
+      }
+    if (sqlite3_value_type (argv[3]) != SQLITE_BLOB
+	&& sqlite3_value_type (argv[3]) != SQLITE_NULL)
+      {
+	  sqlite3_result_int (context, -1);
+	  return;
+      }
     sqlite3_result_int (context, 0);
 }
 
@@ -970,7 +1132,7 @@ fnct_IsPopulatedCoverage (sqlite3_context * context, int argc,
 			  sqlite3_value ** argv)
 {
 /* SQL function:
-/ IsPopulatedCoverage()
+/ IsPopulatedCoverage(text coverage)
 /
 / check if a RasterCoverage is already populated 
 / returns 1 if TRUE, 0 if FALSE
@@ -989,6 +1151,60 @@ fnct_IsPopulatedCoverage (sqlite3_context * context, int argc,
     ret = checkPopulatedCoverage (sqlite, coverage);
     sqlite3_result_int (context, ret);
     return;
+}
+
+static int
+is_without_rowid_table (sqlite3 * sqlite, const char *table)
+{
+/* internal utility functions; checks for WITHOUT ROWID tables */
+    char *sql;
+    char *xtable;
+    int ret;
+    int i;
+    char **results;
+    int rows;
+    int columns;
+    int j;
+    char **results2;
+    int rows2;
+    int columns2;
+    char *errMsg = NULL;
+    int without_rowid = 0;
+
+    xtable = gaiaDoubleQuotedSql (table);
+    sql = sqlite3_mprintf ("PRAGMA index_list(\"%s\")", xtable);
+    free (xtable);
+    ret = sqlite3_get_table (sqlite, sql, &results, &rows, &columns, &errMsg);
+    sqlite3_free (sql);
+    if (ret != SQLITE_OK)
+      {
+	  sqlite3_free (errMsg);
+	  return 1;
+      }
+    for (i = 1; i <= rows; i++)
+      {
+	  const char *index = results[(i * columns) + 1];
+	  sql = sqlite3_mprintf ("SELECT count(*) FROM sqlite_master WHERE "
+				 "type = 'index' AND tbl_name = %Q AND name = %Q",
+				 table, index);
+	  ret =
+	      sqlite3_get_table (sqlite, sql, &results2, &rows2, &columns2,
+				 &errMsg);
+	  sqlite3_free (sql);
+	  if (ret != SQLITE_OK)
+	    {
+		sqlite3_free (errMsg);
+		return 1;
+	    }
+	  for (j = 1; j <= rows2; j++)
+	    {
+		if (atoi (results2[(j * columns2) + 0]) == 0)
+		    without_rowid = 1;
+	    }
+	  sqlite3_free_table (results2);
+      }
+    sqlite3_free_table (results);
+    return without_rowid;
 }
 
 SPATIALITE_PRIVATE int
@@ -1275,7 +1491,7 @@ fnct_AutoFDOStop (sqlite3_context * context, int argc, sqlite3_value ** argv)
     GAIA_UNUSED ();		/* LCOV_EXCL_LINE */
     if (checkSpatialMetaData (sqlite) == 2)
       {
-	  /* ok, creating VirtualFDO tables */
+	  /* ok, removing VirtualFDO tables */
 	  sql_statement = "SELECT DISTINCT f_table_name FROM geometry_columns";
 	  ret = sqlite3_get_table (sqlite, sql_statement, &results, &rows,
 				   &columns, NULL);
@@ -1513,6 +1729,314 @@ fnct_InitSpatialMetaData (sqlite3_context * context, int argc,
     return;
 }
 
+static int
+checkGeoPackage (sqlite3 * handle)
+{
+/* testing for GeoPackage meta-tables */
+    sqlite3 *sqlite = (sqlite3 *) handle;
+    char sql[1024];
+    int ret;
+    const char *name;
+    int table_name = 0;
+    int column_name = 0;
+    int geometry_type_name = 0;
+    int srs_id_gc = 0;
+    int has_z = 0;
+    int has_m = 0;
+    int gpkg_gc = 0;
+    int srs_id_srs = 0;
+    int srs_name = 0;
+    int gpkg_srs = 0;
+    int i;
+    char **results;
+    int rows;
+    int columns;
+/* checking the GPKG_GEOMETRY_COLUMNS table */
+    strcpy (sql, "PRAGMA table_info(gpkg_geometry_columns)");
+    ret = sqlite3_get_table (sqlite, sql, &results, &rows, &columns, NULL);
+    if (ret != SQLITE_OK)
+	goto unknown;
+    if (rows < 1)
+	;
+    else
+      {
+	  for (i = 1; i <= rows; i++)
+	    {
+		name = results[(i * columns) + 1];
+		if (strcasecmp (name, "table_name") == 0)
+		    table_name = 1;
+		if (strcasecmp (name, "column_name") == 0)
+		    column_name = 1;
+		if (strcasecmp (name, "geometry_type_name") == 0)
+		    geometry_type_name = 1;
+		if (strcasecmp (name, "srs_id") == 0)
+		    srs_id_gc = 1;
+		if (strcasecmp (name, "z") == 0)
+		    has_z = 1;
+		if (strcasecmp (name, "m") == 0)
+		    has_m = 1;
+	    }
+      }
+    sqlite3_free_table (results);
+    if (table_name && column_name && geometry_type_name && srs_id_gc && has_z
+	&& has_m)
+	gpkg_gc = 1;
+/* checking the GPKG_SPATIAL_REF_SYS table */
+    strcpy (sql, "PRAGMA table_info(gpkg_spatial_ref_sys)");
+    ret = sqlite3_get_table (sqlite, sql, &results, &rows, &columns, NULL);
+    if (ret != SQLITE_OK)
+	goto unknown;
+    if (rows < 1)
+	;
+    else
+      {
+	  for (i = 1; i <= rows; i++)
+	    {
+		name = results[(i * columns) + 1];
+		if (strcasecmp (name, "srs_id") == 0)
+		    srs_id_srs = 1;
+		if (strcasecmp (name, "srs_name") == 0)
+		    srs_name = 1;
+	    }
+      }
+    sqlite3_free_table (results);
+    if (srs_id_srs && srs_name)
+	gpkg_srs = 1;
+    if (gpkg_gc && gpkg_srs)
+	return 1;
+  unknown:
+    return 0;
+}
+
+static void
+fnct_CheckGeoPackageMetaData (sqlite3_context * context, int argc,
+			      sqlite3_value ** argv)
+{
+/* SQL function:
+/ CheckGeoPackageMetaData(void)
+/
+/ for OGC GeoPackage interoperability:
+/ tests if GeoPackage metadata tables are found
+/
+*/
+    sqlite3 *sqlite;
+    int ret;
+    GAIA_UNUSED ();		/* LCOV_EXCL_LINE */
+    sqlite = sqlite3_context_db_handle (context);
+    ret = checkGeoPackage (sqlite);
+    sqlite3_result_int (context, ret);
+    return;
+}
+
+#ifdef ENABLE_GEOPACKAGE	/* enabling GeoPackage extensions */
+
+static void
+add_gpkg_table (struct gpkg_table **first, struct gpkg_table **last,
+		const char *table, int len)
+{
+/* adds a GPKG Geometry Table to corresponding linked list */
+    struct gpkg_table *p = malloc (sizeof (struct gpkg_table));
+    p->table = malloc (len + 1);
+    strcpy (p->table, table);
+    p->next = NULL;
+    if (!(*first))
+	(*first) = p;
+    if ((*last))
+	(*last)->next = p;
+    (*last) = p;
+}
+
+static void
+free_gpkg_tables (struct gpkg_table *first)
+{
+/* memory cleanup; destroying the GPKG tables linked list */
+    struct gpkg_table *p;
+    struct gpkg_table *pn;
+    p = first;
+    while (p)
+      {
+	  pn = p->next;
+	  if (p->table)
+	      free (p->table);
+	  free (p);
+	  p = pn;
+      }
+}
+
+static void
+fnct_AutoGPKGStart (sqlite3_context * context, int argc, sqlite3_value ** argv)
+{
+/* SQL function:
+/ AutoGPKGStart(void)
+/
+/ for OCG GeoPackage interoperability:
+/ tests the DB layout, then automatically
+/ creating a VirtualGPKS table for each GPKG main table 
+/ declared within gpkg_geometry_colums
+/
+*/
+    int ret;
+    const char *name;
+    int i;
+    char **results;
+    int rows;
+    int columns;
+    char *sql_statement;
+    int count = 0;
+    struct gpkg_table *first = NULL;
+    struct gpkg_table *last = NULL;
+    struct gpkg_table *p;
+    int len;
+    char *xname;
+    char *xxname;
+    char *xtable;
+    sqlite3 *sqlite = sqlite3_context_db_handle (context);
+    GAIA_UNUSED ();		/* LCOV_EXCL_LINE */
+    if (checkGeoPackage (sqlite))
+      {
+	  /* ok, creating VirtualGPKG tables */
+	  sql_statement =
+	      "SELECT DISTINCT table_name FROM gpkg_geometry_columns";
+	  ret =
+	      sqlite3_get_table (sqlite, sql_statement, &results, &rows,
+				 &columns, NULL);
+	  if (ret != SQLITE_OK)
+	      goto error;
+	  if (rows < 1)
+	      ;
+	  else
+	    {
+		for (i = 1; i <= rows; i++)
+		  {
+		      name = results[(i * columns) + 0];
+		      if (name)
+			{
+			    len = strlen (name);
+			    add_gpkg_table (&first, &last, name, len);
+			}
+		  }
+	    }
+	  sqlite3_free_table (results);
+	  p = first;
+	  while (p)
+	    {
+		/* destroying the VirtualGPKG table [if existing] */
+		xxname = sqlite3_mprintf ("vgpkg_%s", p->table);
+		xname = gaiaDoubleQuotedSql (xxname);
+		sqlite3_free (xxname);
+		sql_statement =
+		    sqlite3_mprintf ("DROP TABLE IF EXISTS \"%s\"", xname);
+		free (xname);
+		ret = sqlite3_exec (sqlite, sql_statement, NULL, NULL, NULL);
+		sqlite3_free (sql_statement);
+		if (ret != SQLITE_OK)
+		    goto error;
+		/* creating the VirtualGPKG table */
+		xxname = sqlite3_mprintf ("vgpkg_%s", p->table);
+		xname = gaiaDoubleQuotedSql (xxname);
+		sqlite3_free (xxname);
+		xtable = gaiaDoubleQuotedSql (p->table);
+		sql_statement =
+		    sqlite3_mprintf
+		    ("CREATE VIRTUAL TABLE \"%s\" USING VirtualGPKG(\"%s\")",
+		     xname, xtable);
+		free (xname);
+		free (xtable);
+		ret = sqlite3_exec (sqlite, sql_statement, NULL, NULL, NULL);
+		sqlite3_free (sql_statement);
+		if (ret != SQLITE_OK)
+		    goto error;
+		count++;
+		p = p->next;
+	    }
+	error:
+	  free_gpkg_tables (first);
+	  sqlite3_result_int (context, count);
+	  return;
+      }
+    sqlite3_result_int (context, 0);
+    return;
+}
+
+static void
+fnct_AutoGPKGStop (sqlite3_context * context, int argc, sqlite3_value ** argv)
+{
+/* SQL function:
+/ AutoGPKGStop(void)
+/
+/ for OGC GeoPackage interoperability:
+/ tests the DB layout, then automatically removes any VirtualGPKG table 
+/
+*/
+    int ret;
+    const char *name;
+    int i;
+    char **results;
+    int rows;
+    int columns;
+    char *sql_statement;
+    int count = 0;
+    struct gpkg_table *first = NULL;
+    struct gpkg_table *last = NULL;
+    struct gpkg_table *p;
+    int len;
+    char *xname;
+    char *xxname;
+    sqlite3 *sqlite = sqlite3_context_db_handle (context);
+    GAIA_UNUSED ();		/* LCOV_EXCL_LINE */
+    if (checkGeoPackage (sqlite))
+      {
+	  /* ok, removing VirtualGPKG tables */
+	  sql_statement =
+	      "SELECT DISTINCT table_name FROM gpkg_geometry_columns";
+	  ret =
+	      sqlite3_get_table (sqlite, sql_statement, &results, &rows,
+				 &columns, NULL);
+	  if (ret != SQLITE_OK)
+	      goto error;
+	  if (rows < 1)
+	      ;
+	  else
+	    {
+		for (i = 1; i <= rows; i++)
+		  {
+		      name = results[(i * columns) + 0];
+		      if (name)
+			{
+			    len = strlen (name);
+			    add_gpkg_table (&first, &last, name, len);
+			}
+		  }
+	    }
+	  sqlite3_free_table (results);
+	  p = first;
+	  while (p)
+	    {
+		/* destroying the VirtualGPKG table [if existing] */
+		xxname = sqlite3_mprintf ("vgpkg_%s", p->table);
+		xname = gaiaDoubleQuotedSql (xxname);
+		sqlite3_free (xxname);
+		sql_statement =
+		    sqlite3_mprintf ("DROP TABLE IF EXISTS \"%s\"", xname);
+		free (xname);
+		ret = sqlite3_exec (sqlite, sql_statement, NULL, NULL, NULL);
+		sqlite3_free (sql_statement);
+		if (ret != SQLITE_OK)
+		    goto error;
+		count++;
+		p = p->next;
+	    }
+	error:
+	  free_gpkg_tables (first);
+	  sqlite3_result_int (context, count);
+	  return;
+      }
+    sqlite3_result_int (context, 0);
+    return;
+}
+
+#endif /* end enabling GeoPackage extensions */
+
 static void
 fnct_InsertEpsgSrid (sqlite3_context * context, int argc, sqlite3_value ** argv)
 {
@@ -1694,8 +2218,6 @@ fnct_AddGeometryColumn (sqlite3_context * context, int argc,
     int metadata_version;
     sqlite3_stmt *stmt;
     char *p_table = NULL;
-    const char *name;
-    int len;
     char *quoted_table;
     char *quoted_column;
     const char *p_type;
@@ -1988,12 +2510,12 @@ fnct_AddGeometryColumn (sqlite3_context * context, int argc,
 	      break;		/* end of result set */
 	  if (ret == SQLITE_ROW)
 	    {
-		name = (const char *) sqlite3_column_text (stmt, 0);
-		len = sqlite3_column_bytes (stmt, 0);
-		if (p_table)
-		    free (p_table);
-		p_table = malloc (len + 1);
-		strcpy (p_table, name);
+		if (p_table != NULL)
+		    sqlite3_free (p_table);
+		p_table =
+		    sqlite3_mprintf ("%s",
+				     (const char *) sqlite3_column_text (stmt,
+									 0));
 	    }
       }
     sqlite3_finalize (stmt);
@@ -2001,6 +2523,15 @@ fnct_AddGeometryColumn (sqlite3_context * context, int argc,
       {
 	  spatialite_e
 	      ("AddGeometryColumn() error: table '%s' does not exist\n", table);
+	  sqlite3_result_int (context, 0);
+	  return;
+      }
+/* checking for WITHOUT ROWID */
+    if (is_without_rowid_table (sqlite, table))
+      {
+	  spatialite_e
+	      ("AddGeometryColumn() error: table '%s' is WITHOUT ROWID\n",
+	       table);
 	  sqlite3_result_int (context, 0);
 	  return;
       }
@@ -2064,7 +2595,7 @@ fnct_AddGeometryColumn (sqlite3_context * context, int argc,
       {
 	  spatialite_e ("AddGeometryColumn: \"%s\"\n", sqlite3_errmsg (sqlite));
 	  sqlite3_result_int (context, 0);
-	  free (p_table);
+	  sqlite3_free (p_table);
 	  return;
       }
 /*ok, inserting into geometry_columns [Spatial Metadata] */
@@ -2229,7 +2760,7 @@ fnct_AddGeometryColumn (sqlite3_context * context, int argc,
       {
 	  spatialite_e ("AddGeometryColumn: \"%s\"\n", sqlite3_errmsg (sqlite));
 	  sqlite3_result_int (context, 0);
-	  free (p_table);
+	  sqlite3_free (p_table);
 	  return;
       }
     sqlite3_reset (stmt);
@@ -2265,7 +2796,7 @@ fnct_AddGeometryColumn (sqlite3_context * context, int argc,
 		spatialite_e ("AddGeometryColumn: \"%s\"\n",
 			      sqlite3_errmsg (sqlite));
 		sqlite3_result_int (context, 0);
-		free (p_table);
+		sqlite3_free (p_table);
 		return;
 	    }
 	  sqlite3_reset (stmt);
@@ -2293,7 +2824,7 @@ fnct_AddGeometryColumn (sqlite3_context * context, int argc,
 		spatialite_e ("AddGeometryColumn: \"%s\"\n",
 			      sqlite3_errmsg (sqlite));
 		sqlite3_result_int (context, 0);
-		free (p_table);
+		sqlite3_free (p_table);
 		return;
 	    }
 	  sqlite3_reset (stmt);
@@ -2321,7 +2852,7 @@ fnct_AddGeometryColumn (sqlite3_context * context, int argc,
 		spatialite_e ("AddGeometryColumn: \"%s\"\n",
 			      sqlite3_errmsg (sqlite));
 		sqlite3_result_int (context, 0);
-		free (p_table);
+		sqlite3_free (p_table);
 		return;
 	    }
 	  sqlite3_reset (stmt);
@@ -2389,11 +2920,11 @@ fnct_AddGeometryColumn (sqlite3_context * context, int argc,
 			 p_type, p_dims, (srid <= 0) ? -1 : srid);
     updateSpatiaLiteHistory (sqlite, table, column, sql_statement);
     sqlite3_free (sql_statement);
-    free (p_table);
+    sqlite3_free (p_table);
     return;
   error:
     sqlite3_result_int (context, 0);
-    free (p_table);
+    sqlite3_free (p_table);
     return;
 }
 
@@ -2727,6 +3258,14 @@ fnct_RecoverGeometryColumn (sqlite3_context * context, int argc,
 	  sqlite3_result_int (context, 0);
 	  return;
       }
+    if (is_without_rowid_table (sqlite, table))
+      {
+	  spatialite_e
+	      ("RecoverGeometryColumn() error: table '%s' is WITHOUT ROWID\n",
+	       table);
+	  sqlite3_result_int (context, 0);
+	  return;
+      }
 /* adjusting the actual GeometryType */
     xxtype = xtype;
     xtype = GAIA_UNKNOWN;
@@ -3012,7 +3551,7 @@ fnct_RecoverGeometryColumn (sqlite3_context * context, int argc,
 		break;
 	    case GAIA_POLYGON:
 		n_type = 3;
-		n_dims = 3;
+		n_dims = 2;
 		break;
 	    case GAIA_POLYGONZ:
 		n_type = 1003;
@@ -4529,6 +5068,16 @@ check_spatial_index (sqlite3 * sqlite, const unsigned char *table,
     int ok_i_ymin;
     int ok_i_xmax;
     int ok_i_ymax;
+    int rowid_column = 0;
+    int without_rowid = 0;
+
+    if (is_without_rowid_table (sqlite, (char *) table))
+      {
+	  spatialite_e ("check_spatial_index: table \"%s\" is WITHOUT ROWID\n",
+			table);
+	  without_rowid = 1;
+	  goto err_label;
+      }
 
 /* checking if the R*Tree Spatial Index is defined */
     sql_statement = sqlite3_mprintf ("SELECT Count(*) FROM geometry_columns "
@@ -4553,7 +5102,8 @@ check_spatial_index (sqlite3 * sqlite, const unsigned char *table,
 	      is_defined = sqlite3_column_int (stmt, 0);
 	  else
 	    {
-		printf ("sqlite3_step() error: %s\n", sqlite3_errmsg (sqlite));
+		spatialite_e ("sqlite3_step() error: %s\n",
+			      sqlite3_errmsg (sqlite));
 		sqlite3_finalize (stmt);
 		goto err_label;
 	    }
@@ -4567,6 +5117,13 @@ check_spatial_index (sqlite3 * sqlite, const unsigned char *table,
     idx_name = sqlite3_mprintf ("idx_%s_%s", table, geom);
     xidx_name = gaiaDoubleQuotedSql (idx_name);
     sqlite3_free (idx_name);
+
+    if (!validateRowid (sqlite, (const char *) table))
+      {
+	  /* a physical column named "rowid" shadows the real ROWID */
+	  rowid_column = 1;
+	  goto err_label;
+      }
 
 /* counting how many Geometries are set into the main-table */
     sql_statement = sqlite3_mprintf ("SELECT Count(*) FROM \"%s\" "
@@ -4590,7 +5147,8 @@ check_spatial_index (sqlite3 * sqlite, const unsigned char *table,
 	      count_geom = sqlite3_column_int (stmt, 0);
 	  else
 	    {
-		printf ("sqlite3_step() error: %s\n", sqlite3_errmsg (sqlite));
+		spatialite_e ("sqlite3_step() error: %s\n",
+			      sqlite3_errmsg (sqlite));
 		sqlite3_finalize (stmt);
 		goto err_label;
 	    }
@@ -4617,7 +5175,8 @@ check_spatial_index (sqlite3 * sqlite, const unsigned char *table,
 	      count_rtree = sqlite3_column_int (stmt, 0);
 	  else
 	    {
-		printf ("sqlite3_step() error: %s\n", sqlite3_errmsg (sqlite));
+		spatialite_e ("sqlite3_step() error: %s\n",
+			      sqlite3_errmsg (sqlite));
 		sqlite3_finalize (stmt);
 		goto err_label;
 	    }
@@ -4707,7 +5266,8 @@ check_spatial_index (sqlite3 * sqlite, const unsigned char *table,
 	    }
 	  else
 	    {
-		printf ("sqlite3_step() error: %s\n", sqlite3_errmsg (sqlite));
+		spatialite_e ("sqlite3_step() error: %s\n",
+			      sqlite3_errmsg (sqlite));
 		sqlite3_finalize (stmt);
 		goto err_label;
 	    }
@@ -4794,7 +5354,8 @@ check_spatial_index (sqlite3 * sqlite, const unsigned char *table,
 	    }
 	  else
 	    {
-		printf ("sqlite3_step() error: %s\n", sqlite3_errmsg (sqlite));
+		spatialite_e ("sqlite3_step() error: %s\n",
+			      sqlite3_errmsg (sqlite));
 		sqlite3_finalize (stmt);
 		goto err_label;
 	    }
@@ -4827,6 +5388,10 @@ check_spatial_index (sqlite3 * sqlite, const unsigned char *table,
 	free (xtable);
     if (xidx_name)
 	free (xidx_name);
+    if (rowid_column)
+	return -2;
+    if (without_rowid)
+	return -3;
     return -1;
 }
 
@@ -4867,14 +5432,15 @@ check_any_spatial_index (sqlite3 * sqlite)
 		if (status < 0)
 		  {
 		      sqlite3_finalize (stmt);
-		      return -1;
+		      return status;
 		  }
 		if (status == 0)
 		    invalid_rtree = 1;
 	    }
 	  else
 	    {
-		printf ("sqlite3_step() error: %s\n", sqlite3_errmsg (sqlite));
+		spatialite_e ("sqlite3_step() error: %s\n",
+			      sqlite3_errmsg (sqlite));
 		sqlite3_finalize (stmt);
 		return -1;
 	    }
@@ -4896,6 +5462,7 @@ fnct_CheckSpatialIndex (sqlite3_context * context, int argc,
 / checks a SpatialIndex for consistency, returning:
 / 1 - the R*Tree is fully consistent
 / 0 - the R*Tree is inconsistent
+/ -1 if any physical "ROWID" column exist shadowing the real ROWID
 / NULL on failure
 */
     const unsigned char *table;
@@ -4908,7 +5475,12 @@ fnct_CheckSpatialIndex (sqlite3_context * context, int argc,
 	  /* no arguments: we must check any defined R*Tree */
 	  status = check_any_spatial_index (sqlite);
 	  if (status < 0)
-	      sqlite3_result_null (context);
+	    {
+		if (status == -2)
+		    sqlite3_result_int (context, -1);
+		else
+		    sqlite3_result_null (context);
+	    }
 	  else if (status > 0)
 	      sqlite3_result_int (context, 1);
 	  else
@@ -4933,7 +5505,11 @@ fnct_CheckSpatialIndex (sqlite3_context * context, int argc,
       }
     column = sqlite3_value_text (argv[1]);
     status = check_spatial_index (sqlite, table, column);
-    if (status < 0)
+    if (status == -2)
+	sqlite3_result_int (context, -1);
+    else if (status == -3)
+	sqlite3_result_int (context, -1);
+    else if (status < 0)
 	sqlite3_result_null (context);
     else if (status > 0)
 	sqlite3_result_int (context, 1);
@@ -4954,6 +5530,7 @@ recover_spatial_index (sqlite3 * sqlite, const unsigned char *table,
     char sql[1024];
     int is_defined = 0;
     sqlite3_stmt *stmt;
+    int status;
 
 /* checking if the R*Tree Spatial Index is defined */
     sql_statement = sqlite3_mprintf ("SELECT Count(*) FROM geometry_columns "
@@ -4978,7 +5555,8 @@ recover_spatial_index (sqlite3 * sqlite, const unsigned char *table,
 	      is_defined = sqlite3_column_int (stmt, 0);
 	  else
 	    {
-		printf ("sqlite3_step() error: %s\n", sqlite3_errmsg (sqlite));
+		spatialite_e ("sqlite3_step() error: %s\n",
+			      sqlite3_errmsg (sqlite));
 		sqlite3_finalize (stmt);
 		return -1;
 	    }
@@ -4998,7 +5576,26 @@ recover_spatial_index (sqlite3 * sqlite, const unsigned char *table,
     if (ret != SQLITE_OK)
 	goto error;
 /* populating the R*Tree table from scratch */
-    buildSpatialIndex (sqlite, table, (const char *) geom);
+    status = buildSpatialIndexEx (sqlite, table, (const char *) geom);
+    if (status == 0)
+	;
+    else
+      {
+	  if (status == -2)
+	    {
+		strcpy (sql,
+			"SpatialIndex: a physical column named ROWID shadows the real ROWID");
+		updateSpatiaLiteHistory (sqlite, (const char *) table,
+					 (const char *) geom, sql);
+	    }
+	  else
+	    {
+		strcpy (sql, "SpatialIndex: unable to rebuild the R*Tree");
+		updateSpatiaLiteHistory (sqlite, (const char *) table,
+					 (const char *) geom, sql);
+	    }
+	  return status;
+      }
     strcpy (sql, "SpatialIndex: successfully recovered");
     updateSpatiaLiteHistory (sqlite, (const char *) table,
 			     (const char *) geom, sql);
@@ -5019,6 +5616,8 @@ recover_any_spatial_index (sqlite3 * sqlite, int no_check)
     char sql[1024];
     int ret;
     int to_be_fixed;
+    int rowid_column = 0;
+    int without_rowid = 0;
     sqlite3_stmt *stmt;
 
 /* retrieving any defined R*Tree */
@@ -5049,6 +5648,10 @@ recover_any_spatial_index (sqlite3 * sqlite, int no_check)
 		      if (status < 0)
 			{
 			    /* some unexpected error occurred */
+			    if (status == -2)
+				rowid_column = 1;
+			    if (status == -3)
+				without_rowid = 1;
 			    goto fatal_error;
 			}
 		      else if (status > 0)
@@ -5064,6 +5667,10 @@ recover_any_spatial_index (sqlite3 * sqlite, int no_check)
 		      if (status < 0)
 			{
 			    /* some unexpected error occurred */
+			    if (status == -2)
+				rowid_column = 1;
+			    if (status == -3)
+				without_rowid = 1;
 			    goto fatal_error;
 			}
 		      else if (status == 0)
@@ -5072,7 +5679,8 @@ recover_any_spatial_index (sqlite3 * sqlite, int no_check)
 	    }
 	  else
 	    {
-		printf ("sqlite3_step() error: %s\n", sqlite3_errmsg (sqlite));
+		spatialite_e ("sqlite3_step() error: %s\n",
+			      sqlite3_errmsg (sqlite));
 		sqlite3_finalize (stmt);
 		return -1;
 	    }
@@ -5084,6 +5692,10 @@ recover_any_spatial_index (sqlite3 * sqlite, int no_check)
     return 0;
   fatal_error:
     sqlite3_finalize (stmt);
+    if (rowid_column)
+	return -2;
+    if (without_rowid)
+	return -3;
     return -1;
 }
 
@@ -5100,6 +5712,8 @@ fnct_RecoverSpatialIndex (sqlite3_context * context, int argc,
 / attempts to rebuild a SpatialIndex, returning:
 / 1 - on success
 / 0 - on failure
+/ -1 if any physical "ROWID" column exist shadowing the real ROWID
+/    or if the table was created WITHOUT ROWID
 / NULL if any syntax error is detected
 */
     const unsigned char *table;
@@ -5125,7 +5739,14 @@ fnct_RecoverSpatialIndex (sqlite3_context * context, int argc,
 	    }
 	  status = recover_any_spatial_index (sqlite, no_check);
 	  if (status < 0)
-	      sqlite3_result_null (context);
+	    {
+		if (status == -2)
+		    sqlite3_result_int (context, -1);
+		else if (status == -3)
+		    sqlite3_result_int (context, -1);
+		else
+		    sqlite3_result_null (context);
+	    }
 	  else if (status > 0)
 	      sqlite3_result_int (context, 1);
 	  else
@@ -5168,7 +5789,10 @@ fnct_RecoverSpatialIndex (sqlite3_context * context, int argc,
 	  if (status < 0)
 	    {
 		/* some unexpected error occurred */
-		sqlite3_result_null (context);
+		if (status == -2 || status == -3)
+		    sqlite3_result_int (context, -1);
+		else
+		    sqlite3_result_null (context);
 		return;
 	    }
 	  else if (status > 0)
@@ -5180,12 +5804,79 @@ fnct_RecoverSpatialIndex (sqlite3_context * context, int argc,
       }
 /* rebuilding the Spatial Index */
     status = recover_spatial_index (sqlite, table, column);
-    if (status < 0)
+    if (status == -2)
+	sqlite3_result_int (context, -1);
+    else if (status < 0)
 	sqlite3_result_null (context);
     else if (status > 0)
 	sqlite3_result_int (context, 1);
     else
 	sqlite3_result_int (context, 0);
+}
+
+static void
+fnct_CheckShadowedRowid (sqlite3_context * context, int argc,
+			 sqlite3_value ** argv)
+{
+/* SQL function:
+/ CheckShadowedRowid(table)
+/
+/ checks if some table has a "rowid" physical column shadowing the real ROWID
+/ 1 - yes, the ROWID is shadowed
+/ 0 - no, the ROWID isn't shadowed
+/ NULL on failure (e.g. not existing table)
+*/
+    const unsigned char *table;
+    int ret;
+    char sql[128];
+    sqlite3_stmt *stmt;
+    int exists = 0;
+    sqlite3 *sqlite = sqlite3_context_db_handle (context);
+    GAIA_UNUSED ();		/* LCOV_EXCL_LINE */
+
+    if (sqlite3_value_type (argv[0]) != SQLITE_TEXT)
+      {
+	  spatialite_e
+	      ("CheckShadowedRowid() error: argument 1 [table_name] is not of the String type\n");
+	  sqlite3_result_null (context);
+	  return;
+      }
+    table = sqlite3_value_text (argv[0]);
+
+/* checking if the table exists */
+    strcpy (sql,
+	    "SELECT name FROM sqlite_master WHERE type = 'table' AND Lower(name) = Lower(?)");
+    ret = sqlite3_prepare_v2 (sqlite, sql, strlen (sql), &stmt, NULL);
+    if (ret != SQLITE_OK)
+      {
+	  spatialite_e ("CheckShadowedRowid: \"%s\"\n",
+			sqlite3_errmsg (sqlite));
+	  sqlite3_result_null (context);
+	  return;
+      }
+    sqlite3_reset (stmt);
+    sqlite3_clear_bindings (stmt);
+    sqlite3_bind_text (stmt, 1, (const char *) table,
+		       strlen ((const char *) table), SQLITE_STATIC);
+    while (1)
+      {
+	  /* scrolling the result set rows */
+	  ret = sqlite3_step (stmt);
+	  if (ret == SQLITE_DONE)
+	      break;		/* end of result set */
+	  if (ret == SQLITE_ROW)
+	      exists = 1;
+      }
+    sqlite3_finalize (stmt);
+    if (!exists)
+	sqlite3_result_null (context);
+    else
+      {
+	  if (!validateRowid (sqlite, (const char *) table))
+	      sqlite3_result_int (context, 1);
+	  else
+	      sqlite3_result_int (context, 0);
+      }
 }
 
 static void
@@ -5223,6 +5914,21 @@ fnct_CreateSpatialIndex (sqlite3_context * context, int argc,
 	  return;
       }
     column = (const char *) sqlite3_value_text (argv[1]);
+    if (is_without_rowid_table (sqlite, table))
+      {
+	  spatialite_e
+	      ("CreateSpatialIndex() error: table '%s' is WITHOUT ROWID\n",
+	       table);
+	  sqlite3_result_int (context, -1);
+	  return;
+      }
+    if (!validateRowid (sqlite, table))
+      {
+	  spatialite_e
+	      ("CreateSpatialIndex() error: a physical column named ROWID shadows the real ROWID\n");
+	  sqlite3_result_int (context, -1);
+	  return;
+      }
     sql_statement =
 	sqlite3_mprintf
 	("UPDATE geometry_columns SET spatial_index_enabled = 1 "
@@ -5548,7 +6254,7 @@ fnct_GetLayerExtent (sqlite3_context * context, int argc, sqlite3_value ** argv)
       }
     if (argc >= 3)
       {
-	  if (sqlite3_value_type (argv[1]) != SQLITE_INTEGER)
+	  if (sqlite3_value_type (argv[2]) != SQLITE_INTEGER)
 	    {
 		spatialite_e
 		    ("GetLayerExtent() error: argument 3 [OPTIMISTIC/PESSIMISTIC] is not of the Integer type\n");
@@ -5571,6 +6277,62 @@ fnct_GetLayerExtent (sqlite3_context * context, int argc, sqlite3_value ** argv)
 }
 
 static void
+fnct_InvalidateLayerStatistics (sqlite3_context * context, int argc,
+				sqlite3_value ** argv)
+{
+/* SQL function:
+/ InvalidateLayerStatistics(void)
+/ InvalidateLayerStatistics(table)
+/ InvalidateLayerStatistics(table, column )
+/
+/ Immediately and unconditionally invalidates Layer Statistics
+/ returns 1 on success
+/ 0 on failure
+*/
+    const char *sql;
+    const char *table = NULL;
+    const char *column = NULL;
+    sqlite3 *sqlite = sqlite3_context_db_handle (context);
+    GAIA_UNUSED ();		/* LCOV_EXCL_LINE */
+    if (argc >= 1)
+      {
+	  if (sqlite3_value_type (argv[0]) != SQLITE_TEXT)
+	    {
+		spatialite_e
+		    ("InvalidateLayerStatistics() error: argument 1 [table_name] is not of the String type\n");
+		sqlite3_result_int (context, 0);
+		return;
+	    }
+	  table = (const char *) sqlite3_value_text (argv[0]);
+      }
+    if (argc >= 2)
+      {
+	  if (sqlite3_value_type (argv[1]) != SQLITE_TEXT)
+	    {
+		spatialite_e
+		    ("InvalidateLayerStatistics() error: argument 2 [column_name] is not of the String type\n");
+		sqlite3_result_int (context, 0);
+		return;
+	    }
+	  column = (const char *) sqlite3_value_text (argv[1]);
+      }
+    if (!gaiaStatisticsInvalidate (sqlite, table, column))
+	goto error;
+    sqlite3_result_int (context, 1);
+    sql = "InvalidateLayerStatistics";
+    if (table == NULL)
+	table = "ALL-TABLES";
+    if (column == NULL)
+	column = "ALL-GEOMETRY-COLUMNS";
+    updateSpatiaLiteHistory (sqlite, (const char *) table,
+			     (const char *) column, sql);
+    return;
+  error:
+    sqlite3_result_int (context, 0);
+    return;
+}
+
+static void
 fnct_CreateRasterCoveragesTable (sqlite3_context * context, int argc,
 				 sqlite3_value ** argv)
 {
@@ -5586,12 +6348,195 @@ fnct_CreateRasterCoveragesTable (sqlite3_context * context, int argc,
 
     if (!createRasterCoveragesTable (sqlite))
 	goto error;
-    updateSpatiaLiteHistory (sqlite, "*** Raster Coveraverages ***", NULL,
+    updateSpatiaLiteHistory (sqlite, "*** Raster Coverages ***", NULL,
 			     "Main table successfully created");
     sqlite3_result_int (context, 1);
     return;
 
   error:
+    sqlite3_result_int (context, 0);
+    return;
+}
+
+static void
+fnct_CreateMetaCatalogTables (sqlite3_context * context, int argc,
+			      sqlite3_value ** argv)
+{
+/* SQL function:
+/ CreateMetaCatalogTables(transaction TRUE|FALSE)
+/
+/ creates (or re-creates) both "splite_metacatalog"
+/ and "splite_metacatalog_statistics" tables
+/ returns 1 on success
+/ 0 on failure
+*/
+    char *errMsg = NULL;
+    int ret;
+    int transaction = 0;
+    sqlite3 *sqlite = sqlite3_context_db_handle (context);
+    GAIA_UNUSED ();		/* LCOV_EXCL_LINE */
+
+    if (sqlite3_value_type (argv[0]) != SQLITE_INTEGER)
+      {
+	  spatialite_e
+	      ("CreateMetaCatalogTables() error: argument 1 [TRANSACTION] is not of the Integer type\n");
+	  sqlite3_result_null (context);
+	  return;
+      }
+    transaction = sqlite3_value_int (argv[0]);
+    if (transaction)
+      {
+	  /* starting a Transaction */
+	  ret = sqlite3_exec (sqlite, "BEGIN", NULL, NULL, &errMsg);
+	  if (ret != SQLITE_OK)
+	      goto error;
+      }
+    if (!gaiaCreateMetaCatalogTables (sqlite))
+	goto error;
+    if (transaction)
+      {
+	  /* committing the still pending Transaction */
+	  ret = sqlite3_exec (sqlite, "COMMIT", NULL, NULL, &errMsg);
+	  if (ret != SQLITE_OK)
+	      goto error;
+      }
+    updateSpatiaLiteHistory (sqlite, "*** MetaCatalog ***", NULL,
+			     "Tables successfully created and initialized");
+    sqlite3_result_int (context, 1);
+    return;
+
+  error:
+    if (transaction)
+      {
+	  /* performing a Rollback */
+	  ret = sqlite3_exec (sqlite, "ROLLBACK", NULL, NULL, &errMsg);
+	  if (ret != SQLITE_OK)
+	      sqlite3_free (errMsg);
+      }
+    sqlite3_result_int (context, 0);
+    return;
+}
+
+static void
+fnct_UpdateMetaCatalogStatistics (sqlite3_context * context, int argc,
+				  sqlite3_value ** argv)
+{
+/* SQL function:
+/ UpdateMetaCatalogStatistics(transaction TRUE|FALSE, table, column)
+/ UpdateMetaCatalogStatistics(transaction TRUE|FALSE, master_table, table_name, column_name)
+/
+/ updates the MetaCatalog statistics
+/ returns 1 on success
+/ 0 on failure
+*/
+    char *errMsg = NULL;
+    int ret;
+    int transaction = 0;
+    const char *master_table = NULL;
+    const char *table = NULL;
+    const char *column = NULL;
+    sqlite3 *sqlite = sqlite3_context_db_handle (context);
+    GAIA_UNUSED ();		/* LCOV_EXCL_LINE */
+
+    if (sqlite3_value_type (argv[0]) != SQLITE_INTEGER)
+      {
+	  spatialite_e
+	      ("UpdateMetaCatalogStatistics() error: argument 1 [TRANSACTION] is not of the Integer type\n");
+	  sqlite3_result_null (context);
+	  return;
+      }
+    transaction = sqlite3_value_int (argv[0]);
+    if (argc == 3)
+      {
+	  /* table & column mode */
+	  if (sqlite3_value_type (argv[1]) == SQLITE_TEXT)
+	      table = (const char *) sqlite3_value_text (argv[1]);
+	  else
+	    {
+		spatialite_e
+		    ("UpdateMetaCatalogStatistics() error: argument 2 [TABLE_NAME] is not of the Text type\n");
+		sqlite3_result_null (context);
+		return;
+	    }
+	  if (sqlite3_value_type (argv[2]) == SQLITE_TEXT)
+	      column = (const char *) sqlite3_value_text (argv[2]);
+	  else
+	    {
+		spatialite_e
+		    ("UpdateMetaCatalogStatistics() error: argument 2 [COLUMN_NAME] is not of the Text type\n");
+		sqlite3_result_null (context);
+		return;
+	    }
+      }
+    else
+      {
+	  /* master-table & table_name & column_name mode */
+	  if (sqlite3_value_type (argv[1]) == SQLITE_TEXT)
+	      master_table = (const char *) sqlite3_value_text (argv[1]);
+	  else
+	    {
+		spatialite_e
+		    ("UpdateMetaCatalogStatistics() error: argument 2 [MASTER_TABLE] is not of the Text type\n");
+		sqlite3_result_null (context);
+		return;
+	    }
+	  if (sqlite3_value_type (argv[2]) == SQLITE_TEXT)
+	      table = (const char *) sqlite3_value_text (argv[2]);
+	  else
+	    {
+		spatialite_e
+		    ("UpdateMetaCatalogStatistics() error: argument 3 [TABLE_NAME] is not of the Text type\n");
+		sqlite3_result_null (context);
+		return;
+	    }
+	  if (sqlite3_value_type (argv[3]) == SQLITE_TEXT)
+	      column = (const char *) sqlite3_value_text (argv[3]);
+	  else
+	    {
+		spatialite_e
+		    ("UpdateMetaCatalogStatistics() error: argument 3 [COLUMN_NAME] is not of the Text type\n");
+		sqlite3_result_null (context);
+		return;
+	    }
+      }
+    if (transaction)
+      {
+	  /* starting a Transaction */
+	  ret = sqlite3_exec (sqlite, "BEGIN", NULL, NULL, &errMsg);
+	  if (ret != SQLITE_OK)
+	      goto error;
+      }
+    if (master_table != NULL)
+      {
+	  if (!gaiaUpdateMetaCatalogStatisticsFromMaster
+	      (sqlite, master_table, table, column))
+	      goto error;
+      }
+    else
+      {
+	  if (!gaiaUpdateMetaCatalogStatistics (sqlite, table, column))
+	      goto error;
+      }
+    if (transaction)
+      {
+	  /* committing the still pending Transaction */
+	  ret = sqlite3_exec (sqlite, "COMMIT", NULL, NULL, &errMsg);
+	  if (ret != SQLITE_OK)
+	      goto error;
+      }
+    updateSpatiaLiteHistory (sqlite, "*** MetaCatalog ***", NULL,
+			     "Statistics successfully updated");
+    sqlite3_result_int (context, 1);
+    return;
+
+  error:
+    if (transaction)
+      {
+	  /* performing a Rollback */
+	  ret = sqlite3_exec (sqlite, "ROLLBACK", NULL, NULL, &errMsg);
+	  if (ret != SQLITE_OK)
+	      sqlite3_free (errMsg);
+      }
     sqlite3_result_int (context, 0);
     return;
 }
@@ -5933,6 +6878,7 @@ fnct_AsKml1 (sqlite3_context * context, int argc, sqlite3_value ** argv)
     char *proj_from;
     char *proj_to;
     int precision = 15;
+    void *data = sqlite3_user_data (context);
     sqlite3 *sqlite = sqlite3_context_db_handle (context);
     GAIA_UNUSED ();		/* LCOV_EXCL_LINE */
     if (sqlite3_value_type (argv[0]) != SQLITE_BLOB)
@@ -5980,7 +6926,10 @@ fnct_AsKml1 (sqlite3_context * context, int argc, sqlite3_value ** argv)
 		      sqlite3_result_null (context);
 		      goto stop;
 		  }
-		geo_wgs84 = gaiaTransform (geo, proj_from, proj_to);
+		if (data != NULL)
+		    geo_wgs84 = gaiaTransform_r (data, geo, proj_from, proj_to);
+		else
+		    geo_wgs84 = gaiaTransform (geo, proj_from, proj_to);
 		free (proj_from);
 		free (proj_to);
 		if (!geo_wgs84)
@@ -6034,6 +6983,7 @@ fnct_AsKml3 (sqlite3_context * context, int argc, sqlite3_value ** argv)
     char *proj_from;
     char *proj_to;
     int precision = 15;
+    void *data = sqlite3_user_data (context);
     sqlite3 *sqlite = sqlite3_context_db_handle (context);
     GAIA_UNUSED ();		/* LCOV_EXCL_LINE */
     switch (sqlite3_value_type (argv[0]))
@@ -6147,7 +7097,10 @@ fnct_AsKml3 (sqlite3_context * context, int argc, sqlite3_value ** argv)
 		      sqlite3_result_null (context);
 		      goto stop;
 		  }
-		geo_wgs84 = gaiaTransform (geo, proj_from, proj_to);
+		if (data != NULL)
+		    geo_wgs84 = gaiaTransform_r (data, geo, proj_from, proj_to);
+		else
+		    geo_wgs84 = gaiaTransform (geo, proj_from, proj_to);
 		free (proj_from);
 		free (proj_to);
 		if (!geo_wgs84)
@@ -8455,7 +9408,11 @@ fnct_Collect_step (sqlite3_context * context, int argc, sqlite3_value ** argv)
     else
       {
 	  /* subsequent rows */
-	  result = gaiaMergeGeometries (*p, geom);
+	  void *data = sqlite3_user_data (context);
+	  if (data != NULL)
+	      result = gaiaMergeGeometries_r (data, *p, geom);
+	  else
+	      result = gaiaMergeGeometries (*p, geom);
 	  gaiaFreeGeomColl (*p);
 	  *p = result;
 	  gaiaFreeGeomColl (geom);
@@ -8532,7 +9489,11 @@ fnct_Collect (sqlite3_context * context, int argc, sqlite3_value ** argv)
 	sqlite3_result_null (context);
     else
       {
-	  result = gaiaMergeGeometries (geo1, geo2);
+	  void *data = sqlite3_user_data (context);
+	  if (data != NULL)
+	      result = gaiaMergeGeometries_r (data, geo1, geo2);
+	  else
+	      result = gaiaMergeGeometries (geo1, geo2);
 	  if (!result)
 	      sqlite3_result_null (context);
 	  else if (gaiaIsEmpty (result))
@@ -9263,6 +10224,59 @@ cast_count (gaiaGeomCollPtr geom, int *pts, int *lns, int *pgs)
     *pts = n_pts;
     *lns = n_lns;
     *pgs = n_pgs;
+}
+
+static void
+fnct_CastAutomagic (sqlite3_context * context, int argc, sqlite3_value ** argv)
+{
+/* SQL function:
+/ CastAutomagic(BLOB encoded geometry)
+/
+/ accepts on input both a valid SpatiaLite BLOB geometry
+/ or a valid GPKG BLOB geometry, thus returning a SpatiaLite
+/ BLOB geometry 
+/ will return NULL in any other case
+*/
+    unsigned char *p_blob;
+    int n_bytes;
+    int len;
+    unsigned char *p_result = NULL;
+    gaiaGeomCollPtr geo = NULL;
+    GAIA_UNUSED ();		/* LCOV_EXCL_LINE */
+    if (sqlite3_value_type (argv[0]) != SQLITE_BLOB)
+      {
+	  sqlite3_result_null (context);
+	  return;
+      }
+    p_blob = (unsigned char *) sqlite3_value_blob (argv[0]);
+    n_bytes = sqlite3_value_bytes (argv[0]);
+    geo = gaiaFromSpatiaLiteBlobWkb (p_blob, n_bytes);
+    if (!geo)
+      {
+#ifdef ENABLE_GEOPACKAGE	/* GEOPACKAGE enabled: supporting GPKG geometries */
+	  if (gaiaIsValidGPB (p_blob, n_bytes))
+	    {
+		geo = gaiaFromGeoPackageGeometryBlob (p_blob, n_bytes);
+		if (geo == NULL)
+		    sqlite3_result_null (context);
+		else
+		  {
+		      gaiaToSpatiaLiteBlobWkb (geo, &p_result, &len);
+		      gaiaFreeGeomColl (geo);
+		      sqlite3_result_blob (context, p_result, len, free);
+		  }
+		return;
+	    }
+	  else
+#endif /* end GEOPACKAGE: supporting GPKG geometries */
+	      sqlite3_result_null (context);
+      }
+    else
+      {
+	  gaiaToSpatiaLiteBlobWkb (geo, &p_result, &len);
+	  gaiaFreeGeomColl (geo);
+	  sqlite3_result_blob (context, p_result, len, free);
+      }
 }
 
 static void
@@ -10261,7 +11275,24 @@ fnct_GeometryType (sqlite3_context * context, int argc, sqlite3_value ** argv)
     n_bytes = sqlite3_value_bytes (argv[0]);
     geo = gaiaFromSpatiaLiteBlobWkb (p_blob, n_bytes);
     if (!geo)
-	sqlite3_result_null (context);
+      {
+#ifdef ENABLE_GEOPACKAGE	/* GEOPACKAGE enabled: supporting GPKG geometries */
+	  if (gaiaIsValidGPB (p_blob, n_bytes))
+	    {
+		char *gpb_type = gaiaGetGeometryTypeFromGPB (p_blob, n_bytes);
+		if (gpb_type == NULL)
+		    sqlite3_result_null (context);
+		else
+		  {
+		      len = strlen (gpb_type);
+		      sqlite3_result_text (context, gpb_type, len, free);
+		  }
+		return;
+	    }
+	  else
+#endif /* end GEOPACKAGE: supporting GPKG geometries */
+	      sqlite3_result_null (context);
+      }
     else
       {
 	  type = gaiaGeometryType (geo);
@@ -10531,7 +11562,19 @@ fnct_SRID (sqlite3_context * context, int argc, sqlite3_value ** argv)
     n_bytes = sqlite3_value_bytes (argv[0]);
     geo = gaiaFromSpatiaLiteBlobWkb (p_blob, n_bytes);
     if (!geo)
-	sqlite3_result_null (context);
+      {
+#ifdef ENABLE_GEOPACKAGE	/* GEOPACKAGE enabled: supporting GPKG geometries */
+	  if (gaiaIsValidGPB (p_blob, n_bytes))
+	    {
+		int srid = gaiaGetSridFromGPB (p_blob, n_bytes);
+		sqlite3_result_int (context, srid);
+	    }
+	  else
+	      sqlite3_result_null (context);
+	  return;
+#endif /* end GEOPACKAGE: supporting GPKG geometries */
+	  sqlite3_result_null (context);
+      }
     else
 	sqlite3_result_int (context, geo->Srid);
     gaiaFreeGeomColl (geo);
@@ -10602,7 +11645,17 @@ fnct_IsEmpty (sqlite3_context * context, int argc, sqlite3_value ** argv)
     n_bytes = sqlite3_value_bytes (argv[0]);
     geo = gaiaFromSpatiaLiteBlobWkb (p_blob, n_bytes);
     if (!geo)
-	sqlite3_result_int (context, -1);
+      {
+#ifdef ENABLE_GEOPACKAGE	/* GEOPACKAGE enabled: supporting GPKG geometries */
+	  if (gaiaIsValidGPB (p_blob, n_bytes))
+	    {
+		int is_empty = gaiaIsEmptyGPB (p_blob, n_bytes);
+		sqlite3_result_int (context, is_empty);
+	    }
+	  else
+#endif /* end GEOPACKAGE: supporting GPKG geometries */
+	      sqlite3_result_int (context, -1);
+      }
     else
 	sqlite3_result_int (context, gaiaIsEmpty (geo));
     gaiaFreeGeomColl (geo);
@@ -10632,7 +11685,31 @@ fnct_Is3D (sqlite3_context * context, int argc, sqlite3_value ** argv)
     n_bytes = sqlite3_value_bytes (argv[0]);
     geo = gaiaFromSpatiaLiteBlobWkb (p_blob, n_bytes);
     if (!geo)
-	sqlite3_result_int (context, -1);
+      {
+#ifdef ENABLE_GEOPACKAGE	/* GEOPACKAGE enabled: supporting GPKG geometries */
+	  if (gaiaIsValidGPB (p_blob, n_bytes))
+	    {
+		double min_x;
+		double max_x;
+		double min_y;
+		double max_y;
+		int has_z;
+		double min_z;
+		double max_z;
+		int has_m;
+		double min_m;
+		double max_m;
+		if (gaiaGetEnvelopeFromGPB
+		    (p_blob, n_bytes, &min_x, &max_x, &min_y, &max_y, &has_z,
+		     &min_z, &max_z, &has_m, &min_m, &max_m))
+		  {
+		      sqlite3_result_int (context, has_z);
+		  }
+	    }
+	  else
+#endif /* end GEOPACKAGE: supporting GPKG geometries */
+	      sqlite3_result_int (context, -1);
+      }
     else
       {
 	  if (geo->DimensionModel == GAIA_XY_Z
@@ -10668,7 +11745,31 @@ fnct_IsMeasured (sqlite3_context * context, int argc, sqlite3_value ** argv)
     n_bytes = sqlite3_value_bytes (argv[0]);
     geo = gaiaFromSpatiaLiteBlobWkb (p_blob, n_bytes);
     if (!geo)
-	sqlite3_result_int (context, -1);
+      {
+#ifdef ENABLE_GEOPACKAGE	/* GEOPACKAGE enabled: supporting GPKG geometries */
+	  if (gaiaIsValidGPB (p_blob, n_bytes))
+	    {
+		double min_x;
+		double max_x;
+		double min_y;
+		double max_y;
+		int has_z;
+		double min_z;
+		double max_z;
+		int has_m;
+		double min_m;
+		double max_m;
+		if (gaiaGetEnvelopeFromGPB
+		    (p_blob, n_bytes, &min_x, &max_x, &min_y, &max_y, &has_z,
+		     &min_z, &max_z, &has_m, &min_m, &max_m))
+		  {
+		      sqlite3_result_int (context, has_m);
+		  }
+	    }
+	  else
+#endif /* end GEOPACKAGE: supporting GPKG geometries */
+	      sqlite3_result_int (context, -1);
+      }
     else
       {
 	  if (geo->DimensionModel == GAIA_XY_M
@@ -10704,7 +11805,34 @@ fnct_MinZ (sqlite3_context * context, int argc, sqlite3_value ** argv)
     n_bytes = sqlite3_value_bytes (argv[0]);
     geo = gaiaFromSpatiaLiteBlobWkb (p_blob, n_bytes);
     if (!geo)
-	sqlite3_result_null (context);
+      {
+#ifdef ENABLE_GEOPACKAGE	/* GEOPACKAGE enabled: supporting GPKG geometries */
+	  if (gaiaIsValidGPB (p_blob, n_bytes))
+	    {
+		double min_x;
+		double max_x;
+		double min_y;
+		double max_y;
+		int has_z;
+		double min_z;
+		double max_z;
+		int has_m;
+		double min_m;
+		double max_m;
+		if (gaiaGetEnvelopeFromGPB
+		    (p_blob, n_bytes, &min_x, &max_x, &min_y, &max_y, &has_z,
+		     &min_z, &max_z, &has_m, &min_m, &max_m))
+		  {
+		      if (has_z)
+			  sqlite3_result_double (context, min_z);
+		      else
+			  sqlite3_result_null (context);
+		  }
+	    }
+	  else
+#endif /* end GEOPACKAGE: supporting GPKG geometries */
+	      sqlite3_result_null (context);
+      }
     else
       {
 	  if (geo->DimensionModel == GAIA_XY_Z
@@ -10743,7 +11871,34 @@ fnct_MaxZ (sqlite3_context * context, int argc, sqlite3_value ** argv)
     n_bytes = sqlite3_value_bytes (argv[0]);
     geo = gaiaFromSpatiaLiteBlobWkb (p_blob, n_bytes);
     if (!geo)
-	sqlite3_result_null (context);
+      {
+#ifdef ENABLE_GEOPACKAGE	/* GEOPACKAGE enabled: supporting GPKG geometries */
+	  if (gaiaIsValidGPB (p_blob, n_bytes))
+	    {
+		double min_x;
+		double max_x;
+		double min_y;
+		double max_y;
+		int has_z;
+		double min_z;
+		double max_z;
+		int has_m;
+		double min_m;
+		double max_m;
+		if (gaiaGetEnvelopeFromGPB
+		    (p_blob, n_bytes, &min_x, &max_x, &min_y, &max_y, &has_z,
+		     &min_z, &max_z, &has_m, &min_m, &max_m))
+		  {
+		      if (has_z)
+			  sqlite3_result_double (context, max_z);
+		      else
+			  sqlite3_result_null (context);
+		  }
+	    }
+	  else
+#endif /* end GEOPACKAGE: supporting GPKG geometries */
+	      sqlite3_result_null (context);
+      }
     else
       {
 	  if (geo->DimensionModel == GAIA_XY_Z
@@ -10782,7 +11937,34 @@ fnct_MinM (sqlite3_context * context, int argc, sqlite3_value ** argv)
     n_bytes = sqlite3_value_bytes (argv[0]);
     geo = gaiaFromSpatiaLiteBlobWkb (p_blob, n_bytes);
     if (!geo)
-	sqlite3_result_null (context);
+      {
+#ifdef ENABLE_GEOPACKAGE	/* GEOPACKAGE enabled: supporting GPKG geometries */
+	  if (gaiaIsValidGPB (p_blob, n_bytes))
+	    {
+		double min_x;
+		double max_x;
+		double min_y;
+		double max_y;
+		int has_z;
+		double min_z;
+		double max_z;
+		int has_m;
+		double min_m;
+		double max_m;
+		if (gaiaGetEnvelopeFromGPB
+		    (p_blob, n_bytes, &min_x, &max_x, &min_y, &max_y, &has_z,
+		     &min_z, &max_z, &has_m, &min_m, &max_m))
+		  {
+		      if (has_m)
+			  sqlite3_result_double (context, min_m);
+		      else
+			  sqlite3_result_null (context);
+		  }
+	    }
+	  else
+#endif /* end GEOPACKAGE: supporting GPKG geometries */
+	      sqlite3_result_null (context);
+      }
     else
       {
 	  if (geo->DimensionModel == GAIA_XY_M
@@ -10821,7 +12003,34 @@ fnct_MaxM (sqlite3_context * context, int argc, sqlite3_value ** argv)
     n_bytes = sqlite3_value_bytes (argv[0]);
     geo = gaiaFromSpatiaLiteBlobWkb (p_blob, n_bytes);
     if (!geo)
-	sqlite3_result_null (context);
+      {
+#ifdef ENABLE_GEOPACKAGE	/* GEOPACKAGE enabled: supporting GPKG geometries */
+	  if (gaiaIsValidGPB (p_blob, n_bytes))
+	    {
+		double min_x;
+		double max_x;
+		double min_y;
+		double max_y;
+		int has_z;
+		double min_z;
+		double max_z;
+		int has_m;
+		double min_m;
+		double max_m;
+		if (gaiaGetEnvelopeFromGPB
+		    (p_blob, n_bytes, &min_x, &max_x, &min_y, &max_y, &has_z,
+		     &min_z, &max_z, &has_m, &min_m, &max_m))
+		  {
+		      if (has_m)
+			  sqlite3_result_double (context, max_m);
+		      else
+			  sqlite3_result_null (context);
+		  }
+	    }
+	  else
+#endif /* end GEOPACKAGE: supporting GPKG geometries */
+	      sqlite3_result_null (context);
+      }
     else
       {
 	  if (geo->DimensionModel == GAIA_XY_M
@@ -11476,7 +12685,31 @@ fnct_MbrMinX (sqlite3_context * context, int argc, sqlite3_value ** argv)
     p_blob = (unsigned char *) sqlite3_value_blob (argv[0]);
     n_bytes = sqlite3_value_bytes (argv[0]);
     if (!gaiaGetMbrMinX (p_blob, n_bytes, &coord))
-	sqlite3_result_null (context);
+      {
+#ifdef ENABLE_GEOPACKAGE	/* GEOPACKAGE enabled: supporting GPKG geometries */
+	  if (gaiaIsValidGPB (p_blob, n_bytes))
+	    {
+		double min_x;
+		double max_x;
+		double min_y;
+		double max_y;
+		int has_z;
+		double min_z;
+		double max_z;
+		int has_m;
+		double min_m;
+		double max_m;
+		if (gaiaGetEnvelopeFromGPB
+		    (p_blob, n_bytes, &min_x, &max_x, &min_y, &max_y, &has_z,
+		     &min_z, &max_z, &has_m, &min_m, &max_m))
+		  {
+		      sqlite3_result_double (context, min_x);
+		  }
+	    }
+	  else
+#endif /* end GEOPACKAGE: supporting GPKG geometries */
+	      sqlite3_result_null (context);
+      }
     else
 	sqlite3_result_double (context, coord);
 }
@@ -11502,7 +12735,31 @@ fnct_MbrMaxX (sqlite3_context * context, int argc, sqlite3_value ** argv)
     p_blob = (unsigned char *) sqlite3_value_blob (argv[0]);
     n_bytes = sqlite3_value_bytes (argv[0]);
     if (!gaiaGetMbrMaxX (p_blob, n_bytes, &coord))
-	sqlite3_result_null (context);
+      {
+#ifdef ENABLE_GEOPACKAGE	/* GEOPACKAGE enabled: supporting GPKG geometries */
+	  if (gaiaIsValidGPB (p_blob, n_bytes))
+	    {
+		double min_x;
+		double max_x;
+		double min_y;
+		double max_y;
+		int has_z;
+		double min_z;
+		double max_z;
+		int has_m;
+		double min_m;
+		double max_m;
+		if (gaiaGetEnvelopeFromGPB
+		    (p_blob, n_bytes, &min_x, &max_x, &min_y, &max_y, &has_z,
+		     &min_z, &max_z, &has_m, &min_m, &max_m))
+		  {
+		      sqlite3_result_double (context, max_x);
+		  }
+	    }
+	  else
+#endif /* end GEOPACKAGE: supporting GPKG geometries */
+	      sqlite3_result_null (context);
+      }
     else
 	sqlite3_result_double (context, coord);
 }
@@ -11528,7 +12785,31 @@ fnct_MbrMinY (sqlite3_context * context, int argc, sqlite3_value ** argv)
     p_blob = (unsigned char *) sqlite3_value_blob (argv[0]);
     n_bytes = sqlite3_value_bytes (argv[0]);
     if (!gaiaGetMbrMinY (p_blob, n_bytes, &coord))
-	sqlite3_result_null (context);
+      {
+#ifdef ENABLE_GEOPACKAGE	/* GEOPACKAGE enabled: supporting GPKG geometries */
+	  if (gaiaIsValidGPB (p_blob, n_bytes))
+	    {
+		double min_x;
+		double max_x;
+		double min_y;
+		double max_y;
+		int has_z;
+		double min_z;
+		double max_z;
+		int has_m;
+		double min_m;
+		double max_m;
+		if (gaiaGetEnvelopeFromGPB
+		    (p_blob, n_bytes, &min_x, &max_x, &min_y, &max_y, &has_z,
+		     &min_z, &max_z, &has_m, &min_m, &max_m))
+		  {
+		      sqlite3_result_double (context, min_y);
+		  }
+	    }
+	  else
+#endif /* end GEOPACKAGE: supporting GPKG geometries */
+	      sqlite3_result_null (context);
+      }
     else
 	sqlite3_result_double (context, coord);
 }
@@ -11554,7 +12835,31 @@ fnct_MbrMaxY (sqlite3_context * context, int argc, sqlite3_value ** argv)
     p_blob = (unsigned char *) sqlite3_value_blob (argv[0]);
     n_bytes = sqlite3_value_bytes (argv[0]);
     if (!gaiaGetMbrMaxY (p_blob, n_bytes, &coord))
-	sqlite3_result_null (context);
+      {
+#ifdef ENABLE_GEOPACKAGE	/* GEOPACKAGE enabled: supporting GPKG geometries */
+	  if (gaiaIsValidGPB (p_blob, n_bytes))
+	    {
+		double min_x;
+		double max_x;
+		double min_y;
+		double max_y;
+		int has_z;
+		double min_z;
+		double max_z;
+		int has_m;
+		double min_m;
+		double max_m;
+		if (gaiaGetEnvelopeFromGPB
+		    (p_blob, n_bytes, &min_x, &max_x, &min_y, &max_y, &has_z,
+		     &min_z, &max_z, &has_m, &min_m, &max_m))
+		  {
+		      sqlite3_result_double (context, max_y);
+		  }
+	    }
+	  else
+#endif /* end GEOPACKAGE: supporting GPKG geometries */
+	      sqlite3_result_null (context);
+      }
     else
 	sqlite3_result_double (context, coord);
 }
@@ -12957,6 +14262,67 @@ fnct_RemovePoint (sqlite3_context * context, int argc, sqlite3_value ** argv)
     gaiaFreeGeomColl (line);
 }
 
+static void
+fnct_MakePolygon (sqlite3_context * context, int argc, sqlite3_value ** argv)
+{
+/* SQL functions:
+/ ST_MakePolygon(BLOB encoded LINESTRING line)
+/ ST_MakePolygon(BLOB encoded LINESTRING line, BLOB encoded (MULTI)LINESTING holes)
+/
+/ returns a new POLYGON from the given exterior and interior rings
+/ or NULL if any error is encountered
+*/
+    unsigned char *p_blob;
+    int n_bytes;
+    gaiaGeomCollPtr exterior = NULL;
+    gaiaGeomCollPtr interiors = NULL;
+    gaiaGeomCollPtr out;
+    int len;
+    unsigned char *p_result = NULL;
+    GAIA_UNUSED ();		/* LCOV_EXCL_LINE */
+    if (sqlite3_value_type (argv[0]) != SQLITE_BLOB)
+      {
+	  sqlite3_result_null (context);
+	  goto stop;
+      }
+    p_blob = (unsigned char *) sqlite3_value_blob (argv[0]);
+    n_bytes = sqlite3_value_bytes (argv[0]);
+    exterior = gaiaFromSpatiaLiteBlobWkb (p_blob, n_bytes);
+    if (!exterior)
+      {
+	  sqlite3_result_null (context);
+	  goto stop;
+      }
+    if (argc == 2)
+      {
+	  if (sqlite3_value_type (argv[1]) != SQLITE_BLOB)
+	    {
+		sqlite3_result_null (context);
+		goto stop;
+	    }
+	  p_blob = (unsigned char *) sqlite3_value_blob (argv[1]);
+	  n_bytes = sqlite3_value_bytes (argv[1]);
+	  interiors = gaiaFromSpatiaLiteBlobWkb (p_blob, n_bytes);
+	  if (!interiors)
+	    {
+		sqlite3_result_null (context);
+		goto stop;
+	    }
+      }
+    out = gaiaMakePolygon (exterior, interiors);
+    if (!out)
+      {
+	  sqlite3_result_null (context);
+	  goto stop;
+      }
+    gaiaToSpatiaLiteBlobWkb (out, &p_result, &len);
+    gaiaFreeGeomColl (out);
+    sqlite3_result_blob (context, p_result, len, free);
+  stop:
+    gaiaFreeGeomColl (exterior);
+    gaiaFreeGeomColl (interiors);
+}
+
 static int
 getXYZMSinglePoint (gaiaGeomCollPtr geom, double *x, double *y, double *z,
 		    double *m)
@@ -13489,7 +14855,7 @@ fnct_GARSMbr (sqlite3_context * context, int argc, sqlite3_value ** argv)
     if (!p_result)
       {
 	  sqlite3_result_null (context);
-	  printf ("bad p_result\n");
+	  spatialite_e ("bad p_result\n");
       }
     else
 	sqlite3_result_blob (context, p_result, len, free);
@@ -14820,6 +16186,7 @@ fnct_FromGml (sqlite3_context * context, int argc, sqlite3_value ** argv)
     unsigned char *p_result = NULL;
     const unsigned char *text;
     gaiaGeomCollPtr geo = NULL;
+    void *data = sqlite3_user_data (context);
     sqlite3 *sqlite = sqlite3_context_db_handle (context);
     GAIA_UNUSED ();		/* LCOV_EXCL_LINE */
     if (sqlite3_value_type (argv[0]) != SQLITE_TEXT)
@@ -14828,7 +16195,10 @@ fnct_FromGml (sqlite3_context * context, int argc, sqlite3_value ** argv)
 	  return;
       }
     text = sqlite3_value_text (argv[0]);
-    geo = gaiaParseGml (text, sqlite);
+    if (data != NULL)
+	geo = gaiaParseGml_r (data, text, sqlite);
+    else
+	geo = gaiaParseGml (text, sqlite);
     if (geo == NULL)
       {
 	  sqlite3_result_null (context);
@@ -14919,7 +16289,11 @@ fnct_BuildArea (sqlite3_context * context, int argc, sqlite3_value ** argv)
 	sqlite3_result_null (context);
     else
       {
-	  result = gaiaPolygonize (geo, 0);
+	  void *data = sqlite3_user_data (context);
+	  if (data != NULL)
+	      result = gaiaPolygonize_r (data, geo, 0);
+	  else
+	      result = gaiaPolygonize (geo, 0);
 	  if (result == NULL)
 	      sqlite3_result_null (context);
 	  else
@@ -14972,7 +16346,11 @@ fnct_Polygonize_step (sqlite3_context * context, int argc,
     else
       {
 	  /* subsequent rows */
-	  result = gaiaMergeGeometries (*p, geom);
+	  void *data = sqlite3_user_data (context);
+	  if (data != NULL)
+	      result = gaiaMergeGeometries_r (data, *p, geom);
+	  else
+	      result = gaiaMergeGeometries (*p, geom);
 	  gaiaFreeGeomColl (*p);
 	  *p = result;
 	  gaiaFreeGeomColl (geom);
@@ -15001,7 +16379,11 @@ fnct_Polygonize_final (sqlite3_context * context)
 	sqlite3_result_null (context);
     else
       {
-	  geom = gaiaPolygonize (result, 0);
+	  void *data = sqlite3_user_data (context);
+	  if (data != NULL)
+	      geom = gaiaPolygonize_r (data, result, 0);
+	  else
+	      geom = gaiaPolygonize (result, 0);
 	  if (geom == NULL)
 	      sqlite3_result_null (context);
 	  else
@@ -15275,6 +16657,7 @@ fnct_Transform (sqlite3_context * context, int argc, sqlite3_value ** argv)
     int srid_to;
     char *proj_from;
     char *proj_to;
+    void *data = sqlite3_user_data (context);
     sqlite3 *sqlite = sqlite3_context_db_handle (context);
     GAIA_UNUSED ();		/* LCOV_EXCL_LINE */
     if (sqlite3_value_type (argv[0]) != SQLITE_BLOB)
@@ -15309,7 +16692,10 @@ fnct_Transform (sqlite3_context * context, int argc, sqlite3_value ** argv)
 		sqlite3_result_null (context);
 		return;
 	    }
-	  result = gaiaTransform (geo, proj_from, proj_to);
+	  if (data != NULL)
+	      result = gaiaTransform_r (data, geo, proj_from, proj_to);
+	  else
+	      result = gaiaTransform (geo, proj_from, proj_to);
 	  free (proj_from);
 	  free (proj_to);
 	  if (!result)
@@ -15331,6 +16717,115 @@ fnct_Transform (sqlite3_context * context, int argc, sqlite3_value ** argv)
 #endif /* end including PROJ.4 */
 
 #ifndef OMIT_GEOS		/* including GEOS */
+
+static void
+fnct_GEOS_GetLastWarningMsg (sqlite3_context * context, int argc,
+			     sqlite3_value ** argv)
+{
+/* SQL function:
+/ GEOS_GetLastWarningMsg()
+/
+/ return the most recent GEOS warning message (if any)
+/ return NULL on any other case
+*/
+    const char *msg;
+    void *data = sqlite3_user_data (context);
+    GAIA_UNUSED ();		/* LCOV_EXCL_LINE */
+    if (data != NULL)
+	msg = gaiaGetGeosWarningMsg_r (data);
+    else
+	msg = gaiaGetGeosWarningMsg ();
+    if (msg == NULL)
+	sqlite3_result_null (context);
+    else
+	sqlite3_result_text (context, msg, strlen (msg), SQLITE_STATIC);
+}
+
+static void
+fnct_GEOS_GetLastErrorMsg (sqlite3_context * context, int argc,
+			   sqlite3_value ** argv)
+{
+/* SQL function:
+/ GEOS_GetLastErrorMsg()
+/
+/ return the most recent GEOS error message (if any)
+/ return NULL on any other case
+*/
+    const char *msg;
+    void *data = sqlite3_user_data (context);
+    GAIA_UNUSED ();		/* LCOV_EXCL_LINE */
+    if (data != NULL)
+	msg = gaiaGetGeosErrorMsg_r (data);
+    else
+	msg = gaiaGetGeosErrorMsg ();
+    if (msg == NULL)
+	sqlite3_result_null (context);
+    else
+	sqlite3_result_text (context, msg, strlen (msg), SQLITE_STATIC);
+}
+
+static void
+fnct_GEOS_GetLastAuxErrorMsg (sqlite3_context * context, int argc,
+			      sqlite3_value ** argv)
+{
+/* SQL function:
+/ GEOS_GetLastAuxErrorMsg()
+/
+/ return the most recent GEOS error message (if any)
+/ return NULL on any other case
+*/
+    const char *msg;
+    void *data = sqlite3_user_data (context);
+    GAIA_UNUSED ();		/* LCOV_EXCL_LINE */
+    if (data != NULL)
+	msg = gaiaGetGeosAuxErrorMsg_r (data);
+    else
+	msg = gaiaGetGeosAuxErrorMsg ();
+    if (msg == NULL)
+	sqlite3_result_null (context);
+    else
+	sqlite3_result_text (context, msg, strlen (msg), SQLITE_STATIC);
+}
+
+static void
+fnct_GEOS_GetCriticalPointFromMsg (sqlite3_context * context, int argc,
+				   sqlite3_value ** argv)
+{
+/* SQL function:
+/ GEOS_GetCriticalPointFromMsg()
+/
+/ return a Point Geometry by (possibly) parsing the most recent GEOS error/warning message 
+/ return NULL on any other case
+*/
+    int srid = -1;
+    gaiaGeomCollPtr geom;
+    void *data = sqlite3_user_data (context);
+    GAIA_UNUSED ();		/* LCOV_EXCL_LINE */
+    if (argc == 1)
+      {
+	  if (sqlite3_value_type (argv[0]) != SQLITE_INTEGER)
+	    {
+		sqlite3_result_null (context);
+		return;
+	    }
+	  srid = sqlite3_value_int (argv[0]);
+      }
+    if (data != NULL)
+	geom = gaiaCriticalPointFromGEOSmsg_r (data);
+    else
+	geom = gaiaCriticalPointFromGEOSmsg ();
+    if (geom == NULL)
+	sqlite3_result_null (context);
+    else
+      {
+	  unsigned char *blob;
+	  int len;
+	  geom->Srid = srid;
+	  gaiaToSpatiaLiteBlobWkb (geom, &blob, &len);
+	  gaiaFreeGeomColl (geom);
+	  sqlite3_result_blob (context, blob, len, free);
+      }
+}
 
 static void
 fnct_Boundary (sqlite3_context * context, int argc, sqlite3_value ** argv)
@@ -15364,7 +16859,11 @@ fnct_Boundary (sqlite3_context * context, int argc, sqlite3_value ** argv)
 	      sqlite3_result_null (context);
 	  else
 	    {
-		boundary = gaiaBoundary (geo);
+		void *data = sqlite3_user_data (context);
+		if (data != NULL)
+		    boundary = gaiaBoundary_r (data, geo);
+		else
+		    boundary = gaiaBoundary (geo);
 		if (!boundary)
 		    sqlite3_result_null (context);
 		else
@@ -15438,7 +16937,11 @@ fnct_IsSimple (sqlite3_context * context, int argc, sqlite3_value ** argv)
 	sqlite3_result_int (context, -1);
     else
       {
-	  ret = gaiaIsSimple (geo);
+	  void *data = sqlite3_user_data (context);
+	  if (data != NULL)
+	      ret = gaiaIsSimple_r (data, geo);
+	  else
+	      ret = gaiaIsSimple (geo);
 	  if (ret < 0)
 	      sqlite3_result_int (context, -1);
 	  else
@@ -15481,7 +16984,11 @@ fnct_IsRing (sqlite3_context * context, int argc, sqlite3_value ** argv)
 	      sqlite3_result_int (context, -1);
 	  else
 	    {
-		ret = gaiaIsRing (line);
+		void *data = sqlite3_user_data (context);
+		if (data != NULL)
+		    ret = gaiaIsRing_r (data, line);
+		else
+		    ret = gaiaIsRing (line);
 		sqlite3_result_int (context, ret);
 	    }
       }
@@ -15516,7 +17023,11 @@ fnct_IsValid (sqlite3_context * context, int argc, sqlite3_value ** argv)
 	sqlite3_result_int (context, -1);
     else
       {
-	  ret = gaiaIsValid (geo);
+	  void *data = sqlite3_user_data (context);
+	  if (data != NULL)
+	      ret = gaiaIsValid_r (data, geo);
+	  else
+	      ret = gaiaIsValid (geo);
 	  if (ret < 0)
 	      sqlite3_result_int (context, -1);
 	  else
@@ -15526,8 +17037,8 @@ fnct_IsValid (sqlite3_context * context, int argc, sqlite3_value ** argv)
 }
 
 static void
-length_common (sqlite3_context * context, int argc, sqlite3_value ** argv,
-	       int is_perimeter)
+length_common (const void *p_cache, sqlite3_context * context, int argc,
+	       sqlite3_value ** argv, int is_perimeter)
 {
 /* common implementation supporting both ST_Length and ST_Perimeter */
     unsigned char *p_blob;
@@ -15586,11 +17097,10 @@ length_common (sqlite3_context * context, int argc, sqlite3_value ** argv,
 					l = gaiaGeodesicTotalLength (a,
 								     b,
 								     rf,
-								     line->DimensionModel,
 								     line->
-								     Coords,
-								     line->
-								     Points);
+								     DimensionModel,
+								     line->Coords,
+								     line->Points);
 					if (l < 0.0)
 					  {
 					      length = -1.0;
@@ -15612,12 +17122,9 @@ length_common (sqlite3_context * context, int argc, sqlite3_value ** argv,
 					      ring = polyg->Exterior;
 					      l = gaiaGeodesicTotalLength (a, b,
 									   rf,
-									   ring->
-									   DimensionModel,
-									   ring->
-									   Coords,
-									   ring->
-									   Points);
+									   ring->DimensionModel,
+									   ring->Coords,
+									   ring->Points);
 					      if (l < 0.0)
 						{
 						    length = -1.0;
@@ -15712,7 +17219,12 @@ length_common (sqlite3_context * context, int argc, sqlite3_value ** argv,
 		    sqlite3_result_null (context);
 		goto stop;
 	    }
-	  ret = gaiaGeomCollLengthOrPerimeter (geo, is_perimeter, &length);
+	  else if (p_cache != NULL)
+	      ret =
+		  gaiaGeomCollLengthOrPerimeter_r (p_cache, geo, is_perimeter,
+						   &length);
+	  else
+	      ret = gaiaGeomCollLengthOrPerimeter (geo, is_perimeter, &length);
 	  if (!ret)
 	      sqlite3_result_null (context);
 	  else
@@ -15736,7 +17248,8 @@ fnct_Length (sqlite3_context * context, int argc, sqlite3_value ** argv)
 / any Polygon (only Linestrings will be considered)
 /
 */
-    length_common (context, argc, argv, 0);
+    void *data = sqlite3_user_data (context);
+    length_common (data, context, argc, argv, 0);
 }
 
 static void
@@ -15753,7 +17266,8 @@ fnct_Perimeter (sqlite3_context * context, int argc, sqlite3_value ** argv)
 / any Linestring (only Polygons will be considered)
 /
 */
-    length_common (context, argc, argv, 1);
+    void *data = sqlite3_user_data (context);
+    length_common (data, context, argc, argv, 1);
 }
 
 static void
@@ -15814,7 +17328,13 @@ fnct_Area (sqlite3_context * context, int argc, sqlite3_value ** argv)
 #endif /* end LWGEOM conditional */
 	    }
 	  else
-	      ret = gaiaGeomCollArea (geo, &area);
+	    {
+		void *data = sqlite3_user_data (context);
+		if (data != NULL)
+		    ret = gaiaGeomCollArea_r (data, geo, &area);
+		else
+		    ret = gaiaGeomCollArea (geo, &area);
+	    }
 	  if (!ret)
 	      sqlite3_result_null (context);
 	  else
@@ -15858,7 +17378,11 @@ fnct_Centroid (sqlite3_context * context, int argc, sqlite3_value ** argv)
 	      sqlite3_result_null (context);
 	  else
 	    {
-		ret = gaiaGeomCollCentroid (geo, &x, &y);
+		void *data = sqlite3_user_data (context);
+		if (data != NULL)
+		    ret = gaiaGeomCollCentroid_r (data, geo, &x, &y);
+		else
+		    ret = gaiaGeomCollCentroid (geo, &x, &y);
 		if (!ret)
 		    sqlite3_result_null (context);
 		else
@@ -15905,7 +17429,13 @@ fnct_PointOnSurface (sqlite3_context * context, int argc, sqlite3_value ** argv)
 	sqlite3_result_null (context);
     else
       {
-	  if (!gaiaGetPointOnSurface (geo, &x, &y))
+	  void *data = sqlite3_user_data (context);
+	  int posret;
+	  if (data != NULL)
+	      posret = gaiaGetPointOnSurface_r (data, geo, &x, &y);
+	  else
+	      posret = gaiaGetPointOnSurface (geo, &x, &y);
+	  if (!posret)
 	      sqlite3_result_null (context);
 	  else
 	    {
@@ -15960,7 +17490,11 @@ fnct_Simplify (sqlite3_context * context, int argc, sqlite3_value ** argv)
 	sqlite3_result_null (context);
     else
       {
-	  result = gaiaGeomCollSimplify (geo, tolerance);
+	  void *data = sqlite3_user_data (context);
+	  if (data != NULL)
+	      result = gaiaGeomCollSimplify_r (data, geo, tolerance);
+	  else
+	      result = gaiaGeomCollSimplify (geo, tolerance);
 	  if (!result)
 	      sqlite3_result_null (context);
 	  else
@@ -16017,7 +17551,12 @@ fnct_SimplifyPreserveTopology (sqlite3_context * context, int argc,
 	sqlite3_result_null (context);
     else
       {
-	  result = gaiaGeomCollSimplifyPreserveTopology (geo, tolerance);
+	  void *data = sqlite3_user_data (context);
+	  if (data != NULL)
+	      result =
+		  gaiaGeomCollSimplifyPreserveTopology_r (data, geo, tolerance);
+	  else
+	      result = gaiaGeomCollSimplifyPreserveTopology (geo, tolerance);
 	  if (!result)
 	      sqlite3_result_null (context);
 	  else
@@ -16061,7 +17600,11 @@ fnct_ConvexHull (sqlite3_context * context, int argc, sqlite3_value ** argv)
 	sqlite3_result_null (context);
     else
       {
-	  result = gaiaConvexHull (geo);
+	  void *data = sqlite3_user_data (context);
+	  if (data != NULL)
+	      result = gaiaConvexHull_r (data, geo);
+	  else
+	      result = gaiaConvexHull (geo);
 	  if (!result)
 	      sqlite3_result_null (context);
 	  else
@@ -16114,7 +17657,11 @@ fnct_Buffer (sqlite3_context * context, int argc, sqlite3_value ** argv)
 	sqlite3_result_null (context);
     else
       {
-	  result = gaiaGeomCollBuffer (geo, radius, 30);
+	  void *data = sqlite3_user_data (context);
+	  if (data != NULL)
+	      result = gaiaGeomCollBuffer_r (data, geo, radius, 30);
+	  else
+	      result = gaiaGeomCollBuffer (geo, radius, 30);
 	  if (!result)
 	      sqlite3_result_null (context);
 	  else
@@ -16166,7 +17713,11 @@ fnct_Intersection (sqlite3_context * context, int argc, sqlite3_value ** argv)
 	sqlite3_result_null (context);
     else
       {
-	  result = gaiaGeometryIntersection (geo1, geo2);
+	  void *data = sqlite3_user_data (context);
+	  if (data != NULL)
+	      result = gaiaGeometryIntersection_r (data, geo1, geo2);
+	  else
+	      result = gaiaGeometryIntersection (geo1, geo2);
 	  if (!result)
 	      sqlite3_result_null (context);
 	  else if (gaiaIsEmpty (result))
@@ -16305,6 +17856,7 @@ fnct_Union_final (sqlite3_context * context)
     struct gaia_geom_chain_item *item;
     gaiaGeomCollPtr aggregate;
     gaiaGeomCollPtr result;
+    void *data = sqlite3_user_data (context);
     struct gaia_geom_chain **p = sqlite3_aggregate_context (context, 0);
     if (!p)
       {
@@ -16313,8 +17865,7 @@ fnct_Union_final (sqlite3_context * context)
       }
     chain = *p;
 
-#ifdef GEOS_ADVANCED
-/* we can apply UnaryUnion */
+/* applying UnaryUnion */
     item = chain->first;
     while (item)
       {
@@ -16327,67 +17878,21 @@ fnct_Union_final (sqlite3_context * context)
 		item = item->next;
 		continue;
 	    }
-	  tmp = gaiaMergeGeometries (aggregate, geom);
+	  if (data != NULL)
+	      tmp = gaiaMergeGeometries_r (data, aggregate, geom);
+	  else
+	      tmp = gaiaMergeGeometries (aggregate, geom);
 	  gaiaFreeGeomColl (aggregate);
 	  gaiaFreeGeomColl (geom);
 	  item->geom = NULL;
 	  aggregate = tmp;
 	  item = item->next;
       }
-    result = gaiaUnaryUnion (aggregate);
-    gaiaFreeGeomColl (aggregate);
-/* end UnaryUnion */
-#else
-/* old GEOS; no UnaryUnion available */
-    if (chain->all_polygs)
-      {
-	  /* all Polygons: we can apply UnionCascaded */
-	  item = chain->first;
-	  while (item)
-	    {
-		gaiaGeomCollPtr geom = item->geom;
-		if (item == chain->first)
-		  {
-		      /* initializing the aggregate geometry */
-		      aggregate = geom;
-		      item->geom = NULL;
-		      item = item->next;
-		      continue;
-		  }
-		tmp = gaiaMergeGeometries (aggregate, geom);
-		gaiaFreeGeomColl (aggregate);
-		gaiaFreeGeomColl (geom);
-		item->geom = NULL;
-		aggregate = tmp;
-		item = item->next;
-	    }
-	  result = gaiaUnionCascaded (aggregate);
-	  gaiaFreeGeomColl (aggregate);
-      }
+    if (data != NULL)
+	result = gaiaUnaryUnion_r (data, aggregate);
     else
-      {
-	  /* mixed types: the hardest/slowest way */
-	  item = chain->first;
-	  while (item)
-	    {
-		gaiaGeomCollPtr geom = item->geom;
-		if (item == chain->first)
-		  {
-		      result = geom;
-		      item->geom = NULL;
-		      item = item->next;
-		      continue;
-		  }
-		tmp = gaiaGeometryUnion (result, geom);
-		gaiaFreeGeomColl (result);
-		gaiaFreeGeomColl (geom);
-		item->geom = NULL;
-		result = tmp;
-		item = item->next;
-	    }
-      }
-/* end old GEOS: no UnaryUnion available */
-#endif
+	result = gaiaUnaryUnion (aggregate);
+    gaiaFreeGeomColl (aggregate);
     gaia_free_geom_chain (chain);
 
     if (result == NULL)
@@ -16440,7 +17945,11 @@ fnct_Union (sqlite3_context * context, int argc, sqlite3_value ** argv)
 	sqlite3_result_null (context);
     else
       {
-	  result = gaiaGeometryUnion (geo1, geo2);
+	  void *data = sqlite3_user_data (context);
+	  if (data != NULL)
+	      result = gaiaGeometryUnion_r (data, geo1, geo2);
+	  else
+	      result = gaiaGeometryUnion (geo1, geo2);
 	  if (!result)
 	      sqlite3_result_null (context);
 	  else if (gaiaIsEmpty (result))
@@ -16497,7 +18006,11 @@ fnct_Difference (sqlite3_context * context, int argc, sqlite3_value ** argv)
 	sqlite3_result_null (context);
     else
       {
-	  result = gaiaGeometryDifference (geo1, geo2);
+	  void *data = sqlite3_user_data (context);
+	  if (data != NULL)
+	      result = gaiaGeometryDifference_r (data, geo1, geo2);
+	  else
+	      result = gaiaGeometryDifference (geo1, geo2);
 	  if (!result)
 	      sqlite3_result_null (context);
 	  else if (gaiaIsEmpty (result))
@@ -16554,7 +18067,11 @@ fnct_SymDifference (sqlite3_context * context, int argc, sqlite3_value ** argv)
 	sqlite3_result_null (context);
     else
       {
-	  result = gaiaGeometrySymDifference (geo1, geo2);
+	  void *data = sqlite3_user_data (context);
+	  if (data != NULL)
+	      result = gaiaGeometrySymDifference_r (data, geo1, geo2);
+	  else
+	      result = gaiaGeometrySymDifference (geo1, geo2);
 	  if (!result)
 	      sqlite3_result_null (context);
 	  else if (gaiaIsEmpty (result))
@@ -16613,7 +18130,11 @@ fnct_Equals (sqlite3_context * context, int argc, sqlite3_value ** argv)
 	sqlite3_result_int (context, -1);
     else
       {
-	  ret = gaiaGeomCollEquals (geo1, geo2);
+	  void *data = sqlite3_user_data (context);
+	  if (data != NULL)
+	      ret = gaiaGeomCollEquals_r (data, geo1, geo2);
+	  else
+	      ret = gaiaGeomCollEquals (geo1, geo2);
 	  sqlite3_result_int (context, ret);
       }
     gaiaFreeGeomColl (geo1);
@@ -16659,13 +18180,13 @@ fnct_Intersects (sqlite3_context * context, int argc, sqlite3_value ** argv)
 	sqlite3_result_int (context, -1);
     else
       {
-#ifdef GEOS_ADVANCED		/* only if GEOS advanced features are enable */
-	  ret = gaiaGeomCollPreparedIntersects (sqlite3_user_data (context),
-						geo1, blob1, bytes1, geo2,
-						blob2, bytes2);
-#else
-	  ret = gaiaGeomCollIntersects (geo1, geo2);
-#endif /* end GEOS_ADVANCED */
+	  void *data = sqlite3_user_data (context);
+	  if (data != NULL)
+	      ret = gaiaGeomCollPreparedIntersects (data,
+						    geo1, blob1, bytes1, geo2,
+						    blob2, bytes2);
+	  else
+	      ret = gaiaGeomCollIntersects (geo1, geo2);
 	  sqlite3_result_int (context, ret);
       }
     gaiaFreeGeomColl (geo1);
@@ -16711,13 +18232,13 @@ fnct_Disjoint (sqlite3_context * context, int argc, sqlite3_value ** argv)
 	sqlite3_result_int (context, -1);
     else
       {
-#ifdef GEOS_ADVANCED		/* only if GEOS advanced features are enable */
-	  ret = gaiaGeomCollPreparedDisjoint (sqlite3_user_data (context),
-					      geo1, blob1, bytes1, geo2,
-					      blob2, bytes2);
-#else
-	  ret = gaiaGeomCollDisjoint (geo1, geo2);
-#endif /* end GEOS_ADVANCED */
+	  void *data = sqlite3_user_data (context);
+	  if (data != NULL)
+	      ret = gaiaGeomCollPreparedDisjoint (data,
+						  geo1, blob1, bytes1, geo2,
+						  blob2, bytes2);
+	  else
+	      ret = gaiaGeomCollDisjoint (geo1, geo2);
 	  sqlite3_result_int (context, ret);
       }
     gaiaFreeGeomColl (geo1);
@@ -16763,13 +18284,13 @@ fnct_Overlaps (sqlite3_context * context, int argc, sqlite3_value ** argv)
 	sqlite3_result_int (context, -1);
     else
       {
-#ifdef GEOS_ADVANCED		/* only if GEOS advanced features are enable */
-	  ret = gaiaGeomCollPreparedOverlaps (sqlite3_user_data (context),
-					      geo1, blob1, bytes1, geo2,
-					      blob2, bytes2);
-#else
-	  ret = gaiaGeomCollOverlaps (geo1, geo2);
-#endif /* end GEOS_ADVANCED */
+	  void *data = sqlite3_user_data (context);
+	  if (data != NULL)
+	      ret = gaiaGeomCollPreparedOverlaps (data,
+						  geo1, blob1, bytes1, geo2,
+						  blob2, bytes2);
+	  else
+	      ret = gaiaGeomCollOverlaps (geo1, geo2);
 	  sqlite3_result_int (context, ret);
       }
     gaiaFreeGeomColl (geo1);
@@ -16815,13 +18336,13 @@ fnct_Crosses (sqlite3_context * context, int argc, sqlite3_value ** argv)
 	sqlite3_result_int (context, -1);
     else
       {
-#ifdef GEOS_ADVANCED		/* only if GEOS advanced features are enable */
-	  ret = gaiaGeomCollPreparedCrosses (sqlite3_user_data (context),
-					     geo1, blob1, bytes1, geo2, blob2,
-					     bytes2);
-#else
-	  ret = gaiaGeomCollCrosses (geo1, geo2);
-#endif /* end GEOS_ADVANCED */
+	  void *data = sqlite3_user_data (context);
+	  if (data != NULL)
+	      ret = gaiaGeomCollPreparedCrosses (data,
+						 geo1, blob1, bytes1, geo2,
+						 blob2, bytes2);
+	  else
+	      ret = gaiaGeomCollCrosses (geo1, geo2);
 	  sqlite3_result_int (context, ret);
       }
     gaiaFreeGeomColl (geo1);
@@ -16867,13 +18388,13 @@ fnct_Touches (sqlite3_context * context, int argc, sqlite3_value ** argv)
 	sqlite3_result_int (context, -1);
     else
       {
-#ifdef GEOS_ADVANCED		/* only if GEOS advanced features are enable */
-	  ret = gaiaGeomCollPreparedTouches (sqlite3_user_data (context),
-					     geo1, blob1, bytes1, geo2, blob2,
-					     bytes2);
-#else
-	  ret = gaiaGeomCollTouches (geo1, geo2);
-#endif /* end GEOS_ADVANCED */
+	  void *data = sqlite3_user_data (context);
+	  if (data != NULL)
+	      ret = gaiaGeomCollPreparedTouches (data,
+						 geo1, blob1, bytes1, geo2,
+						 blob2, bytes2);
+	  else
+	      ret = gaiaGeomCollTouches (geo1, geo2);
 	  sqlite3_result_int (context, ret);
       }
     gaiaFreeGeomColl (geo1);
@@ -16919,12 +18440,13 @@ fnct_Within (sqlite3_context * context, int argc, sqlite3_value ** argv)
 	sqlite3_result_int (context, -1);
     else
       {
-#ifdef GEOS_ADVANCED		/* only if GEOS advanced features are enable */
-	  ret = gaiaGeomCollPreparedWithin (sqlite3_user_data (context), geo1,
-					    blob1, bytes1, geo2, blob2, bytes2);
-#else
-	  ret = gaiaGeomCollWithin (geo1, geo2);
-#endif /* end GEOS_ADVANCED */
+	  void *data = sqlite3_user_data (context);
+	  if (data != NULL)
+	      ret = gaiaGeomCollPreparedWithin (data, geo1,
+						blob1, bytes1, geo2, blob2,
+						bytes2);
+	  else
+	      ret = gaiaGeomCollWithin (geo1, geo2);
 	  sqlite3_result_int (context, ret);
       }
     gaiaFreeGeomColl (geo1);
@@ -16970,13 +18492,13 @@ fnct_Contains (sqlite3_context * context, int argc, sqlite3_value ** argv)
 	sqlite3_result_int (context, -1);
     else
       {
-#ifdef GEOS_ADVANCED		/* only if GEOS advanced features are enable */
-	  ret = gaiaGeomCollPreparedContains (sqlite3_user_data (context),
-					      geo1, blob1, bytes1, geo2,
-					      blob2, bytes2);
-#else
-	  ret = gaiaGeomCollContains (geo1, geo2);
-#endif /* end GEOS_ADVANCED */
+	  void *data = sqlite3_user_data (context);
+	  if (data != NULL)
+	      ret = gaiaGeomCollPreparedContains (data,
+						  geo1, blob1, bytes1, geo2,
+						  blob2, bytes2);
+	  else
+	      ret = gaiaGeomCollContains (geo1, geo2);
 	  sqlite3_result_int (context, ret);
       }
     gaiaFreeGeomColl (geo1);
@@ -17027,7 +18549,11 @@ fnct_Relate (sqlite3_context * context, int argc, sqlite3_value ** argv)
 	sqlite3_result_int (context, -1);
     else
       {
-	  ret = gaiaGeomCollRelate (geo1, geo2, (char *) pattern);
+	  void *data = sqlite3_user_data (context);
+	  if (data != NULL)
+	      ret = gaiaGeomCollRelate_r (data, geo1, geo2, (char *) pattern);
+	  else
+	      ret = gaiaGeomCollRelate (geo1, geo2, (char *) pattern);
 	  sqlite3_result_int (context, ret);
       }
     gaiaFreeGeomColl (geo1);
@@ -17054,6 +18580,7 @@ fnct_Distance (sqlite3_context * context, int argc, sqlite3_value ** argv)
     double rf;
     int ret;
     sqlite3 *sqlite = sqlite3_context_db_handle (context);
+    void *data = sqlite3_user_data (context);
     GAIA_UNUSED ();		/* LCOV_EXCL_LINE */
     if (sqlite3_value_type (argv[0]) != SQLITE_BLOB)
       {
@@ -17091,9 +18618,11 @@ fnct_Distance (sqlite3_context * context, int argc, sqlite3_value ** argv)
 		/* attempting to identify the corresponding ellipsoid */
 		if (getEllipsoidParams (sqlite, geo1->Srid, &a, &b, &rf))
 		  {
-#ifdef GEOS_ADVANCED
-		      /* GEOS advanced features support is strictly required */
-		      gaiaGeomCollPtr shortest = gaiaShortestLine (geo1, geo2);
+		      gaiaGeomCollPtr shortest;
+		      if (data != NULL)
+			  shortest = gaiaShortestLine_r (data, geo1, geo2);
+		      else
+			  shortest = gaiaShortestLine (geo1, geo2);
 		      if (shortest == NULL)
 			  sqlite3_result_null (context);
 		      else if (shortest->FirstLinestring == NULL)
@@ -17181,20 +18710,22 @@ fnct_Distance (sqlite3_context * context, int argc, sqlite3_value ** argv)
 				sqlite3_result_null (context);
 			    gaiaFreeGeomColl (shortest);
 			}
-#else
-		      /* GEOS advanced features support unavailable */
-		      sqlite3_result_null (context);
-#endif
 		  }
 		else
 		    sqlite3_result_null (context);
 		goto stop;
 	    }
-	  ret = gaiaGeomCollDistance (geo1, geo2, &dist);
-	  if (!ret)
-	      sqlite3_result_null (context);
 	  else
-	      sqlite3_result_double (context, dist);
+	    {
+		if (data != NULL)
+		    ret = gaiaGeomCollDistance_r (data, geo1, geo2, &dist);
+		else
+		    ret = gaiaGeomCollDistance (geo1, geo2, &dist);
+		if (!ret)
+		    sqlite3_result_null (context);
+		else
+		    sqlite3_result_double (context, dist);
+	    }
       }
   stop:
     gaiaFreeGeomColl (geo1);
@@ -17245,6 +18776,7 @@ fnct_PtDistWithin (sqlite3_context * context, int argc, sqlite3_value ** argv)
     double b;
     double rf;
     int ret;
+    void *data = sqlite3_user_data (context);
     GAIA_UNUSED ();		/* LCOV_EXCL_LINE */
     if (sqlite3_value_type (argv[0]) != SQLITE_BLOB)
       {
@@ -17364,7 +18896,10 @@ fnct_PtDistWithin (sqlite3_context * context, int argc, sqlite3_value ** argv)
 		  }
 	    }
 /* defaulting to flat distance */
-	  ret = gaiaGeomCollDistance (geo1, geo2, &dist);
+	  if (data != NULL)
+	      ret = gaiaGeomCollDistance_r (data, geo1, geo2, &dist);
+	  else
+	      ret = gaiaGeomCollDistance (geo1, geo2, &dist);
 	  if (!ret)
 	      sqlite3_result_null (context);
 	  if (dist <= ref_dist)
@@ -17396,7 +18931,6 @@ geos_error (const char *fmt, ...)
 	gaiaSetGeosErrorMsg (NULL);
 }
 
-
 SPATIALITE_PRIVATE void
 geos_warning (const char *fmt, ...)
 {
@@ -17426,9 +18960,13 @@ fnct_aux_polygonize (sqlite3_context * context, gaiaGeomCollPtr geom_org,
     unsigned char *p_result = NULL;
     gaiaPolygonPtr pg;
     int pgs = 0;
+    void *data = sqlite3_user_data (context);
     if (!geom_org)
 	goto invalid;
-    geom_new = gaiaPolygonize (geom_org, force_multipolygon);
+    if (data != NULL)
+	geom_new = gaiaPolygonize_r (data, geom_org, force_multipolygon);
+    else
+	geom_new = gaiaPolygonize (geom_org, force_multipolygon);
     if (!geom_new)
 	goto invalid;
     gaiaFreeGeomColl (geom_org);
@@ -17790,8 +19328,6 @@ fnct_BdMPolyFromWKB2 (sqlite3_context * context, int argc,
     fnct_aux_polygonize (context, geo, 1, 1);
     return;
 }
-
-#ifdef GEOS_ADVANCED		/* GEOS advanced features */
 
 static int
 check_topo_table (sqlite3 * sqlite, const char *table, int is_view)
@@ -19096,7 +20632,11 @@ fnct_OffsetCurve (sqlite3_context * context, int argc, sqlite3_value ** argv)
 	sqlite3_result_null (context);
     else
       {
-	  result = gaiaOffsetCurve (geo, radius, 16, left_right);
+	  void *data = sqlite3_user_data (context);
+	  if (data != NULL)
+	      result = gaiaOffsetCurve_r (data, geo, radius, 16, left_right);
+	  else
+	      result = gaiaOffsetCurve (geo, radius, 16, left_right);
 	  if (!result)
 	      sqlite3_result_null (context);
 	  else
@@ -19163,7 +20703,12 @@ fnct_SingleSidedBuffer (sqlite3_context * context, int argc,
 	sqlite3_result_null (context);
     else
       {
-	  result = gaiaSingleSidedBuffer (geo, radius, 16, left_right);
+	  void *data = sqlite3_user_data (context);
+	  if (data != NULL)
+	      result =
+		  gaiaSingleSidedBuffer_r (data, geo, radius, 16, left_right);
+	  else
+	      result = gaiaSingleSidedBuffer (geo, radius, 16, left_right);
 	  if (!result)
 	      sqlite3_result_null (context);
 	  else
@@ -19216,7 +20761,11 @@ fnct_HausdorffDistance (sqlite3_context * context, int argc,
 	sqlite3_result_null (context);
     else
       {
-	  ret = gaiaHausdorffDistance (geo1, geo2, &dist);
+	  void *data = sqlite3_user_data (context);
+	  if (data != NULL)
+	      ret = gaiaHausdorffDistance_r (data, geo1, geo2, &dist);
+	  else
+	      ret = gaiaHausdorffDistance (geo1, geo2, &dist);
 	  if (!ret)
 	      sqlite3_result_null (context);
 	  sqlite3_result_double (context, dist);
@@ -19261,7 +20810,11 @@ fnct_SharedPaths (sqlite3_context * context, int argc, sqlite3_value ** argv)
 	sqlite3_result_null (context);
     else
       {
-	  result = gaiaSharedPaths (geo1, geo2);
+	  void *data = sqlite3_user_data (context);
+	  if (data != NULL)
+	      result = gaiaSharedPaths_r (data, geo1, geo2);
+	  else
+	      result = gaiaSharedPaths (geo1, geo2);
 	  if (!result)
 	      sqlite3_result_null (context);
 	  else
@@ -19318,8 +20871,13 @@ fnct_Covers (sqlite3_context * context, int argc, sqlite3_value ** argv)
 	sqlite3_result_int (context, -1);
     else
       {
-	  ret = gaiaGeomCollPreparedCovers (sqlite3_user_data (context), geo1,
-					    blob1, bytes1, geo2, blob2, bytes2);
+	  void *data = sqlite3_user_data (context);
+	  if (data != NULL)
+	      ret = gaiaGeomCollPreparedCovers (data, geo1,
+						blob1, bytes1, geo2, blob2,
+						bytes2);
+	  else
+	      ret = gaiaGeomCollCovers (geo1, geo2);
 	  sqlite3_result_int (context, ret);
       }
     gaiaFreeGeomColl (geo1);
@@ -19365,9 +20923,13 @@ fnct_CoveredBy (sqlite3_context * context, int argc, sqlite3_value ** argv)
 	sqlite3_result_int (context, -1);
     else
       {
-	  ret = gaiaGeomCollPreparedCoveredBy (sqlite3_user_data (context),
-					       geo1, blob1, bytes1, geo2,
-					       blob2, bytes2);
+	  void *data = sqlite3_user_data (context);
+	  if (data != NULL)
+	      ret = gaiaGeomCollPreparedCoveredBy (data,
+						   geo1, blob1, bytes1, geo2,
+						   blob2, bytes2);
+	  else
+	      ret = gaiaGeomCollCoveredBy (geo1, geo2);
 	  sqlite3_result_int (context, ret);
       }
     gaiaFreeGeomColl (geo1);
@@ -19416,7 +20978,11 @@ fnct_LineInterpolatePoint (sqlite3_context * context, int argc,
 	sqlite3_result_null (context);
     else
       {
-	  result = gaiaLineInterpolatePoint (geo, fraction);
+	  void *data = sqlite3_user_data (context);
+	  if (data != NULL)
+	      result = gaiaLineInterpolatePoint_r (data, geo, fraction);
+	  else
+	      result = gaiaLineInterpolatePoint (geo, fraction);
 	  if (!result)
 	      sqlite3_result_null (context);
 	  else
@@ -19475,7 +21041,12 @@ fnct_LineInterpolateEquidistantPoints (sqlite3_context * context, int argc,
 	sqlite3_result_null (context);
     else
       {
-	  result = gaiaLineInterpolateEquidistantPoints (geo, distance);
+	  void *data = sqlite3_user_data (context);
+	  if (data != NULL)
+	      result =
+		  gaiaLineInterpolateEquidistantPoints_r (data, geo, distance);
+	  else
+	      result = gaiaLineInterpolateEquidistantPoints (geo, distance);
 	  if (!result)
 	      sqlite3_result_null (context);
 	  else
@@ -19532,7 +21103,11 @@ fnct_LineLocatePoint (sqlite3_context * context, int argc,
 	sqlite3_result_null (context);
     else
       {
-	  fraction = gaiaLineLocatePoint (geo1, geo2);
+	  void *data = sqlite3_user_data (context);
+	  if (data != NULL)
+	      fraction = gaiaLineLocatePoint_r (data, geo1, geo2);
+	  else
+	      fraction = gaiaLineLocatePoint (geo1, geo2);
 	  if (fraction >= 0.0 && fraction <= 1.0)
 	      sqlite3_result_double (context, fraction);
 	  else
@@ -19596,7 +21171,11 @@ fnct_LineSubstring (sqlite3_context * context, int argc, sqlite3_value ** argv)
 	sqlite3_result_null (context);
     else
       {
-	  result = gaiaLineSubstring (geo, fraction1, fraction2);
+	  void *data = sqlite3_user_data (context);
+	  if (data != NULL)
+	      result = gaiaLineSubstring_r (data, geo, fraction1, fraction2);
+	  else
+	      result = gaiaLineSubstring (geo, fraction1, fraction2);
 	  if (!result)
 	      sqlite3_result_null (context);
 	  else
@@ -19648,7 +21227,11 @@ fnct_ClosestPoint (sqlite3_context * context, int argc, sqlite3_value ** argv)
 	sqlite3_result_null (context);
     else
       {
-	  result = gaiaShortestLine (geo1, geo2);
+	  void *data = sqlite3_user_data (context);
+	  if (data != NULL)
+	      result = gaiaShortestLine_r (data, geo1, geo2);
+	  else
+	      result = gaiaShortestLine (geo1, geo2);
 	  if (result == NULL)
 	      sqlite3_result_null (context);
 	  else if (result->FirstLinestring == NULL)
@@ -19741,7 +21324,11 @@ fnct_ShortestLine (sqlite3_context * context, int argc, sqlite3_value ** argv)
 	sqlite3_result_null (context);
     else
       {
-	  result = gaiaShortestLine (geo1, geo2);
+	  void *data = sqlite3_user_data (context);
+	  if (data != NULL)
+	      result = gaiaShortestLine_r (data, geo1, geo2);
+	  else
+	      result = gaiaShortestLine (geo1, geo2);
 	  sqlite3_result_null (context);
 	  if (!result)
 	      sqlite3_result_null (context);
@@ -19810,7 +21397,11 @@ fnct_Snap (sqlite3_context * context, int argc, sqlite3_value ** argv)
 	sqlite3_result_null (context);
     else
       {
-	  result = gaiaSnap (geo1, geo2, tolerance);
+	  void *data = sqlite3_user_data (context);
+	  if (data != NULL)
+	      result = gaiaSnap_r (data, geo1, geo2, tolerance);
+	  else
+	      result = gaiaSnap (geo1, geo2, tolerance);
 	  if (result == NULL)
 	      sqlite3_result_null (context);
 	  else
@@ -19856,7 +21447,11 @@ fnct_LineMerge (sqlite3_context * context, int argc, sqlite3_value ** argv)
 	sqlite3_result_null (context);
     else
       {
-	  result = gaiaLineMerge (geo);
+	  void *data = sqlite3_user_data (context);
+	  if (data != NULL)
+	      result = gaiaLineMerge_r (data, geo);
+	  else
+	      result = gaiaLineMerge (geo);
 	  if (result == NULL)
 	      sqlite3_result_null (context);
 	  else
@@ -19899,7 +21494,11 @@ fnct_UnaryUnion (sqlite3_context * context, int argc, sqlite3_value ** argv)
 	sqlite3_result_null (context);
     else
       {
-	  result = gaiaUnaryUnion (geo);
+	  void *data = sqlite3_user_data (context);
+	  if (data != NULL)
+	      result = gaiaUnaryUnion_r (data, geo);
+	  else
+	      result = gaiaUnaryUnion (geo);
 	  if (result == NULL)
 	      sqlite3_result_null (context);
 	  else
@@ -20016,13 +21615,20 @@ fnct_SquareGrid (sqlite3_context * context, int argc, sqlite3_value ** argv)
 	sqlite3_result_null (context);
     else
       {
+	  void *data = sqlite3_user_data (context);
 	  if (geo->FirstPoint != NULL)
 	      goto no_polygon;
 	  if (geo->FirstLinestring != NULL)
 	      goto no_polygon;
 	  if (geo->FirstPolygon == NULL)
 	      goto no_polygon;
-	  result = gaiaSquareGrid (geo, origin_x, origin_y, size, edges_only);
+	  if (data != NULL)
+	      result =
+		  gaiaSquareGrid_r (data, geo, origin_x, origin_y, size,
+				    edges_only);
+	  else
+	      result =
+		  gaiaSquareGrid (geo, origin_x, origin_y, size, edges_only);
 	  if (result == NULL)
 	      sqlite3_result_null (context);
 	  else
@@ -20150,14 +21756,21 @@ fnct_TriangularGrid (sqlite3_context * context, int argc, sqlite3_value ** argv)
 	sqlite3_result_null (context);
     else
       {
+	  void *data = sqlite3_user_data (context);
 	  if (geo->FirstPoint != NULL)
 	      goto no_polygon;
 	  if (geo->FirstLinestring != NULL)
 	      goto no_polygon;
 	  if (geo->FirstPolygon == NULL)
 	      goto no_polygon;
-	  result =
-	      gaiaTriangularGrid (geo, origin_x, origin_y, size, edges_only);
+	  if (data != NULL)
+	      result =
+		  gaiaTriangularGrid_r (data, geo, origin_x, origin_y, size,
+					edges_only);
+	  else
+	      result =
+		  gaiaTriangularGrid (geo, origin_x, origin_y, size,
+				      edges_only);
 	  if (result == NULL)
 	      sqlite3_result_null (context);
 	  else
@@ -20285,14 +21898,20 @@ fnct_HexagonalGrid (sqlite3_context * context, int argc, sqlite3_value ** argv)
 	sqlite3_result_null (context);
     else
       {
+	  void *data = sqlite3_user_data (context);
 	  if (geo->FirstPoint != NULL)
 	      goto no_polygon;
 	  if (geo->FirstLinestring != NULL)
 	      goto no_polygon;
 	  if (geo->FirstPolygon == NULL)
 	      goto no_polygon;
-	  result =
-	      gaiaHexagonalGrid (geo, origin_x, origin_y, size, edges_only);
+	  if (data != NULL)
+	      result =
+		  gaiaHexagonalGrid_r (data, geo, origin_x, origin_y, size,
+				       edges_only);
+	  else
+	      result =
+		  gaiaHexagonalGrid (geo, origin_x, origin_y, size, edges_only);
 	  if (result == NULL)
 	      sqlite3_result_null (context);
 	  else
@@ -20673,9 +22292,7 @@ fnct_RingsCutAtNodes (sqlite3_context * context, int argc,
     gaiaFreeGeomColl (geom2);
 }
 
-#endif /* end GEOS advanced features */
-
-#ifdef GEOS_TRUNK		/* GEOS experimental features */
+#ifdef GEOS_ADVANCED		/* GEOS advanced features - 3.4.0 */
 
 static void
 fnct_DelaunayTriangulation (sqlite3_context * context, int argc,
@@ -20735,7 +22352,13 @@ fnct_DelaunayTriangulation (sqlite3_context * context, int argc,
 	sqlite3_result_null (context);
     else
       {
-	  result = gaiaDelaunayTriangulation (geo, tolerance, only_edges);
+	  void *data = sqlite3_user_data (context);
+	  if (data != NULL)
+	      result =
+		  gaiaDelaunayTriangulation_r (data, geo, tolerance,
+					       only_edges);
+	  else
+	      result = gaiaDelaunayTriangulation (geo, tolerance, only_edges);
 	  if (result == NULL)
 	      sqlite3_result_null (context);
 	  else
@@ -20828,8 +22451,15 @@ fnct_VoronojDiagram (sqlite3_context * context, int argc, sqlite3_value ** argv)
 	sqlite3_result_null (context);
     else
       {
-	  result =
-	      gaiaVoronojDiagram (geo, extra_frame_size, tolerance, only_edges);
+	  void *data = sqlite3_user_data (context);
+	  if (data != NULL)
+	      result =
+		  gaiaVoronojDiagram_r (data, geo, extra_frame_size, tolerance,
+					only_edges);
+	  else
+	      result =
+		  gaiaVoronojDiagram (geo, extra_frame_size, tolerance,
+				      only_edges);
 	  if (result == NULL)
 	      sqlite3_result_null (context);
 	  else
@@ -20921,7 +22551,12 @@ fnct_ConcaveHull (sqlite3_context * context, int argc, sqlite3_value ** argv)
 	sqlite3_result_null (context);
     else
       {
-	  result = gaiaConcaveHull (geo, factor, tolerance, allow_holes);
+	  void *data = sqlite3_user_data (context);
+	  if (data != NULL)
+	      result =
+		  gaiaConcaveHull_r (data, geo, factor, tolerance, allow_holes);
+	  else
+	      result = gaiaConcaveHull (geo, factor, tolerance, allow_holes);
 	  if (result == NULL)
 	      sqlite3_result_null (context);
 	  else
@@ -20938,9 +22573,47 @@ fnct_ConcaveHull (sqlite3_context * context, int argc, sqlite3_value ** argv)
     gaiaFreeGeomColl (geo);
 }
 
-#endif /* end GEOS experimental features */
+#endif /* end GEOS advanced features */
 
 #ifdef ENABLE_LWGEOM		/* enabling LWGEOM support */
+
+static void
+fnct_LWGEOM_GetLastWarningMsg (sqlite3_context * context, int argc,
+			       sqlite3_value ** argv)
+{
+/* SQL function:
+/ LWGEOM_GetLastWarningMsg()
+/
+/ return the most recent LWGEOM warning message (if any)
+/ return NULL on any other case
+*/
+    const char *msg;
+    GAIA_UNUSED ();		/* LCOV_EXCL_LINE */
+    msg = gaiaGetLwGeomWarningMsg ();
+    if (msg == NULL)
+	sqlite3_result_null (context);
+    else
+	sqlite3_result_text (context, msg, strlen (msg), SQLITE_STATIC);
+}
+
+static void
+fnct_LWGEOM_GetLastErrorMsg (sqlite3_context * context, int argc,
+			     sqlite3_value ** argv)
+{
+/* SQL function:
+/ LWGEOM_GetLastErrorMsg()
+/
+/ return the most recent LWGEOM error message (if any)
+/ return NULL on any other case
+*/
+    const char *msg;
+    GAIA_UNUSED ();		/* LCOV_EXCL_LINE */
+    msg = gaiaGetLwGeomErrorMsg ();
+    if (msg == NULL)
+	sqlite3_result_null (context);
+    else
+	sqlite3_result_text (context, msg, strlen (msg), SQLITE_STATIC);
+}
 
 static void
 fnct_MakeValid (sqlite3_context * context, int argc, sqlite3_value ** argv)
@@ -21796,6 +23469,316 @@ fnct_3DMaxDistance (sqlite3_context * context, int argc, sqlite3_value ** argv)
       }
     gaiaFreeGeomColl (geo1);
     gaiaFreeGeomColl (geo2);
+}
+
+static void
+fnct_Node (sqlite3_context * context, int argc, sqlite3_value ** argv)
+{
+/* SQL function:
+/ ST_Node(BLOBencoded linestring(s))
+/
+/ Returns a new new (Multi)Linestring by re-noding the input linestring(s)
+/ NULL is returned for invalid arguments
+*/
+    unsigned char *p_blob;
+    int n_bytes;
+    gaiaGeomCollPtr input;
+    gaiaGeomCollPtr result;
+    GAIA_UNUSED ();		/* LCOV_EXCL_LINE */
+    if (sqlite3_value_type (argv[0]) != SQLITE_BLOB)
+      {
+	  sqlite3_result_null (context);
+	  return;
+      }
+
+/* retrieving the input geometry */
+    p_blob = (unsigned char *) sqlite3_value_blob (argv[0]);
+    n_bytes = sqlite3_value_bytes (argv[0]);
+    input = gaiaFromSpatiaLiteBlobWkb (p_blob, n_bytes);
+    if (input == NULL)
+      {
+	  sqlite3_result_null (context);
+	  return;
+      }
+
+    result = gaiaNodeLines (input);
+    if (result != NULL)
+      {
+	  gaiaToSpatiaLiteBlobWkb (result, &p_blob, &n_bytes);
+	  sqlite3_result_blob (context, p_blob, n_bytes, free);
+	  gaiaFreeGeomColl (result);
+      }
+    else
+	sqlite3_result_null (context);
+    gaiaFreeGeomColl (input);
+}
+
+static int
+check_all_linestrings (gaiaGeomCollPtr in)
+{
+/* check id this is a collection of Linestrings */
+    int pts = 0;
+    int lns = 0;
+    int pgs = 0;
+    gaiaPointPtr pt;
+    gaiaLinestringPtr ln;
+    gaiaPolygonPtr pg;
+
+    if (in == NULL)
+	return 0;
+/* checking if we have any POINT */
+    pt = in->FirstPoint;
+    while (pt)
+      {
+	  pts++;
+	  pt = pt->Next;
+      }
+    if (pts > 0)
+	return 0;
+/* checking if we have any POLYGON */
+    pg = in->FirstPolygon;
+    while (pg)
+      {
+	  pgs++;
+	  pg = pg->Next;
+      }
+    if (pgs > 0)
+	return 0;
+/* checking if we have any LINESTRING */
+    ln = in->FirstLinestring;
+    while (ln)
+      {
+	  lns++;
+	  ln = ln->Next;
+      }
+    if (lns == 0)
+	return 0;
+    return 1;
+}
+
+static gaiaGeomCollPtr
+get_nodes (gaiaGeomCollPtr in)
+{
+/* extracts all Nodes (Linestring extermities) */
+    int iv;
+    double x;
+    double y;
+    double m;
+    double z;
+    gaiaLinestringPtr ln;
+    gaiaGeomCollPtr out;
+
+    if (in == NULL)
+	return NULL;
+
+    if (in->DimensionModel == GAIA_XY_M)
+	out = gaiaAllocGeomCollXYM ();
+    else if (in->DimensionModel == GAIA_XY_Z)
+	out = gaiaAllocGeomCollXYZ ();
+    else if (in->DimensionModel == GAIA_XY_Z_M)
+	out = gaiaAllocGeomCollXYZM ();
+    else
+	out = gaiaAllocGeomColl ();
+    out->Srid = in->Srid;
+
+    ln = in->FirstLinestring;
+    while (ln)
+      {
+	  /* saving the extreme points - Start */
+	  if (ln->DimensionModel == GAIA_XY_Z)
+	    {
+		gaiaGetPointXYZ (ln->Coords, 0, &x, &y, &z);
+		gaiaAddPointToGeomCollXYZ (out, x, y, z);
+	    }
+	  else if (ln->DimensionModel == GAIA_XY_M)
+	    {
+		gaiaGetPointXYM (ln->Coords, 0, &x, &y, &m);
+		gaiaAddPointToGeomCollXYM (out, x, y, m);
+	    }
+	  else if (ln->DimensionModel == GAIA_XY_Z_M)
+	    {
+		gaiaGetPointXYZM (ln->Coords, 0, &x, &y, &z, &m);
+		gaiaAddPointToGeomCollXYZM (out, x, y, z, m);
+	    }
+	  else
+	    {
+		gaiaGetPoint (ln->Coords, 0, &x, &y);
+		gaiaAddPointToGeomColl (out, x, y);
+	    }
+	  /* saving the extreme points - End */
+	  iv = ln->Points - 1;
+	  if (ln->DimensionModel == GAIA_XY_Z)
+	    {
+		gaiaGetPointXYZ (ln->Coords, iv, &x, &y, &z);
+		gaiaAddPointToGeomCollXYZ (out, x, y, z);
+	    }
+	  else if (ln->DimensionModel == GAIA_XY_M)
+	    {
+		gaiaGetPointXYM (ln->Coords, iv, &x, &y, &m);
+		gaiaAddPointToGeomCollXYM (out, x, y, m);
+	    }
+	  else if (ln->DimensionModel == GAIA_XY_Z_M)
+	    {
+		gaiaGetPointXYZM (ln->Coords, iv, &x, &y, &z, &m);
+		gaiaAddPointToGeomCollXYZM (out, x, y, z, m);
+	    }
+	  else
+	    {
+		gaiaGetPoint (ln->Coords, iv, &x, &y);
+		gaiaAddPointToGeomColl (out, x, y);
+	    }
+	  ln = ln->Next;
+      }
+
+    return out;
+}
+
+static int
+point_is_defined (gaiaPointPtr in, gaiaGeomCollPtr geom)
+{
+/* checking if a Point is already defined */
+    gaiaPointPtr pt = geom->FirstPoint;
+    while (pt)
+      {
+	  if (geom->DimensionModel == GAIA_XY_Z)
+	    {
+		if (pt->X == in->X && pt->Y == in->Y && pt->Z == in->Z)
+		    return 1;
+	    }
+	  else if (geom->DimensionModel == GAIA_XY_M)
+	    {
+		if (pt->X == in->X && pt->Y == in->Y && pt->M == in->M)
+		    return 1;
+	    }
+	  else if (geom->DimensionModel == GAIA_XY_Z_M)
+	    {
+		if (pt->X == in->X && pt->Y == in->Y && pt->Z == in->Z
+		    && pt->M == in->M)
+		    return 1;
+	    }
+	  else
+	    {
+		if (pt->X == in->X && pt->Y == in->Y)
+		    return 1;
+	    }
+	  pt = pt->Next;
+      }
+    return 0;
+}
+
+static gaiaGeomCollPtr
+get_self_intersections (gaiaGeomCollPtr in_old, gaiaGeomCollPtr in_new)
+{
+/* extracting the self-intersection points */
+    gaiaPointPtr pt;
+    gaiaGeomCollPtr out;
+
+    if (in_old->DimensionModel == GAIA_XY_M)
+	out = gaiaAllocGeomCollXYM ();
+    else if (in_old->DimensionModel == GAIA_XY_Z)
+	out = gaiaAllocGeomCollXYZ ();
+    else if (in_old->DimensionModel == GAIA_XY_Z_M)
+	out = gaiaAllocGeomCollXYZM ();
+    else
+	out = gaiaAllocGeomColl ();
+    out->Srid = in_old->Srid;
+
+    pt = in_new->FirstPoint;
+    while (pt)
+      {
+	  int ok1 = point_is_defined (pt, in_old);
+	  int ok2 = point_is_defined (pt, out);
+	  if (!ok1 && !ok2)
+	    {
+		/* inserting a Point into the result collection */
+		if (out->DimensionModel == GAIA_XY_Z)
+		    gaiaAddPointToGeomCollXYZ (out, pt->X, pt->Y, pt->Z);
+		else if (out->DimensionModel == GAIA_XY_M)
+		    gaiaAddPointToGeomCollXYM (out, pt->X, pt->Y, pt->M);
+		else if (out->DimensionModel == GAIA_XY_Z_M)
+		    gaiaAddPointToGeomCollXYZM (out, pt->X, pt->Y, pt->Z,
+						pt->M);
+		else
+		    gaiaAddPointToGeomColl (out, pt->X, pt->Y);
+	    }
+	  pt = pt->Next;
+      }
+
+    if (out->FirstPoint == NULL)
+      {
+	  /* no self-intersections were found */
+	  gaiaFreeGeomColl (out);
+	  return NULL;
+      }
+
+    return out;
+}
+
+static void
+fnct_SelfIntersections (sqlite3_context * context, int argc,
+			sqlite3_value ** argv)
+{
+/* SQL function:
+/ ST_SelfIntersections(BLOBencoded linestring(s))
+/
+/ Returns a MultiPoint Geometry representing any self-intersection
+/ found within the input geometry [linestring(s)]
+/ NULL is returned for invalid arguments, or when no self-intersections
+/ were found
+*/
+    unsigned char *p_blob;
+    int n_bytes;
+    gaiaGeomCollPtr input;
+    gaiaGeomCollPtr noded;
+    gaiaGeomCollPtr result;
+    gaiaGeomCollPtr nodes_in;
+    gaiaGeomCollPtr nodes_out;
+    GAIA_UNUSED ();		/* LCOV_EXCL_LINE */
+    if (sqlite3_value_type (argv[0]) != SQLITE_BLOB)
+      {
+	  sqlite3_result_null (context);
+	  return;
+      }
+
+/* retrieving the input geometry */
+    p_blob = (unsigned char *) sqlite3_value_blob (argv[0]);
+    n_bytes = sqlite3_value_bytes (argv[0]);
+    input = gaiaFromSpatiaLiteBlobWkb (p_blob, n_bytes);
+    if (input == NULL)
+      {
+	  sqlite3_result_null (context);
+	  return;
+      }
+
+/* checking the input (Linestrings only) */
+    if (!check_all_linestrings (input))
+      {
+	  gaiaFreeGeomColl (input);
+	  sqlite3_result_null (context);
+	  return;
+      }
+/* extracting all input nodes */
+    nodes_in = get_nodes (input);
+
+    noded = gaiaNodeLines (input);
+    gaiaFreeGeomColl (input);
+/* extracting all output nodes */
+    nodes_out = get_nodes (noded);
+    gaiaFreeGeomColl (noded);
+
+/* identifying the intersections */
+    result = get_self_intersections (nodes_in, nodes_out);
+    gaiaFreeGeomColl (nodes_in);
+    gaiaFreeGeomColl (nodes_out);
+    if (result != NULL)
+      {
+	  result->DeclaredType = GAIA_MULTIPOINT;
+	  gaiaToSpatiaLiteBlobWkb (result, &p_blob, &n_bytes);
+	  sqlite3_result_blob (context, p_blob, n_bytes, free);
+	  gaiaFreeGeomColl (result);
+      }
+    else
+	sqlite3_result_null (context);
 }
 
 #endif /* end LWGEOM support */
@@ -23154,35 +25137,6 @@ fnct_math_radians (sqlite3_context * context, int argc, sqlite3_value ** argv)
     sqlite3_result_double (context, x);
 }
 
-
-static void
-fnct_math_round (sqlite3_context * context, int argc, sqlite3_value ** argv)
-{
-/* SQL function:
-/ round(double X)
-/
-/ Returns the nearest integer, but round halfway cases away from zero
-/ or NULL if any error is encountered
-*/
-    int int_value;
-    double x;
-    GAIA_UNUSED ();		/* LCOV_EXCL_LINE */
-    if (sqlite3_value_type (argv[0]) == SQLITE_FLOAT)
-      {
-	  x = math_round (sqlite3_value_double (argv[0]));
-	  sqlite3_result_double (context, x);
-      }
-    else if (sqlite3_value_type (argv[0]) == SQLITE_INTEGER)
-      {
-	  int_value = sqlite3_value_int (argv[0]);
-	  x = int_value;
-	  x = math_round (x);
-	  sqlite3_result_double (context, x);
-      }
-    else
-	sqlite3_result_null (context);
-}
-
 static void
 fnct_math_sign (sqlite3_context * context, int argc, sqlite3_value ** argv)
 {
@@ -23925,8 +25879,7 @@ fnct_GeodesicLength (sqlite3_context * context, int argc, sqlite3_value ** argv)
 				  /* interior Rings */
 				  ring = polyg->Interiors + ib;
 				  l = gaiaGeodesicTotalLength (a, b, rf,
-							       ring->
-							       DimensionModel,
+							       ring->DimensionModel,
 							       ring->Coords,
 							       ring->Points);
 				  if (l < 0.0)
@@ -24010,8 +25963,7 @@ fnct_GreatCircleLength (sqlite3_context * context, int argc,
 			    ring = polyg->Exterior;
 			    length +=
 				gaiaGreatCircleTotalLength (a, b,
-							    ring->
-							    DimensionModel,
+							    ring->DimensionModel,
 							    ring->Coords,
 							    ring->Points);
 			    for (ib = 0; ib < polyg->NumInteriors; ib++)
@@ -24020,8 +25972,7 @@ fnct_GreatCircleLength (sqlite3_context * context, int argc,
 				  ring = polyg->Interiors + ib;
 				  length +=
 				      gaiaGreatCircleTotalLength (a, b,
-								  ring->
-								  DimensionModel,
+								  ring->DimensionModel,
 								  ring->Coords,
 								  ring->Points);
 			      }
@@ -24316,6 +26267,102 @@ fnct_cvtFromIndCh (sqlite3_context * context, int argc, sqlite3_value ** argv)
     convertUnit (context, argc, argv, GAIA_IND_CH, GAIA_M);
 }
 
+static void
+fnct_longFromDMS (sqlite3_context * context, int argc, sqlite3_value ** argv)
+{
+/* SQL function:
+/ LongitudeFromDMS ( dms_string )
+/
+/ return the Longitude (in Decimal Degrees) from a DMS text expression
+/ or NULL if any error is encountered
+*/
+    const char *dms;
+    double longitude;
+    double latitude;
+    GAIA_UNUSED ();		/* LCOV_EXCL_LINE */
+    if (sqlite3_value_type (argv[0]) == SQLITE_TEXT)
+	dms = (const char *) sqlite3_value_text (argv[0]);
+    else
+      {
+	  sqlite3_result_null (context);
+	  return;
+      }
+    if (!gaiaParseDMS (dms, &longitude, &latitude))
+	sqlite3_result_null (context);
+    else
+	sqlite3_result_double (context, longitude);
+}
+
+static void
+fnct_latFromDMS (sqlite3_context * context, int argc, sqlite3_value ** argv)
+{
+/* SQL function:
+/ LatitudeFromDMS ( dms_string )
+/
+/ return the Latitude (in Decimal Degrees) from a DMS text expression
+/ or NULL if any error is encountered
+*/
+    const char *dms;
+    double longitude;
+    double latitude;
+    GAIA_UNUSED ();		/* LCOV_EXCL_LINE */
+    if (sqlite3_value_type (argv[0]) == SQLITE_TEXT)
+	dms = (const char *) sqlite3_value_text (argv[0]);
+    else
+      {
+	  sqlite3_result_null (context);
+	  return;
+      }
+    if (!gaiaParseDMS (dms, &longitude, &latitude))
+	sqlite3_result_null (context);
+    else
+	sqlite3_result_double (context, latitude);
+}
+
+static void
+fnct_toDMS (sqlite3_context * context, int argc, sqlite3_value ** argv)
+{
+/* SQL function:
+/ LongLatToDMS ( longitude, latitude )
+/
+/ return a DMS text expression
+/ or NULL if any error is encountered
+*/
+    double longitude;
+    double latitude;
+    char *dms;
+    GAIA_UNUSED ();		/* LCOV_EXCL_LINE */
+    if (sqlite3_value_type (argv[0]) == SQLITE_FLOAT)
+	longitude = sqlite3_value_double (argv[0]);
+    else if (sqlite3_value_type (argv[0]) == SQLITE_INTEGER)
+      {
+	  int value = sqlite3_value_int (argv[0]);
+	  longitude = value;
+      }
+    else
+      {
+	  sqlite3_result_null (context);
+	  return;
+      }
+    if (sqlite3_value_type (argv[1]) == SQLITE_FLOAT)
+	latitude = sqlite3_value_double (argv[1]);
+    else if (sqlite3_value_type (argv[1]) == SQLITE_INTEGER)
+      {
+	  int value = sqlite3_value_int (argv[1]);
+	  latitude = value;
+      }
+    else
+      {
+	  sqlite3_result_null (context);
+	  return;
+      }
+    dms = gaiaConvertToDMS (longitude, latitude);
+    if (dms == NULL)
+	sqlite3_result_null (context);
+    else
+	sqlite3_result_text (context, dms, strlen (dms), free);
+}
+
 #ifdef ENABLE_LIBXML2		/* including LIBXML2 */
 
 static void
@@ -24567,12 +26614,12 @@ fnct_RegisterStyledGroup (sqlite3_context * context, int argc,
 			  sqlite3_value ** argv)
 {
 /* SQL function:
-/ RegisterStyledGroup(String group_name, String coverage_name, 
-/		      Integer style_id [, Integer paint_order)
+/ RegisterStyledGroup(String group_name, String coverage_name
+/                     [, Integer paint_order ] )
 /  or
 / RegisterStyledGroup(String group_name, String f_table_name,
-/		      String f_geometry_column, Integer style_id
-/		      [, Integer paint_order)
+/		      String f_geometry_column
+/		      [, Integer paint_order ] )
 /
 / inserts or updates a Styled Group item 
 / returns 1 on success
@@ -24583,20 +26630,43 @@ fnct_RegisterStyledGroup (sqlite3_context * context, int argc,
     const char *f_table_name = NULL;
     const char *f_geometry_column = NULL;
     const char *coverage_name = NULL;
-    int style_id;
     int paint_order = -1;
     sqlite3 *sqlite = sqlite3_context_db_handle (context);
     GAIA_UNUSED ();		/* LCOV_EXCL_LINE */
-    if (argc == 3)
+    if (argc == 2)
       {
 	  /* raster layer - default */
+	  if (sqlite3_value_type (argv[0]) == SQLITE_TEXT
+	      && sqlite3_value_type (argv[1]) == SQLITE_TEXT)
+	    {
+		group_name = (const char *) sqlite3_value_text (argv[0]);
+		coverage_name = (const char *) sqlite3_value_text (argv[1]);
+	    }
+	  else
+	    {
+		sqlite3_result_int (context, -1);
+		return;
+	    }
+      }
+    else if (argc == 3)
+      {
 	  if (sqlite3_value_type (argv[0]) == SQLITE_TEXT
 	      && sqlite3_value_type (argv[1]) == SQLITE_TEXT
 	      && sqlite3_value_type (argv[2]) == SQLITE_INTEGER)
 	    {
+		/* raster layer - paint_order */
 		group_name = (const char *) sqlite3_value_text (argv[0]);
 		coverage_name = (const char *) sqlite3_value_text (argv[1]);
-		style_id = sqlite3_value_int (argv[2]);
+		paint_order = sqlite3_value_int (argv[2]);
+	    }
+	  else if (sqlite3_value_type (argv[0]) == SQLITE_TEXT
+		   && sqlite3_value_type (argv[1]) == SQLITE_TEXT
+		   && sqlite3_value_type (argv[2]) == SQLITE_TEXT)
+	    {
+		/* vector layer - default */
+		group_name = (const char *) sqlite3_value_text (argv[0]);
+		f_table_name = (const char *) sqlite3_value_text (argv[1]);
+		f_geometry_column = (const char *) sqlite3_value_text (argv[2]);
 	    }
 	  else
 	    {
@@ -24606,48 +26676,16 @@ fnct_RegisterStyledGroup (sqlite3_context * context, int argc,
       }
     else if (argc == 4)
       {
-	  if (sqlite3_value_type (argv[0]) == SQLITE_TEXT
-	      && sqlite3_value_type (argv[1]) == SQLITE_TEXT
-	      && sqlite3_value_type (argv[2]) == SQLITE_INTEGER
-	      && sqlite3_value_type (argv[3]) == SQLITE_INTEGER)
-	    {
-		/* raster layer - paint_order */
-		group_name = (const char *) sqlite3_value_text (argv[0]);
-		coverage_name = (const char *) sqlite3_value_text (argv[1]);
-		style_id = sqlite3_value_int (argv[2]);
-		paint_order = sqlite3_value_int (argv[3]);
-	    }
-	  else if (sqlite3_value_type (argv[0]) == SQLITE_TEXT
-		   && sqlite3_value_type (argv[1]) == SQLITE_TEXT
-		   && sqlite3_value_type (argv[2]) == SQLITE_TEXT
-		   && sqlite3_value_type (argv[3]) == SQLITE_INTEGER)
-	    {
-		/* vector layer - default */
-		group_name = (const char *) sqlite3_value_text (argv[0]);
-		f_table_name = (const char *) sqlite3_value_text (argv[1]);
-		f_geometry_column = (const char *) sqlite3_value_text (argv[2]);
-		style_id = sqlite3_value_int (argv[3]);
-	    }
-	  else
-	    {
-		sqlite3_result_int (context, -1);
-		return;
-	    }
-      }
-    else if (argc == 5)
-      {
 	  /* vector layer - paint_order */
 	  if (sqlite3_value_type (argv[0]) == SQLITE_TEXT
 	      && sqlite3_value_type (argv[1]) == SQLITE_TEXT
 	      && sqlite3_value_type (argv[2]) == SQLITE_TEXT
-	      && sqlite3_value_type (argv[3]) == SQLITE_INTEGER
-	      && sqlite3_value_type (argv[4]) == SQLITE_INTEGER)
+	      && sqlite3_value_type (argv[3]) == SQLITE_INTEGER)
 	    {
 		group_name = (const char *) sqlite3_value_text (argv[0]);
 		f_table_name = (const char *) sqlite3_value_text (argv[1]);
 		f_geometry_column = (const char *) sqlite3_value_text (argv[2]);
-		style_id = sqlite3_value_int (argv[3]);
-		paint_order = sqlite3_value_int (argv[4]);
+		paint_order = sqlite3_value_int (argv[3]);
 	    }
 	  else
 	    {
@@ -24656,8 +26694,7 @@ fnct_RegisterStyledGroup (sqlite3_context * context, int argc,
 	    }
       }
     ret = register_styled_group (sqlite, group_name, f_table_name,
-				 f_geometry_column, coverage_name, style_id,
-				 paint_order);
+				 f_geometry_column, coverage_name, paint_order);
     sqlite3_result_int (context, ret);
 }
 
@@ -24698,6 +26735,71 @@ fnct_SetStyledGroupInfos (sqlite3_context * context, int argc,
     title = (const char *) sqlite3_value_text (argv[1]);
     abstract = (const char *) sqlite3_value_text (argv[2]);
     ret = styled_group_set_infos (sqlite, group_name, title, abstract);
+    sqlite3_result_int (context, ret);
+}
+
+static void
+fnct_RegisterGroupStyle (sqlite3_context * context, int argc,
+			 sqlite3_value ** argv)
+{
+/* SQL function:
+/ RegisterGroupStyle(String group_name, BLOB style)
+/  or
+/ RegisterGroupStyle(String group_name, Integer style_id,
+/                    BLOB style)
+/
+/ inserts or updates a Group Style 
+/ returns 1 on success
+/ 0 on failure, -1 on invalid arguments
+*/
+    int ret;
+    const char *group_name;
+    int style_id = -1;
+    const unsigned char *p_blob;
+    int n_bytes;
+    sqlite3 *sqlite = sqlite3_context_db_handle (context);
+    GAIA_UNUSED ();		/* LCOV_EXCL_LINE */
+    if (sqlite3_value_type (argv[0]) != SQLITE_TEXT)
+      {
+	  sqlite3_result_int (context, -1);
+	  return;
+      }
+    if (argc == 3)
+      {
+	  /* optional extra args */
+	  if (sqlite3_value_type (argv[1]) != SQLITE_INTEGER)
+	    {
+		sqlite3_result_int (context, -1);
+		return;
+	    }
+	  if (sqlite3_value_type (argv[2]) != SQLITE_BLOB)
+	    {
+		sqlite3_result_int (context, -1);
+		return;
+	    }
+      }
+    else
+      {
+	  /* no extra-args */
+	  if (sqlite3_value_type (argv[1]) != SQLITE_BLOB)
+	    {
+		sqlite3_result_int (context, -1);
+		return;
+	    }
+      }
+    group_name = (const char *) sqlite3_value_text (argv[0]);
+    if (argc == 3)
+      {
+	  style_id = sqlite3_value_int (argv[1]);
+	  p_blob = sqlite3_value_blob (argv[2]);
+	  n_bytes = sqlite3_value_bytes (argv[2]);
+      }
+    else
+      {
+	  p_blob = sqlite3_value_blob (argv[1]);
+	  n_bytes = sqlite3_value_bytes (argv[1]);
+      }
+    ret = register_group_style (sqlite, group_name, style_id, p_blob, n_bytes);
     sqlite3_result_int (context, ret);
 }
 
@@ -25392,6 +27494,31 @@ fnct_XB_IsSldSeRasterStyle (sqlite3_context * context, int argc,
 }
 
 static void
+fnct_XB_IsSldStyle (sqlite3_context * context, int argc, sqlite3_value ** argv)
+{
+/* SQL function:
+/ XB_IsSldStyle(XmlBLOB)
+/
+/ returns TRUE if the current BLOB is an SLD Style XmlBLOB,
+/ FALSE if it's a valid XmlBLOB but not an SLD Style
+/ or -1 if any error is encountered
+*/
+    unsigned char *p_blob;
+    int n_bytes;
+    int ret;
+    GAIA_UNUSED ();		/* LCOV_EXCL_LINE */
+    if (sqlite3_value_type (argv[0]) != SQLITE_BLOB)
+      {
+	  sqlite3_result_int (context, -1);
+	  return;
+      }
+    p_blob = (unsigned char *) sqlite3_value_blob (argv[0]);
+    n_bytes = sqlite3_value_bytes (argv[0]);
+    ret = gaiaIsSldStyleXmlBlob (p_blob, n_bytes);
+    sqlite3_result_int (context, ret);
+}
+
+static void
 fnct_XB_IsSvg (sqlite3_context * context, int argc, sqlite3_value ** argv)
 {
 /* SQL function:
@@ -25772,6 +27899,34 @@ fnct_XB_AddParentId (sqlite3_context * context, int argc, sqlite3_value ** argv)
 }
 
 static void
+fnct_XB_GetName (sqlite3_context * context, int argc, sqlite3_value ** argv)
+{
+/* SQL function:
+/ XB_GetName(XmlBLOB)
+/
+/ if the BLOB is a valid XmlBLOB containing a Name then
+/ the Name will be returned
+/ return NULL on any other case
+*/
+    const unsigned char *p_blob;
+    int n_bytes;
+    char *name;
+    GAIA_UNUSED ();		/* LCOV_EXCL_LINE */
+    if (sqlite3_value_type (argv[0]) != SQLITE_BLOB)
+      {
+	  sqlite3_result_null (context);
+	  return;
+      }
+    p_blob = sqlite3_value_blob (argv[0]);
+    n_bytes = sqlite3_value_bytes (argv[0]);
+    name = gaiaXmlBlobGetName (p_blob, n_bytes);
+    if (name == NULL)
+	sqlite3_result_null (context);
+    else
+	sqlite3_result_text (context, name, strlen (name), free);
+}
+
+static void
 fnct_XB_GetTitle (sqlite3_context * context, int argc, sqlite3_value ** argv)
 {
 /* SQL function:
@@ -26022,67 +28177,17 @@ fnct_XB_CacheFlush (sqlite3_context * context, int argc, sqlite3_value ** argv)
 
 #endif /* end including LIBXML2 */
 
-SPATIALITE_DECLARE void *
-spatialite_alloc_connection ()
-{
-/* allocating and initializing an empty internal cache */
-    gaiaOutBufferPtr out;
-    int i;
-    struct splite_internal_cache *cache;
-    struct splite_geos_cache_item *p;
-    struct splite_xmlSchema_cache_item *p_xmlSchema;
-
-    cache = malloc (sizeof (struct splite_internal_cache));
-/* initializing the XML error buffers */
-    out = malloc (sizeof (gaiaOutBuffer));
-    gaiaOutBufferInitialize (out);
-    cache->xmlParsingErrors = out;
-    out = malloc (sizeof (gaiaOutBuffer));
-    gaiaOutBufferInitialize (out);
-    cache->xmlSchemaValidationErrors = out;
-    out = malloc (sizeof (gaiaOutBuffer));
-    gaiaOutBufferInitialize (out);
-    cache->xmlXPathErrors = out;
-/* initializing the GEOS cache */
-    p = &(cache->cacheItem1);
-    memset (p->gaiaBlob, '\0', 64);
-    p->gaiaBlobSize = 0;
-    p->crc32 = 0;
-    p->geosGeom = NULL;
-    p->preparedGeosGeom = NULL;
-    p = &(cache->cacheItem2);
-    memset (p->gaiaBlob, '\0', 64);
-    p->gaiaBlobSize = 0;
-    p->crc32 = 0;
-    p->geosGeom = NULL;
-    p->preparedGeosGeom = NULL;
-    for (i = 0; i < MAX_XMLSCHEMA_CACHE; i++)
-      {
-	  /* initializing the XmlSchema cache */
-	  p_xmlSchema = &(cache->xmlSchemaCache[i]);
-	  p_xmlSchema->timestamp = 0;
-	  p_xmlSchema->schemaURI = NULL;
-	  p_xmlSchema->schemaDoc = NULL;
-	  p_xmlSchema->parserCtxt = NULL;
-	  p_xmlSchema->schema = NULL;
-      }
-    return cache;
-}
-
 SPATIALITE_PRIVATE void *
-register_spatialite_sql_functions (void *p_db, void *p_cache)
+register_spatialite_sql_functions (void *p_db, const void *p_cache)
 {
     sqlite3 *db = p_db;
     struct splite_internal_cache *cache =
 	(struct splite_internal_cache *) p_cache;
     const char *security_level;
-    if (cache == NULL)
-      {
-	  /* dirty compatibility mode: allocating an internal cache */
-	  cache = spatialite_alloc_connection ();
-      }
     sqlite3_create_function (db, "spatialite_version", 0, SQLITE_ANY, 0,
 			     fnct_spatialite_version, 0, 0);
+    sqlite3_create_function (db, "spatialite_target_cpu", 0, SQLITE_ANY, 0,
+			     fnct_spatialite_target_cpu, 0, 0);
     sqlite3_create_function (db, "proj4_version", 0, SQLITE_ANY, 0,
 			     fnct_proj4_version, 0, 0);
     sqlite3_create_function (db, "geos_version", 0, SQLITE_ANY, 0,
@@ -26113,6 +28218,8 @@ register_spatialite_sql_functions (void *p_db, void *p_cache)
 			     fnct_has_epsg, 0, 0);
     sqlite3_create_function (db, "HasLibXML2", 0, SQLITE_ANY, 0,
 			     fnct_has_libxml2, 0, 0);
+    sqlite3_create_function (db, "HasGeoPackage", 0, SQLITE_ANY, 0,
+			     fnct_has_geopackage, 0, 0);
     sqlite3_create_function (db, "GeometryConstraints", 3, SQLITE_ANY, 0,
 			     fnct_GeometryConstraints, 0, 0);
     sqlite3_create_function (db, "GeometryConstraints", 4, SQLITE_ANY, 0,
@@ -26121,10 +28228,20 @@ register_spatialite_sql_functions (void *p_db, void *p_cache)
 			     fnct_RTreeAlign, 0, 0);
     sqlite3_create_function (db, "IsValidNoDataPixel", 3, SQLITE_ANY, 0,
 			     fnct_IsValidNoDataPixel, 0, 0);
+    sqlite3_create_function (db, "IsValidRasterPalette", 2, SQLITE_ANY, 0,
+			     fnct_IsValidRasterPalette, 0, 0);
+    sqlite3_create_function (db, "IsValidRasterStatistics", 2, SQLITE_ANY, 0,
+			     fnct_IsValidRasterStatistics, 0, 0);
+    sqlite3_create_function (db, "IsValidRasterStatistics", 3, SQLITE_ANY, 0,
+			     fnct_IsValidRasterStatistics, 0, 0);
+    sqlite3_create_function (db, "IsValidRasterTile", 4, SQLITE_ANY, 0,
+			     fnct_IsValidRasterTile, 0, 0);
     sqlite3_create_function (db, "IsPopulatedCoverage", 1, SQLITE_ANY, 0,
 			     fnct_IsPopulatedCoverage, 0, 0);
     sqlite3_create_function (db, "CheckSpatialMetaData", 0, SQLITE_ANY, 0,
 			     fnct_CheckSpatialMetaData, 0, 0);
+    sqlite3_create_function (db, "CheckGeoPackageMetaData", 0, SQLITE_ANY, 0,
+			     fnct_CheckGeoPackageMetaData, 0, 0);
     sqlite3_create_function (db, "AutoFDOStart", 0, SQLITE_ANY, 0,
 			     fnct_AutoFDOStart, 0, 0);
     sqlite3_create_function (db, "AutoFDOStop", 0, SQLITE_ANY, 0,
@@ -26173,6 +28290,8 @@ register_spatialite_sql_functions (void *p_db, void *p_cache)
 			     fnct_CheckSpatialIndex, 0, 0);
     sqlite3_create_function (db, "CheckSpatialIndex", 2, SQLITE_ANY, 0,
 			     fnct_CheckSpatialIndex, 0, 0);
+    sqlite3_create_function (db, "CheckShadowedRowid", 1, SQLITE_ANY, 0,
+			     fnct_CheckShadowedRowid, 0, 0);
     sqlite3_create_function (db, "CreateSpatialIndex", 2, SQLITE_ANY, 0,
 			     fnct_CreateSpatialIndex, 0, 0);
     sqlite3_create_function (db, "CreateMbrCache", 2, SQLITE_ANY, 0,
@@ -26193,8 +28312,20 @@ register_spatialite_sql_functions (void *p_db, void *p_cache)
 			     fnct_GetLayerExtent, 0, 0);
     sqlite3_create_function (db, "GetLayerExtent", 3, SQLITE_ANY, 0,
 			     fnct_GetLayerExtent, 0, 0);
+    sqlite3_create_function (db, "InvalidateLayerStatistics", 0, SQLITE_ANY, 0,
+			     fnct_InvalidateLayerStatistics, 0, 0);
+    sqlite3_create_function (db, "InvalidateLayerStatistics", 1, SQLITE_ANY, 0,
+			     fnct_InvalidateLayerStatistics, 0, 0);
+    sqlite3_create_function (db, "InvalidateLayerStatistics", 2, SQLITE_ANY, 0,
+			     fnct_InvalidateLayerStatistics, 0, 0);
     sqlite3_create_function (db, "CreateRasterCoveragesTable", 0, SQLITE_ANY,
 			     0, fnct_CreateRasterCoveragesTable, 0, 0);
+    sqlite3_create_function (db, "CreateMetaCatalogTables", 1, SQLITE_ANY, 0,
+			     fnct_CreateMetaCatalogTables, 0, 0);
+    sqlite3_create_function (db, "UpdateMetaCatalogStatistics", 3, SQLITE_ANY,
+			     0, fnct_UpdateMetaCatalogStatistics, 0, 0);
+    sqlite3_create_function (db, "UpdateMetaCatalogStatistics", 4, SQLITE_ANY,
+			     0, fnct_UpdateMetaCatalogStatistics, 0, 0);
     sqlite3_create_function (db, "AsText", 1, SQLITE_ANY, 0, fnct_AsText, 0, 0);
     sqlite3_create_function (db, "ST_AsText", 1, SQLITE_ANY, 0, fnct_AsText, 0,
 			     0);
@@ -26205,16 +28336,20 @@ register_spatialite_sql_functions (void *p_db, void *p_cache)
     sqlite3_create_function (db, "AsSvg", 3, SQLITE_ANY, 0, fnct_AsSvg3, 0, 0);
 
 #ifndef OMIT_PROJ		/* PROJ.4 is strictly required to support KML */
-    sqlite3_create_function (db, "AsKml", 1, SQLITE_ANY, 0, fnct_AsKml, 0, 0);
-    sqlite3_create_function (db, "AsKml", 2, SQLITE_ANY, 0, fnct_AsKml, 0, 0);
-    sqlite3_create_function (db, "AsKml", 3, SQLITE_ANY, 0, fnct_AsKml, 0, 0);
-    sqlite3_create_function (db, "AsKml", 4, SQLITE_ANY, 0, fnct_AsKml, 0, 0);
+    sqlite3_create_function (db, "AsKml", 1, SQLITE_ANY, cache, fnct_AsKml, 0,
+			     0);
+    sqlite3_create_function (db, "AsKml", 2, SQLITE_ANY, cache, fnct_AsKml, 0,
+			     0);
+    sqlite3_create_function (db, "AsKml", 3, SQLITE_ANY, cache, fnct_AsKml, 0,
+			     0);
+    sqlite3_create_function (db, "AsKml", 4, SQLITE_ANY, cache, fnct_AsKml, 0,
+			     0);
 #endif /* end including PROJ.4 */
 
     sqlite3_create_function (db, "AsGml", 1, SQLITE_ANY, 0, fnct_AsGml, 0, 0);
     sqlite3_create_function (db, "AsGml", 2, SQLITE_ANY, 0, fnct_AsGml, 0, 0);
     sqlite3_create_function (db, "AsGml", 3, SQLITE_ANY, 0, fnct_AsGml, 0, 0);
-    sqlite3_create_function (db, "GeomFromGml", 1, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "GeomFromGml", 1, SQLITE_ANY, cache,
 			     fnct_FromGml, 0, 0);
     sqlite3_create_function (db, "AsGeoJSON", 1, SQLITE_ANY, 0,
 			     fnct_AsGeoJSON, 0, 0);
@@ -26774,14 +28909,14 @@ register_spatialite_sql_functions (void *p_db, void *p_cache)
 			     fnct_MakeEllipticSector, 0, 0);
     sqlite3_create_function (db, "MakeEllipticSector", 8, SQLITE_ANY, 0,
 			     fnct_MakeEllipticSector, 0, 0);
-    sqlite3_create_function (db, "Collect", 1, SQLITE_ANY, 0, 0,
+    sqlite3_create_function (db, "Collect", 1, SQLITE_ANY, cache, 0,
 			     fnct_Collect_step, fnct_Collect_final);
-    sqlite3_create_function (db, "Collect", 2, SQLITE_ANY, 0, fnct_Collect, 0,
-			     0);
-    sqlite3_create_function (db, "ST_Collect", 1, SQLITE_ANY, 0, 0,
-			     fnct_Collect_step, fnct_Collect_final);
-    sqlite3_create_function (db, "ST_Collect", 2, SQLITE_ANY, 0, fnct_Collect,
+    sqlite3_create_function (db, "Collect", 2, SQLITE_ANY, cache, fnct_Collect,
 			     0, 0);
+    sqlite3_create_function (db, "ST_Collect", 1, SQLITE_ANY, cache, 0,
+			     fnct_Collect_step, fnct_Collect_final);
+    sqlite3_create_function (db, "ST_Collect", 2, SQLITE_ANY, cache,
+			     fnct_Collect, 0, 0);
     sqlite3_create_function (db, "BuildMbrFilter", 4, SQLITE_ANY, 0,
 			     fnct_BuildMbrFilter, 0, 0);
     sqlite3_create_function (db, "FilterMbrWithin", 4, SQLITE_ANY, 0,
@@ -26837,15 +28972,23 @@ register_spatialite_sql_functions (void *p_db, void *p_cache)
 			     0, 0);
     sqlite3_create_function (db, "ST_SetPoint", 3, SQLITE_ANY, 0,
 			     fnct_SetPoint, 0, 0);
+    sqlite3_create_function (db, "MakePolygon", 1, SQLITE_ANY, 0,
+			     fnct_MakePolygon, 0, 0);
+    sqlite3_create_function (db, "ST_MakePolygon", 1, SQLITE_ANY, 0,
+			     fnct_MakePolygon, 0, 0);
+    sqlite3_create_function (db, "MakePolygon", 2, SQLITE_ANY, 0,
+			     fnct_MakePolygon, 0, 0);
+    sqlite3_create_function (db, "ST_MakePolygon", 2, SQLITE_ANY, 0,
+			     fnct_MakePolygon, 0, 0);
 
 #ifndef OMIT_GEOS		/* including GEOS */
-    sqlite3_create_function (db, "BuildArea", 1, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "BuildArea", 1, SQLITE_ANY, cache,
 			     fnct_BuildArea, 0, 0);
-    sqlite3_create_function (db, "ST_BuildArea", 1, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "ST_BuildArea", 1, SQLITE_ANY, cache,
 			     fnct_BuildArea, 0, 0);
-    sqlite3_create_function (db, "Polygonize", 1, SQLITE_ANY, 0, 0,
+    sqlite3_create_function (db, "Polygonize", 1, SQLITE_ANY, cache, 0,
 			     fnct_Polygonize_step, fnct_Polygonize_final);
-    sqlite3_create_function (db, "ST_Polygonize", 1, SQLITE_ANY, 0, 0,
+    sqlite3_create_function (db, "ST_Polygonize", 1, SQLITE_ANY, cache, 0,
 			     fnct_Polygonize_step, fnct_Polygonize_final);
 #endif /* end including GEOS */
 
@@ -27044,6 +29187,14 @@ register_spatialite_sql_functions (void *p_db, void *p_cache)
     sqlite3_create_function (db, "CvtFromIndCh", 1, SQLITE_ANY, 0,
 			     fnct_cvtFromIndCh, 0, 0);
 
+/* DMS (Degrees/Minutes/Seconds) to DD (decimal degrees) */
+    sqlite3_create_function (db, "LongitudeFromDMS", 1, SQLITE_ANY, 0,
+			     fnct_longFromDMS, 0, 0);
+    sqlite3_create_function (db, "LatitudeFromDMS", 1, SQLITE_ANY, 0,
+			     fnct_latFromDMS, 0, 0);
+    sqlite3_create_function (db, "LongLatToDMS", 2, SQLITE_ANY, 0, fnct_toDMS,
+			     0, 0);
+
 #ifndef OMIT_MATHSQL		/* supporting SQL math functions */
 
 /* some extra math functions */
@@ -27078,8 +29229,6 @@ register_spatialite_sql_functions (void *p_db, void *p_cache)
 			     0);
     sqlite3_create_function (db, "radians", 1, SQLITE_ANY, 0,
 			     fnct_math_radians, 0, 0);
-    sqlite3_create_function (db, "round", 1, SQLITE_ANY, 0, fnct_math_round,
-			     0, 0);
     sqlite3_create_function (db, "sign", 1, SQLITE_ANY, 0, fnct_math_sign, 0,
 			     0);
     sqlite3_create_function (db, "sin", 1, SQLITE_ANY, 0, fnct_math_sin, 0, 0);
@@ -27100,99 +29249,115 @@ register_spatialite_sql_functions (void *p_db, void *p_cache)
 
 #ifndef OMIT_PROJ		/* including PROJ.4 */
 
-    sqlite3_create_function (db, "Transform", 2, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "Transform", 2, SQLITE_ANY, cache,
 			     fnct_Transform, 0, 0);
-    sqlite3_create_function (db, "ST_Transform", 2, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "ST_Transform", 2, SQLITE_ANY, cache,
 			     fnct_Transform, 0, 0);
 
 #endif /* end including PROJ.4 */
 
 #ifndef OMIT_GEOS		/* including GEOS */
 
-    sqlite3_create_function (db, "Boundary", 1, SQLITE_ANY, 0, fnct_Boundary,
-			     0, 0);
-    sqlite3_create_function (db, "ST_Boundary", 1, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "GEOS_GetLastErrorMsg", 0, SQLITE_ANY,
+			     cache, fnct_GEOS_GetLastErrorMsg, 0, 0);
+    sqlite3_create_function (db, "GEOS_GetLastWarningMsg", 0, SQLITE_ANY,
+			     cache, fnct_GEOS_GetLastWarningMsg, 0, 0);
+    sqlite3_create_function (db, "GEOS_GetLastAuxErrorMsg", 0, SQLITE_ANY,
+			     cache, fnct_GEOS_GetLastAuxErrorMsg, 0, 0);
+    sqlite3_create_function (db, "GEOS_GetCriticalPointFromMsg", 0, SQLITE_ANY,
+			     cache, fnct_GEOS_GetCriticalPointFromMsg, 0, 0);
+    sqlite3_create_function (db, "GEOS_GetCriticalPointFromMsg", 1, SQLITE_ANY,
+			     cache, fnct_GEOS_GetCriticalPointFromMsg, 0, 0);
+
+    sqlite3_create_function (db, "Boundary", 1, SQLITE_ANY, cache,
 			     fnct_Boundary, 0, 0);
-    sqlite3_create_function (db, "IsClosed", 1, SQLITE_ANY, 0, fnct_IsClosed,
+    sqlite3_create_function (db, "ST_Boundary", 1, SQLITE_ANY, cache,
+			     fnct_Boundary, 0, 0);
+    sqlite3_create_function (db, "IsClosed", 1, SQLITE_ANY, 0, fnct_IsClosed, 0,
+			     0);
+    sqlite3_create_function (db, "ST_IsClosed", 1, SQLITE_ANY, 0, fnct_IsClosed,
 			     0, 0);
-    sqlite3_create_function (db, "ST_IsClosed", 1, SQLITE_ANY, 0,
-			     fnct_IsClosed, 0, 0);
-    sqlite3_create_function (db, "IsSimple", 1, SQLITE_ANY, 0, fnct_IsSimple,
-			     0, 0);
-    sqlite3_create_function (db, "ST_IsSimple", 1, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "IsSimple", 1, SQLITE_ANY, cache,
 			     fnct_IsSimple, 0, 0);
-    sqlite3_create_function (db, "IsRing", 1, SQLITE_ANY, 0, fnct_IsRing, 0, 0);
-    sqlite3_create_function (db, "ST_IsRing", 1, SQLITE_ANY, 0, fnct_IsRing, 0,
+    sqlite3_create_function (db, "ST_IsSimple", 1, SQLITE_ANY, cache,
+			     fnct_IsSimple, 0, 0);
+    sqlite3_create_function (db, "IsRing", 1, SQLITE_ANY, cache, fnct_IsRing, 0,
 			     0);
-    sqlite3_create_function (db, "IsValid", 1, SQLITE_ANY, 0, fnct_IsValid, 0,
-			     0);
-    sqlite3_create_function (db, "ST_IsValid", 1, SQLITE_ANY, 0, fnct_IsValid,
+    sqlite3_create_function (db, "ST_IsRing", 1, SQLITE_ANY, cache, fnct_IsRing,
 			     0, 0);
-    sqlite3_create_function (db, "GLength", 1, SQLITE_ANY, 0, fnct_Length, 0,
-			     0);
-    sqlite3_create_function (db, "GLength", 2, SQLITE_ANY, 0, fnct_Length, 0,
-			     0);
-    sqlite3_create_function (db, "ST_Length", 1, SQLITE_ANY, 0, fnct_Length, 0,
-			     0);
-    sqlite3_create_function (db, "ST_Length", 2, SQLITE_ANY, 0, fnct_Length, 0,
-			     0);
-    sqlite3_create_function (db, "Perimeter", 1, SQLITE_ANY, 0, fnct_Perimeter,
+    sqlite3_create_function (db, "IsValid", 1, SQLITE_ANY, cache, fnct_IsValid,
 			     0, 0);
-    sqlite3_create_function (db, "Perimeter", 2, SQLITE_ANY, 0, fnct_Perimeter,
+    sqlite3_create_function (db, "ST_IsValid", 1, SQLITE_ANY, cache,
+			     fnct_IsValid, 0, 0);
+    sqlite3_create_function (db, "GLength", 1, SQLITE_ANY, cache, fnct_Length,
 			     0, 0);
-    sqlite3_create_function (db, "ST_Perimeter", 1, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "GLength", 2, SQLITE_ANY, cache, fnct_Length,
+			     0, 0);
+    sqlite3_create_function (db, "ST_Length", 1, SQLITE_ANY, cache, fnct_Length,
+			     0, 0);
+    sqlite3_create_function (db, "ST_Length", 2, SQLITE_ANY, cache, fnct_Length,
+			     0, 0);
+    sqlite3_create_function (db, "Perimeter", 1, SQLITE_ANY, cache,
 			     fnct_Perimeter, 0, 0);
-    sqlite3_create_function (db, "ST_Perimeter", 2, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "Perimeter", 2, SQLITE_ANY, cache,
 			     fnct_Perimeter, 0, 0);
-    sqlite3_create_function (db, "Area", 1, SQLITE_ANY, 0, fnct_Area, 0, 0);
-    sqlite3_create_function (db, "ST_Area", 1, SQLITE_ANY, 0, fnct_Area, 0, 0);
-    sqlite3_create_function (db, "ST_Centroid", 1, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "ST_Perimeter", 1, SQLITE_ANY, cache,
+			     fnct_Perimeter, 0, 0);
+    sqlite3_create_function (db, "ST_Perimeter", 2, SQLITE_ANY, cache,
+			     fnct_Perimeter, 0, 0);
+    sqlite3_create_function (db, "Area", 1, SQLITE_ANY, cache, fnct_Area, 0, 0);
+    sqlite3_create_function (db, "ST_Area", 1, SQLITE_ANY, cache, fnct_Area, 0,
+			     0);
+    sqlite3_create_function (db, "ST_Centroid", 1, SQLITE_ANY, cache,
 			     fnct_Centroid, 0, 0);
-    sqlite3_create_function (db, "Centroid", 1, SQLITE_ANY, 0, fnct_Centroid,
-			     0, 0);
-    sqlite3_create_function (db, "PointOnSurface", 1, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "Centroid", 1, SQLITE_ANY, cache,
+			     fnct_Centroid, 0, 0);
+    sqlite3_create_function (db, "PointOnSurface", 1, SQLITE_ANY, cache,
 			     fnct_PointOnSurface, 0, 0);
-    sqlite3_create_function (db, "ST_PointOnSurface", 1, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "ST_PointOnSurface", 1, SQLITE_ANY, cache,
 			     fnct_PointOnSurface, 0, 0);
-    sqlite3_create_function (db, "Simplify", 2, SQLITE_ANY, 0, fnct_Simplify,
-			     0, 0);
-    sqlite3_create_function (db, "ST_Simplify", 2, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "Simplify", 2, SQLITE_ANY, cache,
 			     fnct_Simplify, 0, 0);
-    sqlite3_create_function (db, "ST_Generalize", 2, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "ST_Simplify", 2, SQLITE_ANY, cache,
 			     fnct_Simplify, 0, 0);
-    sqlite3_create_function (db, "SimplifyPreserveTopology", 2, SQLITE_ANY, 0,
-			     fnct_SimplifyPreserveTopology, 0, 0);
+    sqlite3_create_function (db, "ST_Generalize", 2, SQLITE_ANY, cache,
+			     fnct_Simplify, 0, 0);
+    sqlite3_create_function (db, "SimplifyPreserveTopology", 2, SQLITE_ANY,
+			     cache, fnct_SimplifyPreserveTopology, 0, 0);
     sqlite3_create_function (db, "ST_SimplifyPreserveTopology", 2, SQLITE_ANY,
-			     0, fnct_SimplifyPreserveTopology, 0, 0);
-    sqlite3_create_function (db, "ConvexHull", 1, SQLITE_ANY, 0,
+			     cache, fnct_SimplifyPreserveTopology, 0, 0);
+    sqlite3_create_function (db, "ConvexHull", 1, SQLITE_ANY, cache,
 			     fnct_ConvexHull, 0, 0);
-    sqlite3_create_function (db, "ST_ConvexHull", 1, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "ST_ConvexHull", 1, SQLITE_ANY, cache,
 			     fnct_ConvexHull, 0, 0);
-    sqlite3_create_function (db, "Buffer", 2, SQLITE_ANY, 0, fnct_Buffer, 0, 0);
-    sqlite3_create_function (db, "ST_Buffer", 2, SQLITE_ANY, 0, fnct_Buffer, 0,
+    sqlite3_create_function (db, "Buffer", 2, SQLITE_ANY, cache, fnct_Buffer, 0,
 			     0);
-    sqlite3_create_function (db, "Intersection", 2, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "ST_Buffer", 2, SQLITE_ANY, cache, fnct_Buffer,
+			     0, 0);
+    sqlite3_create_function (db, "Intersection", 2, SQLITE_ANY, cache,
 			     fnct_Intersection, 0, 0);
-    sqlite3_create_function (db, "ST_Intersection", 2, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "ST_Intersection", 2, SQLITE_ANY, cache,
 			     fnct_Intersection, 0, 0);
-    sqlite3_create_function (db, "GUnion", 1, SQLITE_ANY, 0, 0,
+    sqlite3_create_function (db, "GUnion", 1, SQLITE_ANY, cache, 0,
 			     fnct_Union_step, fnct_Union_final);
-    sqlite3_create_function (db, "GUnion", 2, SQLITE_ANY, 0, fnct_Union, 0, 0);
-    sqlite3_create_function (db, "ST_Union", 1, SQLITE_ANY, 0, 0,
+    sqlite3_create_function (db, "GUnion", 2, SQLITE_ANY, cache, fnct_Union, 0,
+			     0);
+    sqlite3_create_function (db, "ST_Union", 1, SQLITE_ANY, cache, 0,
 			     fnct_Union_step, fnct_Union_final);
-    sqlite3_create_function (db, "ST_Union", 2, SQLITE_ANY, 0, fnct_Union, 0,
-			     0);
-    sqlite3_create_function (db, "Difference", 2, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "ST_Union", 2, SQLITE_ANY, cache, fnct_Union,
+			     0, 0);
+    sqlite3_create_function (db, "Difference", 2, SQLITE_ANY, cache,
 			     fnct_Difference, 0, 0);
-    sqlite3_create_function (db, "ST_Difference", 2, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "ST_Difference", 2, SQLITE_ANY, cache,
 			     fnct_Difference, 0, 0);
-    sqlite3_create_function (db, "SymDifference", 2, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "SymDifference", 2, SQLITE_ANY, cache,
 			     fnct_SymDifference, 0, 0);
-    sqlite3_create_function (db, "ST_SymDifference", 2, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "ST_SymDifference", 2, SQLITE_ANY, cache,
 			     fnct_SymDifference, 0, 0);
-    sqlite3_create_function (db, "Equals", 2, SQLITE_ANY, 0, fnct_Equals, 0, 0);
-    sqlite3_create_function (db, "ST_Equals", 2, SQLITE_ANY, 0, fnct_Equals, 0,
+    sqlite3_create_function (db, "Equals", 2, SQLITE_ANY, cache, fnct_Equals, 0,
 			     0);
+    sqlite3_create_function (db, "ST_Equals", 2, SQLITE_ANY, cache, fnct_Equals,
+			     0, 0);
     sqlite3_create_function (db, "Intersects", 2, SQLITE_ANY, cache,
 			     fnct_Intersects, 0, 0);
     sqlite3_create_function (db, "ST_Intersects", 2, SQLITE_ANY, cache,
@@ -27213,83 +29378,81 @@ register_spatialite_sql_functions (void *p_db, void *p_cache)
 			     0, 0);
     sqlite3_create_function (db, "ST_Touches", 2, SQLITE_ANY, cache,
 			     fnct_Touches, 0, 0);
-    sqlite3_create_function (db, "Within", 2, SQLITE_ANY, cache, fnct_Within,
+    sqlite3_create_function (db, "Within", 2, SQLITE_ANY, cache, fnct_Within, 0,
+			     0);
+    sqlite3_create_function (db, "ST_Within", 2, SQLITE_ANY, cache, fnct_Within,
 			     0, 0);
-    sqlite3_create_function (db, "ST_Within", 2, SQLITE_ANY, cache,
-			     fnct_Within, 0, 0);
     sqlite3_create_function (db, "Contains", 2, SQLITE_ANY, cache,
 			     fnct_Contains, 0, 0);
     sqlite3_create_function (db, "ST_Contains", 2, SQLITE_ANY, cache,
 			     fnct_Contains, 0, 0);
-    sqlite3_create_function (db, "Relate", 3, SQLITE_ANY, 0, fnct_Relate, 0, 0);
-    sqlite3_create_function (db, "ST_Relate", 3, SQLITE_ANY, 0, fnct_Relate, 0,
+    sqlite3_create_function (db, "Relate", 3, SQLITE_ANY, cache, fnct_Relate, 0,
 			     0);
-    sqlite3_create_function (db, "Distance", 2, SQLITE_ANY, 0, fnct_Distance,
+    sqlite3_create_function (db, "ST_Relate", 3, SQLITE_ANY, cache, fnct_Relate,
 			     0, 0);
-    sqlite3_create_function (db, "Distance", 3, SQLITE_ANY, 0, fnct_Distance,
-			     0, 0);
-    sqlite3_create_function (db, "ST_Distance", 2, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "Distance", 2, SQLITE_ANY, cache,
 			     fnct_Distance, 0, 0);
-    sqlite3_create_function (db, "ST_Distance", 3, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "Distance", 3, SQLITE_ANY, cache,
 			     fnct_Distance, 0, 0);
-    sqlite3_create_function (db, "PtDistWithin", 3, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "ST_Distance", 2, SQLITE_ANY, cache,
+			     fnct_Distance, 0, 0);
+    sqlite3_create_function (db, "ST_Distance", 3, SQLITE_ANY, cache,
+			     fnct_Distance, 0, 0);
+    sqlite3_create_function (db, "PtDistWithin", 3, SQLITE_ANY, cache,
 			     fnct_PtDistWithin, 0, 0);
-    sqlite3_create_function (db, "PtDistWithin", 4, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "PtDistWithin", 4, SQLITE_ANY, cache,
 			     fnct_PtDistWithin, 0, 0);
-    sqlite3_create_function (db, "BdPolyFromText", 1, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "BdPolyFromText", 1, SQLITE_ANY, cache,
 			     fnct_BdPolyFromText1, 0, 0);
-    sqlite3_create_function (db, "BdPolyFromText", 2, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "BdPolyFromText", 2, SQLITE_ANY, cache,
 			     fnct_BdPolyFromText2, 0, 0);
-    sqlite3_create_function (db, "BdMPolyFromText", 1, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "BdMPolyFromText", 1, SQLITE_ANY, cache,
 			     fnct_BdMPolyFromText1, 0, 0);
-    sqlite3_create_function (db, "BdMPolyFromText", 2, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "BdMPolyFromText", 2, SQLITE_ANY, cache,
 			     fnct_BdMPolyFromText2, 0, 0);
-    sqlite3_create_function (db, "BdPolyFromWKB", 1, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "BdPolyFromWKB", 1, SQLITE_ANY, cache,
 			     fnct_BdPolyFromWKB1, 0, 0);
-    sqlite3_create_function (db, "BdPolyFromWKB", 2, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "BdPolyFromWKB", 2, SQLITE_ANY, cache,
 			     fnct_BdPolyFromWKB2, 0, 0);
-    sqlite3_create_function (db, "BdMPolyFromWKB", 1, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "BdMPolyFromWKB", 1, SQLITE_ANY, cache,
 			     fnct_BdMPolyFromWKB1, 0, 0);
-    sqlite3_create_function (db, "BdMPolyFromWKB", 2, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "BdMPolyFromWKB", 2, SQLITE_ANY, cache,
 			     fnct_BdMPolyFromWKB2, 0, 0);
-    sqlite3_create_function (db, "ST_BdPolyFromText", 1, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "ST_BdPolyFromText", 1, SQLITE_ANY, cache,
 			     fnct_BdPolyFromText1, 0, 0);
-    sqlite3_create_function (db, "ST_BdPolyFromText", 2, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "ST_BdPolyFromText", 2, SQLITE_ANY, cache,
 			     fnct_BdPolyFromText2, 0, 0);
-    sqlite3_create_function (db, "ST_BdMPolyFromText", 1, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "ST_BdMPolyFromText", 1, SQLITE_ANY, cache,
 			     fnct_BdMPolyFromText1, 0, 0);
-    sqlite3_create_function (db, "ST_BdMPolyFromText", 2, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "ST_BdMPolyFromText", 2, SQLITE_ANY, cache,
 			     fnct_BdMPolyFromText2, 0, 0);
-    sqlite3_create_function (db, "ST_BdPolyFromWKB", 1, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "ST_BdPolyFromWKB", 1, SQLITE_ANY, cache,
 			     fnct_BdPolyFromWKB1, 0, 0);
-    sqlite3_create_function (db, "ST_BdPolyFromWKB", 2, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "ST_BdPolyFromWKB", 2, SQLITE_ANY, cache,
 			     fnct_BdPolyFromWKB2, 0, 0);
-    sqlite3_create_function (db, "ST_BdMPolyFromWKB", 1, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "ST_BdMPolyFromWKB", 1, SQLITE_ANY, cache,
 			     fnct_BdMPolyFromWKB1, 0, 0);
-    sqlite3_create_function (db, "ST_BdMPolyFromWKB", 2, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "ST_BdMPolyFromWKB", 2, SQLITE_ANY, cache,
 			     fnct_BdMPolyFromWKB2, 0, 0);
-
-#ifdef GEOS_ADVANCED		/* GEOS advanced features */
-
     sqlite3_create_function (db, "CreateTopologyTables", 2, SQLITE_ANY, 0,
 			     fnct_CreateTopologyTables, 0, 0);
     sqlite3_create_function (db, "CreateTopologyTables", 3, SQLITE_ANY, 0,
 			     fnct_CreateTopologyTables, 0, 0);
-    sqlite3_create_function (db, "OffsetCurve", 3, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "OffsetCurve", 3, SQLITE_ANY, cache,
 			     fnct_OffsetCurve, 0, 0);
-    sqlite3_create_function (db, "ST_OffsetCurve", 3, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "ST_OffsetCurve", 3, SQLITE_ANY, cache,
 			     fnct_OffsetCurve, 0, 0);
-    sqlite3_create_function (db, "SingleSidedBuffer", 3, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "SingleSidedBuffer", 3, SQLITE_ANY, cache,
 			     fnct_SingleSidedBuffer, 0, 0);
-    sqlite3_create_function (db, "ST_SingleSidedBuffer", 3, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "ST_SingleSidedBuffer", 3, SQLITE_ANY, cache,
 			     fnct_SingleSidedBuffer, 0, 0);
-    sqlite3_create_function (db, "HausdorffDistance", 2, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "HausdorffDistance", 2, SQLITE_ANY, cache,
 			     fnct_HausdorffDistance, 0, 0);
-    sqlite3_create_function (db, "ST_HausdorffDistance", 2, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "ST_HausdorffDistance", 2, SQLITE_ANY, cache,
 			     fnct_HausdorffDistance, 0, 0);
-    sqlite3_create_function (db, "SharedPaths", 2, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "SharedPaths", 2, SQLITE_ANY, cache,
 			     fnct_SharedPaths, 0, 0);
-    sqlite3_create_function (db, "ST_SharedPaths", 2, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "ST_SharedPaths", 2, SQLITE_ANY, cache,
 			     fnct_SharedPaths, 0, 0);
     sqlite3_create_function (db, "Covers", 2, SQLITE_ANY, cache, fnct_Covers,
 			     0, 0);
@@ -27299,77 +29462,78 @@ register_spatialite_sql_functions (void *p_db, void *p_cache)
 			     fnct_CoveredBy, 0, 0);
     sqlite3_create_function (db, "ST_CoveredBy", 2, SQLITE_ANY, cache,
 			     fnct_CoveredBy, 0, 0);
-    sqlite3_create_function (db, "Line_Interpolate_Point", 2, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "Line_Interpolate_Point", 2, SQLITE_ANY, cache,
 			     fnct_LineInterpolatePoint, 0, 0);
     sqlite3_create_function (db, "ST_Line_Interpolate_Point", 2, SQLITE_ANY,
-			     0, fnct_LineInterpolatePoint, 0, 0);
+			     cache, fnct_LineInterpolatePoint, 0, 0);
     sqlite3_create_function (db, "Line_Interpolate_Equidistant_Points", 2,
-			     SQLITE_ANY, 0,
+			     SQLITE_ANY, cache,
 			     fnct_LineInterpolateEquidistantPoints, 0, 0);
     sqlite3_create_function (db, "ST_Line_Interpolate_Equidistant_Points", 2,
-			     SQLITE_ANY, 0,
+			     SQLITE_ANY, cache,
 			     fnct_LineInterpolateEquidistantPoints, 0, 0);
-    sqlite3_create_function (db, "Line_Locate_Point", 2, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "Line_Locate_Point", 2, SQLITE_ANY, cache,
 			     fnct_LineLocatePoint, 0, 0);
-    sqlite3_create_function (db, "ST_Line_Locate_Point", 2, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "ST_Line_Locate_Point", 2, SQLITE_ANY, cache,
 			     fnct_LineLocatePoint, 0, 0);
-    sqlite3_create_function (db, "Line_Substring", 3, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "Line_Substring", 3, SQLITE_ANY, cache,
 			     fnct_LineSubstring, 0, 0);
-    sqlite3_create_function (db, "ST_Line_Substring", 3, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "ST_Line_Substring", 3, SQLITE_ANY, cache,
 			     fnct_LineSubstring, 0, 0);
-    sqlite3_create_function (db, "ClosestPoint", 2, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "ClosestPoint", 2, SQLITE_ANY, cache,
 			     fnct_ClosestPoint, 0, 0);
-    sqlite3_create_function (db, "ST_ClosestPoint", 2, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "ST_ClosestPoint", 2, SQLITE_ANY, cache,
 			     fnct_ClosestPoint, 0, 0);
-    sqlite3_create_function (db, "ShortestLine", 2, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "ShortestLine", 2, SQLITE_ANY, cache,
 			     fnct_ShortestLine, 0, 0);
-    sqlite3_create_function (db, "ST_ShortestLine", 2, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "ST_ShortestLine", 2, SQLITE_ANY, cache,
 			     fnct_ShortestLine, 0, 0);
-    sqlite3_create_function (db, "Snap", 3, SQLITE_ANY, 0, fnct_Snap, 0, 0);
-    sqlite3_create_function (db, "ST_Snap", 3, SQLITE_ANY, 0, fnct_Snap, 0, 0);
-    sqlite3_create_function (db, "LineMerge", 1, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "Snap", 3, SQLITE_ANY, cache, fnct_Snap, 0, 0);
+    sqlite3_create_function (db, "ST_Snap", 3, SQLITE_ANY, cache, fnct_Snap, 0,
+			     0);
+    sqlite3_create_function (db, "LineMerge", 1, SQLITE_ANY, cache,
 			     fnct_LineMerge, 0, 0);
-    sqlite3_create_function (db, "ST_LineMerge", 1, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "ST_LineMerge", 1, SQLITE_ANY, cache,
 			     fnct_LineMerge, 0, 0);
-    sqlite3_create_function (db, "UnaryUnion", 1, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "UnaryUnion", 1, SQLITE_ANY, cache,
 			     fnct_UnaryUnion, 0, 0);
-    sqlite3_create_function (db, "ST_UnaryUnion", 1, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "ST_UnaryUnion", 1, SQLITE_ANY, cache,
 			     fnct_UnaryUnion, 0, 0);
-    sqlite3_create_function (db, "SquareGrid", 2, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "SquareGrid", 2, SQLITE_ANY, cache,
 			     fnct_SquareGrid, 0, 0);
-    sqlite3_create_function (db, "SquareGrid", 3, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "SquareGrid", 3, SQLITE_ANY, cache,
 			     fnct_SquareGrid, 0, 0);
-    sqlite3_create_function (db, "SquareGrid", 4, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "SquareGrid", 4, SQLITE_ANY, cache,
 			     fnct_SquareGrid, 0, 0);
-    sqlite3_create_function (db, "ST_SquareGrid", 2, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "ST_SquareGrid", 2, SQLITE_ANY, cache,
 			     fnct_SquareGrid, 0, 0);
-    sqlite3_create_function (db, "ST_SquareGrid", 3, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "ST_SquareGrid", 3, SQLITE_ANY, cache,
 			     fnct_SquareGrid, 0, 0);
-    sqlite3_create_function (db, "ST_SquareGrid", 4, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "ST_SquareGrid", 4, SQLITE_ANY, cache,
 			     fnct_SquareGrid, 0, 0);
-    sqlite3_create_function (db, "TriangularGrid", 2, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "TriangularGrid", 2, SQLITE_ANY, cache,
 			     fnct_TriangularGrid, 0, 0);
-    sqlite3_create_function (db, "TriangularGrid", 3, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "TriangularGrid", 3, SQLITE_ANY, cache,
 			     fnct_TriangularGrid, 0, 0);
-    sqlite3_create_function (db, "TriangularGrid", 4, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "TriangularGrid", 4, SQLITE_ANY, cache,
 			     fnct_TriangularGrid, 0, 0);
-    sqlite3_create_function (db, "ST_TriangularGrid", 2, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "ST_TriangularGrid", 2, SQLITE_ANY, cache,
 			     fnct_TriangularGrid, 0, 0);
-    sqlite3_create_function (db, "ST_TriangularGrid", 3, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "ST_TriangularGrid", 3, SQLITE_ANY, cache,
 			     fnct_TriangularGrid, 0, 0);
-    sqlite3_create_function (db, "ST_TriangularGrid", 4, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "ST_TriangularGrid", 4, SQLITE_ANY, cache,
 			     fnct_TriangularGrid, 0, 0);
-    sqlite3_create_function (db, "HexagonalGrid", 2, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "HexagonalGrid", 2, SQLITE_ANY, cache,
 			     fnct_HexagonalGrid, 0, 0);
-    sqlite3_create_function (db, "HexagonalGrid", 3, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "HexagonalGrid", 3, SQLITE_ANY, cache,
 			     fnct_HexagonalGrid, 0, 0);
-    sqlite3_create_function (db, "HexagonalGrid", 4, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "HexagonalGrid", 4, SQLITE_ANY, cache,
 			     fnct_HexagonalGrid, 0, 0);
-    sqlite3_create_function (db, "ST_HexagonalGrid", 2, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "ST_HexagonalGrid", 2, SQLITE_ANY, cache,
 			     fnct_HexagonalGrid, 0, 0);
-    sqlite3_create_function (db, "ST_HexagonalGrid", 3, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "ST_HexagonalGrid", 3, SQLITE_ANY, cache,
 			     fnct_HexagonalGrid, 0, 0);
-    sqlite3_create_function (db, "ST_HexagonalGrid", 4, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "ST_HexagonalGrid", 4, SQLITE_ANY, cache,
 			     fnct_HexagonalGrid, 0, 0);
     sqlite3_create_function (db, "LinesCutAtNodes", 2, SQLITE_ANY, 0,
 			     fnct_LinesCutAtNodes, 0, 0);
@@ -27380,58 +29544,61 @@ register_spatialite_sql_functions (void *p_db, void *p_cache)
     sqlite3_create_function (db, "ST_RingsCutAtNodes", 1, SQLITE_ANY, 0,
 			     fnct_RingsCutAtNodes, 0, 0);
 
+#ifdef GEOS_ADVANCED		/* GEOS advanced features - 3.4.0 */
+
+    sqlite3_create_function (db, "DelaunayTriangulation", 1, SQLITE_ANY, cache,
+			     fnct_DelaunayTriangulation, 0, 0);
+    sqlite3_create_function (db, "DelaunayTriangulation", 2, SQLITE_ANY, cache,
+			     fnct_DelaunayTriangulation, 0, 0);
+    sqlite3_create_function (db, "DelaunayTriangulation", 3, SQLITE_ANY, cache,
+			     fnct_DelaunayTriangulation, 0, 0);
+    sqlite3_create_function (db, "ST_DelaunayTriangulation", 1, SQLITE_ANY,
+			     cache, fnct_DelaunayTriangulation, 0, 0);
+    sqlite3_create_function (db, "ST_DelaunayTriangulation", 2, SQLITE_ANY,
+			     cache, fnct_DelaunayTriangulation, 0, 0);
+    sqlite3_create_function (db, "ST_DelaunayTriangulation", 3, SQLITE_ANY,
+			     cache, fnct_DelaunayTriangulation, 0, 0);
+    sqlite3_create_function (db, "VoronojDiagram", 1, SQLITE_ANY, cache,
+			     fnct_VoronojDiagram, 0, 0);
+    sqlite3_create_function (db, "VoronojDiagram", 2, SQLITE_ANY, cache,
+			     fnct_VoronojDiagram, 0, 0);
+    sqlite3_create_function (db, "VoronojDiagram", 3, SQLITE_ANY, cache,
+			     fnct_VoronojDiagram, 0, 0);
+    sqlite3_create_function (db, "VoronojDiagram", 4, SQLITE_ANY, cache,
+			     fnct_VoronojDiagram, 0, 0);
+    sqlite3_create_function (db, "ST_VoronojDiagram", 1, SQLITE_ANY, cache,
+			     fnct_VoronojDiagram, 0, 0);
+    sqlite3_create_function (db, "ST_VoronojDiagram", 2, SQLITE_ANY, cache,
+			     fnct_VoronojDiagram, 0, 0);
+    sqlite3_create_function (db, "ST_VoronojDiagram", 3, SQLITE_ANY, cache,
+			     fnct_VoronojDiagram, 0, 0);
+    sqlite3_create_function (db, "ST_VoronojDiagram", 4, SQLITE_ANY, cache,
+			     fnct_VoronojDiagram, 0, 0);
+    sqlite3_create_function (db, "ConcaveHull", 1, SQLITE_ANY, cache,
+			     fnct_ConcaveHull, 0, 0);
+    sqlite3_create_function (db, "ConcaveHull", 2, SQLITE_ANY, cache,
+			     fnct_ConcaveHull, 0, 0);
+    sqlite3_create_function (db, "ConcaveHull", 3, SQLITE_ANY, cache,
+			     fnct_ConcaveHull, 0, 0);
+    sqlite3_create_function (db, "ConcaveHull", 4, SQLITE_ANY, cache,
+			     fnct_ConcaveHull, 0, 0);
+    sqlite3_create_function (db, "ST_ConcaveHull", 1, SQLITE_ANY, cache,
+			     fnct_ConcaveHull, 0, 0);
+    sqlite3_create_function (db, "ST_ConcaveHull", 2, SQLITE_ANY, cache,
+			     fnct_ConcaveHull, 0, 0);
+    sqlite3_create_function (db, "ST_ConcaveHull", 3, SQLITE_ANY, cache,
+			     fnct_ConcaveHull, 0, 0);
+    sqlite3_create_function (db, "ST_ConcaveHull", 4, SQLITE_ANY, cache,
+			     fnct_ConcaveHull, 0, 0);
+
 #endif /* end GEOS advanced features */
 
-#ifdef GEOS_TRUNK		/* GEOS experimental features */
-
-    sqlite3_create_function (db, "DelaunayTriangulation", 1, SQLITE_ANY, 0,
-			     fnct_DelaunayTriangulation, 0, 0);
-    sqlite3_create_function (db, "DelaunayTriangulation", 2, SQLITE_ANY, 0,
-			     fnct_DelaunayTriangulation, 0, 0);
-    sqlite3_create_function (db, "DelaunayTriangulation", 3, SQLITE_ANY, 0,
-			     fnct_DelaunayTriangulation, 0, 0);
-    sqlite3_create_function (db, "ST_DelaunayTriangulation", 1, SQLITE_ANY, 0,
-			     fnct_DelaunayTriangulation, 0, 0);
-    sqlite3_create_function (db, "ST_DelaunayTriangulation", 2, SQLITE_ANY, 0,
-			     fnct_DelaunayTriangulation, 0, 0);
-    sqlite3_create_function (db, "ST_DelaunayTriangulation", 3, SQLITE_ANY, 0,
-			     fnct_DelaunayTriangulation, 0, 0);
-    sqlite3_create_function (db, "VoronojDiagram", 1, SQLITE_ANY, 0,
-			     fnct_VoronojDiagram, 0, 0);
-    sqlite3_create_function (db, "VoronojDiagram", 2, SQLITE_ANY, 0,
-			     fnct_VoronojDiagram, 0, 0);
-    sqlite3_create_function (db, "VoronojDiagram", 3, SQLITE_ANY, 0,
-			     fnct_VoronojDiagram, 0, 0);
-    sqlite3_create_function (db, "VoronojDiagram", 4, SQLITE_ANY, 0,
-			     fnct_VoronojDiagram, 0, 0);
-    sqlite3_create_function (db, "ST_VoronojDiagram", 1, SQLITE_ANY, 0,
-			     fnct_VoronojDiagram, 0, 0);
-    sqlite3_create_function (db, "ST_VoronojDiagram", 2, SQLITE_ANY, 0,
-			     fnct_VoronojDiagram, 0, 0);
-    sqlite3_create_function (db, "ST_VoronojDiagram", 3, SQLITE_ANY, 0,
-			     fnct_VoronojDiagram, 0, 0);
-    sqlite3_create_function (db, "ST_VoronojDiagram", 4, SQLITE_ANY, 0,
-			     fnct_VoronojDiagram, 0, 0);
-    sqlite3_create_function (db, "ConcaveHull", 1, SQLITE_ANY, 0,
-			     fnct_ConcaveHull, 0, 0);
-    sqlite3_create_function (db, "ConcaveHull", 2, SQLITE_ANY, 0,
-			     fnct_ConcaveHull, 0, 0);
-    sqlite3_create_function (db, "ConcaveHull", 3, SQLITE_ANY, 0,
-			     fnct_ConcaveHull, 0, 0);
-    sqlite3_create_function (db, "ConcaveHull", 4, SQLITE_ANY, 0,
-			     fnct_ConcaveHull, 0, 0);
-    sqlite3_create_function (db, "ST_ConcaveHull", 1, SQLITE_ANY, 0,
-			     fnct_ConcaveHull, 0, 0);
-    sqlite3_create_function (db, "ST_ConcaveHull", 2, SQLITE_ANY, 0,
-			     fnct_ConcaveHull, 0, 0);
-    sqlite3_create_function (db, "ST_ConcaveHull", 3, SQLITE_ANY, 0,
-			     fnct_ConcaveHull, 0, 0);
-    sqlite3_create_function (db, "ST_ConcaveHull", 4, SQLITE_ANY, 0,
-			     fnct_ConcaveHull, 0, 0);
-
-#endif /* end GEOS experimental features */
-
 #ifdef ENABLE_LWGEOM		/* enabling LWGEOM support */
+
+    sqlite3_create_function (db, "LWGEOM_GetLastErrorMsg", 0, SQLITE_ANY,
+			     0, fnct_LWGEOM_GetLastErrorMsg, 0, 0);
+    sqlite3_create_function (db, "LWGEOM_GetLastWarningMsg", 0, SQLITE_ANY,
+			     0, fnct_LWGEOM_GetLastWarningMsg, 0, 0);
 
     sqlite3_create_function (db, "MakeValid", 1, SQLITE_ANY, 0,
 			     fnct_MakeValid, 0, 0);
@@ -27494,6 +29661,11 @@ register_spatialite_sql_functions (void *p_db, void *p_cache)
 			     fnct_SplitRight, 0, 0);
     sqlite3_create_function (db, "ST_SplitRight", 2, SQLITE_ANY, 0,
 			     fnct_SplitRight, 0, 0);
+    sqlite3_create_function (db, "ST_Node", 1, SQLITE_ANY, 0, fnct_Node, 0, 0);
+    sqlite3_create_function (db, "SelfIntersections", 1, SQLITE_ANY, 0,
+			     fnct_SelfIntersections, 0, 0);
+    sqlite3_create_function (db, "ST_SelfIntersections", 1, SQLITE_ANY, 0,
+			     fnct_SelfIntersections, 0, 0);
 
 #endif /* end LWGEOM support */
 
@@ -27517,14 +29689,18 @@ register_spatialite_sql_functions (void *p_db, void *p_cache)
 			     0, fnct_RegisterRasterStyledLayer, 0, 0);
     sqlite3_create_function (db, "RegisterRasterStyledLayer", 3, SQLITE_ANY,
 			     0, fnct_RegisterRasterStyledLayer, 0, 0);
+    sqlite3_create_function (db, "RegisterStyledGroup", 2, SQLITE_ANY, 0,
+			     fnct_RegisterStyledGroup, 0, 0);
     sqlite3_create_function (db, "RegisterStyledGroup", 3, SQLITE_ANY, 0,
 			     fnct_RegisterStyledGroup, 0, 0);
     sqlite3_create_function (db, "RegisterStyledGroup", 4, SQLITE_ANY, 0,
 			     fnct_RegisterStyledGroup, 0, 0);
-    sqlite3_create_function (db, "RegisterStyledGroup", 5, SQLITE_ANY, 0,
-			     fnct_RegisterStyledGroup, 0, 0);
     sqlite3_create_function (db, "SetStyledGroupInfos", 3, SQLITE_ANY, 0,
 			     fnct_SetStyledGroupInfos, 0, 0);
+    sqlite3_create_function (db, "RegisterGroupStyle", 2, SQLITE_ANY,
+			     0, fnct_RegisterGroupStyle, 0, 0);
+    sqlite3_create_function (db, "RegisterGroupStyle", 3, SQLITE_ANY,
+			     0, fnct_RegisterGroupStyle, 0, 0);
     sqlite3_create_function (db, "CreateIsoMetadataTables", 0, SQLITE_ANY, 0,
 			     fnct_CreateIsoMetadataTables, 0, 0);
     sqlite3_create_function (db, "CreateIsoMetadataTables", 1, SQLITE_ANY, 0,
@@ -27567,6 +29743,8 @@ register_spatialite_sql_functions (void *p_db, void *p_cache)
 			     fnct_XB_IsSldSeVectorStyle, 0, 0);
     sqlite3_create_function (db, "XB_IsSldSeRasterStyle", 1, SQLITE_ANY, 0,
 			     fnct_XB_IsSldSeRasterStyle, 0, 0);
+    sqlite3_create_function (db, "XB_IsSldStyle", 1, SQLITE_ANY, 0,
+			     fnct_XB_IsSldStyle, 0, 0);
     sqlite3_create_function (db, "XB_IsSvg", 1, SQLITE_ANY, 0, fnct_XB_IsSvg,
 			     0, 0);
     sqlite3_create_function (db, "XB_GetSchemaURI", 1, SQLITE_ANY, 0,
@@ -27585,6 +29763,8 @@ register_spatialite_sql_functions (void *p_db, void *p_cache)
 			     fnct_XB_AddFileId, 0, 0);
     sqlite3_create_function (db, "XB_AddParentId", 6, SQLITE_ANY, cache,
 			     fnct_XB_AddParentId, 0, 0);
+    sqlite3_create_function (db, "XB_GetName", 1, SQLITE_ANY, 0,
+			     fnct_XB_GetName, 0, 0);
     sqlite3_create_function (db, "XB_GetTitle", 1, SQLITE_ANY, 0,
 			     fnct_XB_GetTitle, 0, 0);
     sqlite3_create_function (db, "XB_GetAbstract", 1, SQLITE_ANY, 0,
@@ -27608,34 +29788,69 @@ register_spatialite_sql_functions (void *p_db, void *p_cache)
 
 #endif /* end including LIBXML2 */
 
-#ifdef ENABLE_GEOPACKAGE
+#ifdef ENABLE_GEOPACKAGE	/* enabling GeoPackage extensions */
+
+    sqlite3_create_function (db, "AutoGPKGStart", 0, SQLITE_ANY, 0,
+			     fnct_AutoGPKGStart, 0, 0);
+    sqlite3_create_function (db, "AutoGPKGStop", 0, SQLITE_ANY, 0,
+			     fnct_AutoGPKGStop, 0, 0);
+
     /* not yet finalised geopackage raster functions, plus some convenience API */
     sqlite3_create_function (db, "gpkgCreateBaseTables", 0, SQLITE_ANY, 0,
 			     fnct_gpkgCreateBaseTables, 0, 0);
-    sqlite3_create_function (db, "gpkgCreateTilesTable", 2, SQLITE_ANY, 0,
+    sqlite3_create_function (db, "gpkgInsertEpsgSRID", 1, SQLITE_ANY, 0,
+			     fnct_gpkgInsertEpsgSRID, 0, 0);
+    sqlite3_create_function (db, "gpkgCreateTilesTable", 6, SQLITE_ANY, 0,
 			     fnct_gpkgCreateTilesTable, 0, 0);
     sqlite3_create_function (db, "gpkgCreateTilesZoomLevel", 4, SQLITE_ANY, 0,
 			     fnct_gpkgCreateTilesZoomLevel, 0, 0);
     sqlite3_create_function (db, "gpkgAddTileTriggers", 1, SQLITE_ANY, 0,
 			     fnct_gpkgAddTileTriggers, 0, 0);
-    sqlite3_create_function (db, "gpkgAddRtMetadataTriggers", 1, SQLITE_ANY,
-			     0, fnct_gpkgAddRtMetadataTriggers, 0, 0);
     sqlite3_create_function (db, "gpkgGetNormalZoom", 2, SQLITE_ANY, 0,
 			     fnct_gpkgGetNormalZoom, 0, 0);
     sqlite3_create_function (db, "gpkgGetNormalRow", 3, SQLITE_ANY, 0,
 			     fnct_gpkgGetNormalRow, 0, 0);
     sqlite3_create_function (db, "gpkgGetImageType", 1, SQLITE_ANY, 0,
 			     fnct_gpkgGetImageType, 0, 0);
-    sqlite3_create_function (db, "gpkgPointToTile", 5, SQLITE_ANY, 0,
-			     fnct_gpkgPointToTile, 0, 0);
+    sqlite3_create_function (db, "gpkgAddGeometryColumn", 6, SQLITE_ANY, 0,
+			     fnct_gpkgAddGeometryColumn, 0, 0);
+    sqlite3_create_function (db, "gpkgAddGeometryTriggers", 2, SQLITE_ANY, 0,
+			     fnct_gpkgAddGeometryTriggers, 0, 0);
+    sqlite3_create_function (db, "gpkgAddSpatialIndex", 2, SQLITE_ANY, 0,
+			     fnct_gpkgAddSpatialIndex, 0, 0);
+    sqlite3_create_function (db, "gpkgMakePoint", 2, SQLITE_ANY, 0,
+			     fnct_gpkgMakePoint, 0, 0);
+    sqlite3_create_function (db, "gpkgMakePoint", 3, SQLITE_ANY, 0,
+			     fnct_gpkgMakePointWithSRID, 0, 0);
+    sqlite3_create_function (db, "gpkgMakePointZ", 3, SQLITE_ANY, 0,
+			     fnct_gpkgMakePointZ, 0, 0);
+    sqlite3_create_function (db, "gpkgMakePointZ", 4, SQLITE_ANY, 0,
+			     fnct_gpkgMakePointZWithSRID, 0, 0);
+    sqlite3_create_function (db, "gpkgMakePointM", 3, SQLITE_ANY, 0,
+			     fnct_gpkgMakePointM, 0, 0);
+    sqlite3_create_function (db, "gpkgMakePointM", 4, SQLITE_ANY, 0,
+			     fnct_gpkgMakePointMWithSRID, 0, 0);
+    sqlite3_create_function (db, "gpkgMakePointZM", 4, SQLITE_ANY, 0,
+			     fnct_gpkgMakePointZM, 0, 0);
+    sqlite3_create_function (db, "gpkgMakePointZM", 5, SQLITE_ANY, 0,
+			     fnct_gpkgMakePointZMWithSRID, 0, 0);
+    sqlite3_create_function (db, "AsGPB", 1, SQLITE_ANY, 0, fnct_ToGPB, 0, 0);
+    sqlite3_create_function (db, "GeomFromGPB", 1, SQLITE_ANY, 0,
+			     fnct_GeomFromGPB, 0, 0);
+    sqlite3_create_function (db, "IsValidGPB", 1, SQLITE_ANY, 0,
+			     fnct_IsValidGPB, 0, 0);
+    sqlite3_create_function (db, "GPKG_IsAssignable", 2, SQLITE_ANY, 0,
+			     fnct_GPKG_IsAssignable, 0, 0);
+    sqlite3_create_function (db, "CastAutomagic", 1, SQLITE_ANY, 0,
+			     fnct_CastAutomagic, 0, 0);
 
-#endif /* enabling GeoPackage extensions */
+#endif /* end enabling GeoPackage extensions */
 
     return cache;
 }
 
 SPATIALITE_PRIVATE void
-init_spatialite_virtualtables (void *p_db, void *p_cache)
+init_spatialite_virtualtables (void *p_db, const void *p_cache)
 {
     sqlite3 *db = (sqlite3 *) p_db;
 
@@ -27659,8 +29874,15 @@ init_spatialite_virtualtables (void *p_db, void *p_cache)
     mbrcache_extension_init (db);
 /* initializing the VirtualFDO  extension */
     virtualfdo_extension_init (db);
+/* initializing the VirtualBBox  extension */
+    virtualbbox_extension_init (db, p_cache);
 /* initializing the VirtualSpatialIndex  extension */
     virtual_spatialindex_extension_init (db);
+
+#ifdef ENABLE_GEOPACKAGE	/* only if GeoPackage support is enabled */
+/* initializing the VirtualFDO  extension */
+    virtualgpkg_extension_init (db);
+#endif /* end GEOPACKAGE conditional */
 
 #ifdef ENABLE_LIBXML2		/* including LIBXML2 */
 /* initializing the VirtualXPath extension */
@@ -27669,17 +29891,24 @@ init_spatialite_virtualtables (void *p_db, void *p_cache)
 }
 
 #ifdef LOADABLE_EXTENSION	/* loadable-extension only */
-static int
+SQLITE_EXTENSION_INIT1 static int
 init_spatialite_extension (sqlite3 * db, char **pzErrMsg,
 			   const sqlite3_api_routines * pApi)
 {
-    void *p_cache;
+    void *p_cache = spatialite_alloc_connection ();
+    struct splite_internal_cache *cache =
+	(struct splite_internal_cache *) p_cache;
     SQLITE_EXTENSION_INIT2 (pApi);
+
+#ifdef POSTGIS_2_1		/* initializing liblwgeom from PostGIS 2.1.x (or later) */
+    splite_lwgeom_init ();
+#endif /* end POSTGIS_2_1 */
+
 /* setting the POSIX locale for numeric */
     setlocale (LC_NUMERIC, "POSIX");
     *pzErrMsg = NULL;
 
-    p_cache = register_spatialite_sql_functions (db, NULL);
+    register_spatialite_sql_functions (db, cache);
 
     init_spatialite_virtualtables (db, p_cache);
 
@@ -27734,6 +29963,12 @@ spatialite_splash_screen (int verbose)
 
 		spatialite_i
 		    ("\t- 'VirtualFDO'\t\t[FDO-OGR interoperability]\n");
+
+#ifdef ENABLE_GEOPACKAGE	/* VirtualGPKG is supported */
+		spatialite_i
+		    ("\t- 'VirtualGPKG'\t[OGC GeoPackage interoperability]\n");
+#endif
+		spatialite_i ("\t- 'VirtualBBox'\t\t[BoundingBox tables]\n");
 		spatialite_i ("\t- 'SpatiaLite'\t\t[Spatial SQL - OGC]\n");
 	    }
 #ifndef OMIT_PROJ		/* PROJ.4 version */
@@ -27749,23 +29984,28 @@ spatialite_splash_screen (int verbose)
 	      spatialite_i ("LWGEOM version ......: %s\n",
 			    splite_lwgeom_version ());
 #endif /* end LWGEOM version */
+	  if (verbose)
+	      spatialite_i ("TARGET CPU ..........: %s\n",
+			    spatialite_target_cpu ());
       }
 }
 
 #ifndef LOADABLE_EXTENSION
 SPATIALITE_DECLARE void
-spatialite_init_ex (sqlite3 * db_handle, void *p_cache, int verbose)
+spatialite_init_ex (sqlite3 * db_handle, const void *p_cache, int verbose)
 {
 /* used when SQLite initializes as an ordinary lib */
     struct splite_internal_cache *cache =
 	(struct splite_internal_cache *) p_cache;
+    if (p_cache == NULL)
+      {
+	  spatialite_e
+	      ("ERROR unable to initialize the SpatiaLite extension: NULL cache !!!\n");
+	  return;
+      }
 
 /* setting the POSIX locale for numeric */
     setlocale (LC_NUMERIC, "POSIX");
-
-#ifndef OMIT_GEOS		/* initializing GEOS */
-    initGEOS (geos_warning, geos_error);
-#endif /* end GEOS  */
 
 #ifdef POSTGIS_2_1		/* initializing liblwgeom from PostGIS 2.1.x (or later) */
     splite_lwgeom_init ();
@@ -27780,49 +30020,16 @@ spatialite_init_ex (sqlite3 * db_handle, void *p_cache, int verbose)
     sqlite3_busy_timeout (db_handle, 5000);
 }
 
-static void
-free_internal_cache (struct splite_internal_cache *cache)
-{
-/* freeing an internal cache */
-    struct splite_geos_cache_item *p;
-#ifdef ENABLE_LIBXML2
-    int i;
-    struct splite_xmlSchema_cache_item *p_xmlSchema;
-#endif
-/* freeing the XML error buffers */
-    gaiaOutBufferReset (cache->xmlParsingErrors);
-    gaiaOutBufferReset (cache->xmlSchemaValidationErrors);
-    gaiaOutBufferReset (cache->xmlXPathErrors);
-    free (cache->xmlParsingErrors);
-    free (cache->xmlSchemaValidationErrors);
-    free (cache->xmlXPathErrors);
-
-/* freeing the GEOS cache */
-    p = &(cache->cacheItem1);
-    splite_free_geos_cache_item (p);
-    p = &(cache->cacheItem2);
-    splite_free_geos_cache_item (p);
-#ifdef ENABLE_LIBXML2
-    for (i = 0; i < MAX_XMLSCHEMA_CACHE; i++)
-      {
-	  /* freeing the XmlSchema cache */
-	  p_xmlSchema = &(cache->xmlSchemaCache[i]);
-	  splite_free_xml_schema_cache_item (p_xmlSchema);
-      }
-#endif
-/* freeing the cache itself */
-    free (cache);
-}
-
 SPATIALITE_DECLARE void
-spatialite_cleanup_ex (void *ptr)
+spatialite_cleanup_ex (const void *ptr)
 {
     struct splite_internal_cache *cache = (struct splite_internal_cache *) ptr;
 
-#ifndef OMIT_GEOS
-    finishGEOS ();
-    gaiaResetGeosMsg ();
-#endif
+    if (cache == NULL)
+	return;
+    if (cache->magic1 != SPATIALITE_CACHE_MAGIC1
+	|| cache->magic2 != SPATIALITE_CACHE_MAGIC2)
+	return;
 
 #ifdef ENABLE_LWGEOM
     gaiaResetLwGeomMsg ();
@@ -27839,19 +30046,11 @@ spatialite_cleanup_ex (void *ptr)
 __attribute__ ((visibility ("default")))
 #endif
      SPATIALITE_DECLARE int
-	 sqlite3_extension_init (sqlite3 * db, char **pzErrMsg,
-				 const sqlite3_api_routines * pApi)
+	 sqlite3_modspatialite_init (sqlite3 * db, char **pzErrMsg,
+				     const sqlite3_api_routines * pApi)
 {
 /* SQLite invokes this routine once when it dynamically loads the extension. */
-
-#ifndef OMIT_GEOS		/* initializing GEOS */
-    initGEOS (geos_warning, geos_error);
-#endif /* end GEOS  */
-
-#ifdef POSTGIS_2_1		/* initializing liblwgeom from PostGIS 2.1.x (or later) */
-    splite_lwgeom_init ();
-#endif /* end POSTGIS_2_1 */
-
+    spatialite_initialize ();
     return init_spatialite_extension (db, pzErrMsg, pApi);
 }
 #endif

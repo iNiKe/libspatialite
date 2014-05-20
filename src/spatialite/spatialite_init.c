@@ -65,9 +65,7 @@ Regione Toscana - Settore Sistema Informativo Territoriale ed Ambientale
 #include "config.h"
 #endif
 
-#define LOADABLE_EXTENSION
 #include <spatialite/sqlite.h>
-#undef LOADABLE_EXTENSION
 
 #include <spatialite/spatialite.h>
 #include <spatialite.h>
@@ -77,22 +75,21 @@ Regione Toscana - Settore Sistema Informativo Territoriale ed Ambientale
 #include <geos_c.h>
 #endif
 
-SQLITE_EXTENSION_INIT1 static int
-init_spatialite_extension (sqlite3 * db, char **pzErrMsg,
-			   const sqlite3_api_routines * pApi)
+#ifndef LOADABLE_EXTENSION	/* ordinary library, not loadable-extension */
+
+static int
+init_spatialite_extension (sqlite3 * db, char **pzErrMsg, const void *pApi)
 {
-    void *p_cache = spatialite_alloc_connection ();
-    struct splite_internal_cache *cache =
-	(struct splite_internal_cache *) p_cache;
-    SQLITE_EXTENSION_INIT2 (pApi);
+    if (pApi == NULL)
+	pApi = NULL;		/* suppressing stupid compiler warnings */
 
 /* setting the POSIX locale for numeric */
     setlocale (LC_NUMERIC, "POSIX");
     *pzErrMsg = NULL;
 
-    register_spatialite_sql_functions (db, cache);
+    register_spatialite_sql_functions (db, NULL);
 
-    init_spatialite_virtualtables (db, p_cache);
+    init_spatialite_virtualtables (db, NULL);
 
 /* setting a timeout handler */
     sqlite3_busy_timeout (db, 5000);
@@ -104,12 +101,20 @@ SPATIALITE_DECLARE void
 spatialite_init (int verbose)
 {
 /* used when SQLite initializes as an ordinary lib 
-   OBSOLETE - strongly discuraged !!!!!
+
+   OBSOLETE - strongly discouraged !!!!!
+   always using spatialite_init_ex() as a replacement
+   is warmly reccomended
 */
+    spatialite_initialize ();
 
 #ifndef OMIT_GEOS		/* initializing GEOS */
     initGEOS (geos_warning, geos_error);
 #endif /* end GEOS  */
+
+#ifdef POSTGIS_2_1		/* initializing liblwgeom from PostGIS 2.1.x (or later) */
+    splite_lwgeom_init ();
+#endif /* end POSTGIS_2_1 */
 
     sqlite3_auto_extension ((void (*)(void)) init_spatialite_extension);
     spatialite_splash_screen (verbose);
@@ -118,6 +123,11 @@ spatialite_init (int verbose)
 SPATIALITE_DECLARE void
 spatialite_cleanup ()
 {
+/* OBSOLETE - strongly discouraged !!!!!
+   always using spatialite_cleanup_ex() as a replacement
+   is warmly reccomended
+*/
+
 #ifndef OMIT_GEOS
     finishGEOS ();
 #endif
@@ -128,20 +138,4 @@ spatialite_cleanup ()
 
     sqlite3_reset_auto_extension ();
 }
-
-#if !(defined _WIN32) || defined(__MINGW32__)
-/* MSVC is unable to understand this declaration */
-__attribute__ ((visibility ("default")))
 #endif
-     SPATIALITE_DECLARE int
-	 sqlite3_extension_init (sqlite3 * db, char **pzErrMsg,
-				 const sqlite3_api_routines * pApi)
-{
-/* SQLite invokes this routine once when it dynamically loads the extension. */
-
-#ifndef OMIT_GEOS		/* initializing GEOS */
-    initGEOS (geos_warning, geos_error);
-#endif /* end GEOS  */
-
-    return init_spatialite_extension (db, pzErrMsg, pApi);
-}

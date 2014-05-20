@@ -3704,6 +3704,7 @@ updateGeometryTriggers (void *p_sqlite, const char *table, const char *column)
 	  if (curr_idx->ValidRtree)
 	    {
 		/* building RTree SpatialIndex */
+		int status;
 		raw = sqlite3_mprintf ("idx_%s_%s", curr_idx->TableName,
 				       curr_idx->ColumnName);
 		quoted_rtree = gaiaDoubleQuotedSql (raw);
@@ -3716,9 +3717,24 @@ updateGeometryTriggers (void *p_sqlite, const char *table, const char *column)
 		sqlite3_free (sql_statement);
 		if (ret != SQLITE_OK)
 		    goto error;
-		buildSpatialIndex (sqlite,
-				   (unsigned char *) (curr_idx->TableName),
-				   curr_idx->ColumnName);
+		status = buildSpatialIndexEx (sqlite,
+					      (unsigned char
+					       *) (curr_idx->TableName),
+					      curr_idx->ColumnName);
+		if (status == 0)
+		    ;
+		else
+		  {
+		      if (status == -2)
+			  errMsg =
+			      sqlite3_mprintf
+			      ("SpatialIndex error: a physical column named ROWID shadows the real ROWID");
+		      else
+			  errMsg =
+			      sqlite3_mprintf
+			      ("SpatialIndex error: unable to rebuild the T*Tree");
+		      goto error;
+		  }
 	    }
 	  if (curr_idx->ValidCache)
 	    {
@@ -3769,6 +3785,51 @@ SPATIALITE_PRIVATE void
 buildSpatialIndex (void *p_sqlite, const unsigned char *table,
 		   const char *column)
 {
+/* DEPRECATED - always use buildSpatialIndexEx as a safer replacement */
+    buildSpatialIndexEx (p_sqlite, table, column);
+}
+
+SPATIALITE_PRIVATE int
+validateRowid (void *p_sqlite, const char *table)
+{
+/* check for tables containing a physical column named ROWID */
+    sqlite3 *sqlite = (sqlite3 *) p_sqlite;
+    int rowid = 0;
+    char *sql;
+    int ret;
+    const char *name;
+    int i;
+    char **results;
+    int rows;
+    int columns;
+    char *quoted_table = gaiaDoubleQuotedSql (table);
+    sql = sqlite3_mprintf ("PRAGMA table_info(\"%s\")", quoted_table);
+    ret = sqlite3_get_table (sqlite, sql, &results, &rows, &columns, NULL);
+    sqlite3_free (sql);
+    free (quoted_table);
+    if (ret != SQLITE_OK)
+	return 0;
+    if (rows < 1)
+	;
+    else
+      {
+	  for (i = 1; i <= rows; i++)
+	    {
+		name = results[(i * columns) + 1];
+		if (strcasecmp (name, "rowid") == 0)
+		    rowid = 1;
+	    }
+      }
+    sqlite3_free_table (results);
+    if (rowid == 0)
+	return 1;
+    return 0;
+}
+
+SPATIALITE_PRIVATE int
+buildSpatialIndexEx (void *p_sqlite, const unsigned char *table,
+		     const char *column)
+{
 /* loading a SpatialIndex [RTree] */
     sqlite3 *sqlite = (sqlite3 *) p_sqlite;
     char *raw;
@@ -3778,6 +3839,14 @@ buildSpatialIndex (void *p_sqlite, const unsigned char *table,
     char *sql_statement;
     char *errMsg = NULL;
     int ret;
+
+    if (!validateRowid (sqlite, (const char *) table))
+      {
+	  /* a physical column named "rowid" shadows the real ROWID */
+	  spatialite_e
+	      ("buildSpatialIndex error: a physical column named ROWID shadows the real ROWID\n");
+	  return -2;
+      }
 
     raw = sqlite3_mprintf ("idx_%s_%s", table, column);
     quoted_rtree = gaiaDoubleQuotedSql (raw);
@@ -3800,7 +3869,9 @@ buildSpatialIndex (void *p_sqlite, const unsigned char *table,
       {
 	  spatialite_e ("buildSpatialIndex error: \"%s\"\n", errMsg);
 	  sqlite3_free (errMsg);
+	  return -1;
       }
+    return 0;
 }
 
 SPATIALITE_PRIVATE int
@@ -5981,4 +6052,54 @@ gaiaGetLayerExtent (sqlite3 * handle, const char *table,
     gaiaSetPoint (rect->Coords, 3, minx, maxy);	/* vertex # 4 */
     gaiaSetPoint (rect->Coords, 4, minx, miny);	/* vertex # 5 [same as vertex # 1 to close the polygon] */
     return bbox;
+}
+
+SPATIALITE_DECLARE int
+gaiaStatisticsInvalidate (sqlite3 * sqlite, const char *table,
+			  const char *geometry)
+{
+/* attempting to immediately and unconditionally invalidate Statistics */
+    int metadata_version = checkSpatialMetaData (sqlite);
+
+    if (metadata_version == 3)
+      {
+	  /* current metadata style >= v.4.0.0 */
+	  int ret;
+	  char *errMsg = NULL;
+	  char *sql_statement;
+	  if (table != NULL && geometry != NULL)
+	      sql_statement =
+		  sqlite3_mprintf ("UPDATE geometry_columns_time SET "
+				   "last_insert = strftime('%%Y-%%m-%%dT%%H:%%M:%%fZ', 'now'), "
+				   "last_update = strftime('%%Y-%%m-%%dT%%H:%%M:%%fZ', 'now'), "
+				   "last_delete = strftime('%%Y-%%m-%%dT%%H:%%M:%%fZ', 'now') "
+				   "WHERE Lower(f_table_name) = Lower(%Q) AND "
+				   "Lower(f_geometry_column) = Lower(%Q)",
+				   table, geometry);
+	  else if (table != NULL)
+	      sql_statement =
+		  sqlite3_mprintf ("UPDATE geometry_columns_time SET "
+				   "last_insert = strftime('%%Y-%%m-%%dT%%H:%%M:%%fZ', 'now'), "
+				   "last_update = strftime('%%Y-%%m-%%dT%%H:%%M:%%fZ', 'now'), "
+				   "last_delete = strftime('%%Y-%%m-%%dT%%H:%%M:%%fZ', 'now') "
+				   "WHERE Lower(f_table_name) = Lower(%Q)",
+				   table);
+	  else
+	      sql_statement =
+		  sqlite3_mprintf ("UPDATE geometry_columns_time SET "
+				   "last_insert = strftime('%%Y-%%m-%%dT%%H:%%M:%%fZ', 'now'), "
+				   "last_update = strftime('%%Y-%%m-%%dT%%H:%%M:%%fZ', 'now'), "
+				   "last_delete = strftime('%%Y-%%m-%%dT%%H:%%M:%%fZ', 'now')");
+	  ret = sqlite3_exec (sqlite, sql_statement, NULL, NULL, &errMsg);
+	  sqlite3_free (sql_statement);
+	  if (ret != SQLITE_OK)
+	    {
+		spatialite_e ("SQL error: %s: %s\n", sql_statement, errMsg);
+		sqlite3_free (errMsg);
+		return 0;
+	    }
+	  return 1;
+      }
+    else
+	return 0;
 }

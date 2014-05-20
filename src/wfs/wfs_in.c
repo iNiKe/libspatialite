@@ -76,6 +76,7 @@ Regione Toscana - Settore Sistema Informativo Territoriale ed Ambientale
 #ifdef ENABLE_LIBXML2		/* LIBXML2 enabled: supporting XML documents */
 
 #include <libxml/parser.h>
+#include <libxml/nanohttp.h>
 
 #define MAX_GTYPES	28
 
@@ -4268,6 +4269,13 @@ get_wfs_schema_column_info (gaiaWFScolumnPtr handle, const char **name,
     return 1;
 }
 
+SPATIALITE_DECLARE void
+reset_wfs_http_connection (void)
+{
+/* Resets the libxml2 "nano HTTP": useful when changing the HTTP_PROXY settings */
+    xmlNanoHTTPCleanup ();
+}
+
 #else /* LIBXML2 isn't enabled */
 
 SPATIALITE_DECLARE int
@@ -4567,6 +4575,13 @@ get_wfs_schema_column_info (gaiaWFScolumnPtr handle, const char **name,
     if (handle != NULL || name == NULL || type == NULL || nullable == NULL)
 	handle = NULL;
     return 0;
+}
+
+SPATIALITE_DECLARE void
+reset_wfs_http_connection (void)
+{
+/* LIBXML2 isn't enabled: does absolutely nothing */
+    return;
 }
 
 #endif /* end LIBXML2 conditionals */
