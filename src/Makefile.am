@@ -38,10 +38,10 @@ if MINGW
 libspatialite_la_LDFLAGS = -version-info 4:2:0 -no-undefined
 else 
 if ANDROID
-libspatialite_la_LDFLAGS = -version-info 6:0:2
+libspatialite_la_LDFLAGS = -version-info 7:0:0
 libspatialite_la_LIBADD += -ldl
 else
-libspatialite_la_LDFLAGS = -version-info 6:0:2
+libspatialite_la_LDFLAGS = -version-info 7:0:0
 libspatialite_la_LIBADD += -lpthread -ldl
 endif
 endif
@@ -70,10 +70,10 @@ if MINGW
 mod_spatialite_la_LDFLAGS = -module -avoid-version -no-undefined
 else 
 if ANDROID
-mod_spatialite_la_LDFLAGS = -module -version-info 6:0:2
+mod_spatialite_la_LDFLAGS = -module -version-info 7:0:0
 mod_spatialite_la_LIBADD += -ldl
 else
-mod_spatialite_la_LDFLAGS = -module -version-info 6:0:2
+mod_spatialite_la_LDFLAGS = -module -version-info 7:0:0
 mod_spatialite_la_LIBADD += -lpthread -ldl
 endif
 endif
