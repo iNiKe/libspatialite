@@ -1287,7 +1287,8 @@ to_sqlite_julian_date (int year, int month, int day, double *julian)
 }
 
 static int
-parseDbfField (unsigned char *buf_dbf, void *iconv_obj, gaiaDbfFieldPtr pFld)
+parseDbfField (unsigned char *buf_dbf, void *iconv_obj, gaiaDbfFieldPtr pFld,
+	       int text_dates)
 {
 /* parsing a generic DBF field */
     unsigned char buf[512];
@@ -1328,34 +1329,43 @@ parseDbfField (unsigned char *buf_dbf, void *iconv_obj, gaiaDbfFieldPtr pFld)
 	  else if (pFld->Type == 'D')
 	    {
 		/* DATE value */
-		if (strlen ((char *) buf) != 8)
-		    gaiaSetNullValue (pFld);
+		if (text_dates)
+		  {
+		      /* assuming to be plain text */
+		      gaiaSetStrValue (pFld, (char *) buf);
+		  }
 		else
 		  {
-		      /* converting into a Julian Date */
-		      double julian;
-		      char date[5];
-		      int year = 0;
-		      int month = 0;
-		      int day = 0;
-		      date[0] = buf[0];
-		      date[1] = buf[1];
-		      date[2] = buf[2];
-		      date[3] = buf[3];
-		      date[4] = '\0';
-		      year = atoi (date);
-		      date[0] = buf[4];
-		      date[1] = buf[5];
-		      date[2] = '\0';
-		      month = atoi (date);
-		      date[0] = buf[6];
-		      date[1] = buf[7];
-		      date[2] = '\0';
-		      day = atoi (date);
-		      if (to_sqlite_julian_date (year, month, day, &julian))
-			  gaiaSetDoubleValue (pFld, julian);
-		      else
+		      if (strlen ((char *) buf) != 8)
 			  gaiaSetNullValue (pFld);
+		      else
+			{
+			    /* converting into a Julian Date */
+			    double julian;
+			    char date[5];
+			    int year = 0;
+			    int month = 0;
+			    int day = 0;
+			    date[0] = buf[0];
+			    date[1] = buf[1];
+			    date[2] = buf[2];
+			    date[3] = buf[3];
+			    date[4] = '\0';
+			    year = atoi (date);
+			    date[0] = buf[4];
+			    date[1] = buf[5];
+			    date[2] = '\0';
+			    month = atoi (date);
+			    date[0] = buf[6];
+			    date[1] = buf[7];
+			    date[2] = '\0';
+			    day = atoi (date);
+			    if (to_sqlite_julian_date
+				(year, month, day, &julian))
+				gaiaSetDoubleValue (pFld, julian);
+			    else
+				gaiaSetNullValue (pFld);
+			}
 		  }
 	    }
 	  else if (pFld->Type == 'L')
@@ -1610,6 +1620,13 @@ shp_build_area (struct shp_ring_collection *ringsColl, gaiaGeomCollPtr geom)
 
 GAIAGEO_DECLARE int
 gaiaReadShpEntity (gaiaShapefilePtr shp, int current_row, int srid)
+{
+    return gaiaReadShpEntity_ex (shp, current_row, srid, 0);
+}
+
+GAIAGEO_DECLARE int
+gaiaReadShpEntity_ex (gaiaShapefilePtr shp, int current_row, int srid,
+		      int text_dates)
 {
 /* trying to read an entity from shapefile */
     unsigned char buf[512];
@@ -2491,7 +2508,7 @@ gaiaReadShpEntity (gaiaShapefilePtr shp, int current_row, int srid)
     pFld = shp->Dbf->First;
     while (pFld)
       {
-	  if (!parseDbfField (shp->BufDbf, shp->IconvObj, pFld))
+	  if (!parseDbfField (shp->BufDbf, shp->IconvObj, pFld, text_dates))
 	      goto conversion_error;
 	  pFld = pFld->Next;
       }
@@ -2686,8 +2703,8 @@ gaiaWriteShpEntity (gaiaShapefilePtr shp, gaiaDbfListPtr entity)
 #endif
     size_t len;
     size_t utf8len;
+    char *dynbuf;
     char *pUtf8buf;
-    char buf[512];
     char utf8buf[2048];
 /* writing the DBF record */
     memset (shp->BufDbf, '\0', shp->DbfReclen);
@@ -2729,23 +2746,33 @@ gaiaWriteShpEntity (gaiaShapefilePtr shp, gaiaDbfListPtr entity)
 		  {
 		      if (fld->Value->Type == GAIA_TEXT_VALUE)
 			{
-			    strcpy (buf, fld->Value->TxtValue);
-			    len = strlen (buf);
+			    len = strlen (fld->Value->TxtValue);
+			    dynbuf = malloc (len + 1);
+			    strcpy (dynbuf, fld->Value->TxtValue);
+			    if (len > 512)
+			      {
+				  dynbuf[512] = '\0';
+				  len = strlen (dynbuf);
+			      }
 			    utf8len = 2048;
-			    pBuf = buf;
+			    pBuf = dynbuf;
 			    pUtf8buf = utf8buf;
 			    if (iconv
 				((iconv_t) (shp->IconvObj), &pBuf, &len,
 				 &pUtf8buf, &utf8len) == (size_t) (-1))
-				goto conversion_error;
-			    memcpy (buf, utf8buf, 2048 - utf8len);
-			    buf[2048 - utf8len] = '\0';
-			    if (strlen (buf) < fld->Length)
-				memcpy (shp->BufDbf + fld->Offset + 1, buf,
-					strlen (buf));
+			      {
+				  free (dynbuf);
+				  goto conversion_error;
+			      }
+			    memcpy (dynbuf, utf8buf, 2048 - utf8len);
+			    dynbuf[2048 - utf8len] = '\0';
+			    if (strlen (dynbuf) < fld->Length)
+				memcpy (shp->BufDbf + fld->Offset + 1, dynbuf,
+					strlen (dynbuf));
 			    else
-				memcpy (shp->BufDbf + fld->Offset + 1, buf,
+				memcpy (shp->BufDbf + fld->Offset + 1, dynbuf,
 					fld->Length);
+			    free (dynbuf);
 			}
 		  }
 		break;
@@ -5139,6 +5166,13 @@ gaiaFlushDbfHeader (gaiaDbfPtr dbf)
 GAIAGEO_DECLARE int
 gaiaReadDbfEntity (gaiaDbfPtr dbf, int current_row, int *deleted)
 {
+    return gaiaReadDbfEntity_ex (dbf, current_row, deleted, 0);
+}
+
+GAIAGEO_DECLARE int
+gaiaReadDbfEntity_ex (gaiaDbfPtr dbf, int current_row, int *deleted,
+		      int text_dates)
+{
 /* trying to read an entity from DBF */
     int rd;
     int skpos;
@@ -5171,7 +5205,7 @@ gaiaReadDbfEntity (gaiaDbfPtr dbf, int current_row, int *deleted)
     pFld = dbf->Dbf->First;
     while (pFld)
       {
-	  if (!parseDbfField (dbf->BufDbf, dbf->IconvObj, pFld))
+	  if (!parseDbfField (dbf->BufDbf, dbf->IconvObj, pFld, text_dates))
 	      goto conversion_error;
 	  pFld = pFld->Next;
       }

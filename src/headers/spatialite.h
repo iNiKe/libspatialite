@@ -193,7 +193,7 @@ extern "C"
  \param charset a valid GNU ICONV charset to be used for DBF text strings
  \param geom_type "POINT", "LINESTRING", "POLYGON", "MULTIPOLYGON" or NULL
  \param verbose if TRUE a short report is shown on stderr
- \param rows on completion will contain the total number of actually exported rows
+ \param rows on completion will contain the total number of exported rows
  \param err_msg on completion will contain an error message (if any)
 
  \return 0 on failure, any other value on success
@@ -217,12 +217,12 @@ extern "C"
  \param compressed if TRUE compressed Geometries will be created
  \param verbose if TRUE a short report is shown on stderr
  \param spatial_index if TRUE an R*Tree Spatial Index will be created
- \param rows on completion will contain the total number of actually exported rows
+ \param rows on completion will contain the total number of imported rows
  \param err_msg on completion will contain an error message (if any)
 
  \return 0 on failure, any other value on success
 
- \sa load_shapefile_ex
+ \sa load_shapefile_ex, load_shapefile_ex2
 
  \note this function simply calls load_shapefile_ex by passing 
   implicit gype="AUTO" and pk_column=NULL arguments
@@ -254,12 +254,12 @@ extern "C"
  \param compressed if TRUE compressed Geometries will be created
  \param verbose if TRUE a short report is shown on stderr
  \param spatial_index if TRUE an R*Tree Spatial Index will be created
- \param rows on completion will contain the total number of actually exported rows
+ \param rows on completion will contain the total number of imported rows
  \param err_msg on completion will contain an error message (if any)
 
  \return 0 on failure, any other value on success
 
- \sa load_shapefile
+ \sa load_shapefile, load_shapefile_ex2
 
  \note the Shapefile format doesn't supports any distinction between
   LINESTRINGs and MULTILINESTRINGs, or between POLYGONs and MULTIPOLYGONs;
@@ -279,6 +279,52 @@ extern "C"
 					      int *rows, char *err_msg);
 
 /**
+ Loads an external Shapefile into a newly created table
+
+ \param sqlite handle to current DB connection
+ \param shp_path pathname of the Shapefile to be imported (no suffix) 
+ \param table the name of the table to be created
+ \param charset a valid GNU ICONV charset to be used for DBF text strings
+ \param srid the SRID to be set for Geometries
+ \param geo_column the name of the geometry column
+ \param gtype expected to be one of: "LINESTRING", "LINESTRINGZ", 
+  "LINESTRINGM", "LINESTRINGZM", "MULTILINESTRING", "MULTILINESTRINGZ",
+  "MULTILINESTRINGM", "MULTILINESTRINGZM", "POLYGON", "POLYGONZ", "POLYGONM", 
+  "POLYGONZM", "MULTIPOLYGON", "MULTIPOLYGONZ", "MULTIPOLYGONM", 
+  "MULTIPOLYGONZM" or "AUTO".
+ \param pk_column name of the Primary Key column; if NULL or mismatching
+ then "PK_UID" will be assumed by default.
+ \param coerce2d if TRUE any Geometry will be casted to 2D [XY]
+ \param compressed if TRUE compressed Geometries will be created
+ \param verbose if TRUE a short report is shown on stderr
+ \param spatial_index if TRUE an R*Tree Spatial Index will be created
+ \param text_dates is TRUE all DBF dates will be considered as TEXT
+ \param rows on completion will contain the total number of imported rows
+ \param err_msg on completion will contain an error message (if any)
+
+ \return 0 on failure, any other value on success
+
+ \sa load_shapefile, load_shapefile_ex
+
+ \note the Shapefile format doesn't supports any distinction between
+  LINESTRINGs and MULTILINESTRINGs, or between POLYGONs and MULTIPOLYGONs;
+  as does not allows to clearly distinguish if the M-measure is required.
+ \n So a first preliminary scan of the Shapefile is required in order to
+  correctly identify the actual payload (gtype = "AUTO", default case).
+ \n By explicitly specifying some expected geometry type this first scan
+  will be skipped at all thus introducing a noticeable performance gain.
+ \n Anyway, declaring a mismatching geometry type will surely cause a failure.
+ */
+    SPATIALITE_DECLARE int load_shapefile_ex2 (sqlite3 * sqlite, char *shp_path,
+					       char *table, char *charset,
+					       int srid, char *geo_column,
+					       char *gtype, char *pk_column,
+					       int coerce2d, int compressed,
+					       int verbose, int spatial_index,
+					       int text_date, int *rows,
+					       char *err_msg);
+
+/**
  Loads an external DBF file into a newly created table
 
  \param sqlite handle to current DB connection
@@ -289,7 +335,7 @@ extern "C"
  \param rows on completion will contain the total number of actually exported rows
  \param err_msg on completion will contain an error message (if any)
 
- \sa load_dbf_ex
+ \sa load_dbf_ex, load_dbf_ex2
 
  \note this function simply calls load_dbf_ex by passing an
   implicit pk_column=NULL argument
@@ -313,7 +359,7 @@ extern "C"
  \param rows on completion will contain the total number of actually exported rows
  \param err_msg on completion will contain an error message (if any)
 
- \sa load_shapefile
+ \sa load_dbf, load_dbf_ex2
 
  \return 0 on failure, any other value on success
  */
@@ -322,6 +368,29 @@ extern "C"
 					char *charset, int verbose, int *rows,
 					char *err_msg);
 
+/**
+ Loads an external DBF file into a newly created table
+
+ \param sqlite handle to current DB connection
+ \param dbf_path pathname of the DBF file to be imported
+ \param table the name of the table to be created
+ \param pk_column name of the Primary Key column; if NULL or mismatching
+ then "PK_UID" will be assumed by default.
+ \param charset a valid GNU ICONV charset to be used for DBF text strings
+ \param verbose if TRUE a short report is shown on stderr
+ \param text_dates is TRUE all DBF dates will be considered as TEXT
+ \param rows on completion will contain the total number of imported rows
+ \param err_msg on completion will contain an error message (if any)
+
+ \sa load_dbf, load_dbf_ex
+
+ \return 0 on failure, any other value on success
+ */
+    SPATIALITE_DECLARE int load_dbf_ex2 (sqlite3 * sqlite, char *dbf_path,
+					 char *table, char *pk_column,
+					 char *charset, int verbose,
+					 int text_date, int *rows,
+					 char *err_msg);
 
 /**
  Dumps a full table into an external DBF file
@@ -331,12 +400,32 @@ extern "C"
  \param dbf_path pathname of the DBF to be exported 
  \param charset a valid GNU ICONV charset to be used for DBF text strings
  \param err_msg on completion will contain an error message (if any)
+ 
+ \sa dump_dbf_ex
 
  \return 0 on failure, any other value on success
  */
     SPATIALITE_DECLARE int dump_dbf (sqlite3 * sqlite, char *table,
 				     char *dbf_path, char *charset,
 				     char *err_msg);
+
+/**
+ Dumps a full table into an external DBF file
+
+ \param sqlite handle to current DB connection
+ \param table the name of the table to be exported
+ \param dbf_path pathname of the DBF to be exported 
+ \param charset a valid GNU ICONV charset to be used for DBF text strings
+ \param rows on completion will contain the total number of exported rows
+ \param err_msg on completion will contain an error message (if any)
+ 
+ \sa dump_dbf
+
+ \return 0 on failure, any other value on success
+ */
+    SPATIALITE_DECLARE int dump_dbf_ex (sqlite3 * sqlite, char *table,
+					char *dbf_path, char *charset,
+					int *rows, char *err_msg);
 
 /**
  Loads an external spreadsheet (.xls) file into a newly created table
@@ -441,6 +530,8 @@ extern "C"
  \param name_col column to be used for KML "name" (may be null)
  \param desc_col column to be used for KML "description" (may be null)
  \param precision number of decimal digits for coordinates
+ 
+ \sa dump_kml_ex
 
  \return 0 on failure, any other value on success
  */
@@ -448,6 +539,27 @@ extern "C"
 				     char *geom_col, char *kml_path,
 				     char *name_col, char *desc_col,
 				     int precision);
+
+/**
+ Dumps a full geometry-table into an external KML file
+
+ \param sqlite handle to current DB connection
+ \param table the name of the table to be exported
+ \param geom_col the name of the geometry column
+ \param kml_path pathname of the KML file to be exported 
+ \param name_col column to be used for KML "name" (may be null)
+ \param desc_col column to be used for KML "description" (may be null)
+ \param precision number of decimal digits for coordinates
+ \param rows on completion will contain the total number of exported rows
+ 
+ \sa dump_kml
+
+ \return 0 on failure, any other value on success
+ */
+    SPATIALITE_DECLARE int dump_kml_ex (sqlite3 * sqlite, char *table,
+					char *geom_col, char *kml_path,
+					char *name_col, char *desc_col,
+					int precision, int *rows);
 
 /**
  Checks for duplicated rows into the same table
@@ -505,6 +617,8 @@ extern "C"
  \param outTable name of the output table to be created
  \param pKey name of the Primary Key column in the output table
  \param multiId name of the column identifying origins in the output table
+ 
+ \sa elementary_geometries_ex
 
  \note if the input table contains some kind of complex Geometry
  (MULTIPOINT, MULTILINESTRING, MULTIPOLYGON or GEOMETRYCOLLECTION),
@@ -520,6 +634,33 @@ extern "C"
 						   char *multiId);
 
 /**
+ Creates a derived table surely containing elementary Geometries
+
+ \param sqlite handle to current DB connection
+ \param inTable name of the input table 
+ \param geometry name of the Geometry column
+ \param outTable name of the output table to be created
+ \param pKey name of the Primary Key column in the output table
+ \param multiId name of the column identifying origins in the output table
+ \param rows on completion will contain the total number of inserted rows
+ 
+ \sa elementary_geometries
+
+ \note if the input table contains some kind of complex Geometry
+ (MULTIPOINT, MULTILINESTRING, MULTIPOLYGON or GEOMETRYCOLLECTION),
+ then many rows are inserted into the output table: each single 
+ row will contain the same attributes and an elementaty Geometry.
+ All the rows created by expanding the same input row will expose
+ the same value in the "multiId" column.
+ */
+    SPATIALITE_DECLARE void elementary_geometries_ex (sqlite3 * sqlite,
+						      char *inTable,
+						      char *geometry,
+						      char *outTable,
+						      char *pKey, char *multiId,
+						      int *rows);
+
+/**
  Dumps a full geometry-table into an external GeoJSON file
 
  \param sqlite handle to current DB connection
@@ -528,6 +669,8 @@ extern "C"
  \param outfile_path pathname for the GeoJSON file to be written to
  \param precision number of decimal digits for coordinates
  \param option the format to use for output
+ 
+ \sa dump_geojson_rx
 
  \note valid values for option are:
    - 0 no option
@@ -542,6 +685,34 @@ extern "C"
     SPATIALITE_DECLARE int dump_geojson (sqlite3 * sqlite, char *table,
 					 char *geom_col, char *outfile_path,
 					 int precision, int option);
+
+/**
+ Dumps a full geometry-table into an external GeoJSON file
+
+ \param sqlite handle to current DB connection
+ \param table the name of the table to be exported
+ \param geom_col the name of the geometry column
+ \param outfile_path pathname for the GeoJSON file to be written to
+ \param precision number of decimal digits for coordinates
+ \param option the format to use for output
+ \param rows on completion will contain the total number of exported rows
+ 
+ \sa dump_geojson
+
+ \note valid values for option are:
+   - 0 no option
+   - 1 GeoJSON MBR
+   - 2 GeoJSON Short CRS (e.g EPSG:4326)
+   - 3 MBR + Short CRS
+   - 4 GeoJSON Long CRS (e.g urn:ogc:def:crs:EPSG::4326)
+   - 5 MBR + Long CRS
+
+ \return 0 on failure, any other value on success
+ */
+    SPATIALITE_DECLARE int dump_geojson_ex (sqlite3 * sqlite, char *table,
+					    char *geom_col, char *outfile_path,
+					    int precision, int option,
+					    int *rows);
 
 /**
  Updates the LAYER_STATICS metadata table

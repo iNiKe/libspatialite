@@ -52,6 +52,7 @@ the terms of any one of the MPL, the GPL or the LGPL.
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
+#include <float.h>
 
 #if defined(_WIN32) && !defined(__MINGW32__)
 #include "config-msvc.h"
@@ -384,10 +385,22 @@ load_shapefile (sqlite3 * sqlite, char *shp_path, char *table, char *charset,
 }
 
 SPATIALITE_DECLARE int
-load_shapefile_ex (sqlite3 * sqlite, char *shp_path, char *table, char *charset,
-		   int srid, char *g_column, char *gtype, char *pk_column,
-		   int coerce2d, int compressed, int verbose, int spatial_index,
-		   int *rows, char *err_msg)
+load_shapefile_ex (sqlite3 * sqlite, char *shp_path, char *table,
+		   char *charset, int srid, char *g_column, char *gtype,
+		   char *pk_column, int coerce2d, int compressed, int verbose,
+		   int spatial_index, int *rows, char *err_msg)
+{
+    return load_shapefile_ex2 (sqlite, shp_path, table, charset, srid, g_column,
+			       gtype, pk_column, coerce2d, compressed, verbose,
+			       spatial_index, 0, rows, err_msg);
+}
+
+SPATIALITE_DECLARE int
+load_shapefile_ex2 (sqlite3 * sqlite, char *shp_path, char *table,
+		    char *charset, int srid, char *g_column, char *gtype,
+		    char *pk_column, int coerce2d, int compressed,
+		    int verbose, int spatial_index, int text_dates, int *rows,
+		    char *err_msg)
 {
     sqlite3_stmt *stmt = NULL;
     int ret;
@@ -423,6 +436,8 @@ load_shapefile_ex (sqlite3 * sqlite, char *shp_path, char *table, char *charset,
     gaiaOutBuffer sql_statement;
     if (!geo_column)
 	geo_column = "Geometry";
+    if (rows)
+	*rows = -1;
     if (!xgtype)
 	;
     else
@@ -613,7 +628,10 @@ load_shapefile_ex (sqlite3 * sqlite, char *shp_path, char *table, char *charset,
 			      }
 			    break;
 			case 'D':
-			    pk_type = SQLITE_FLOAT;
+			    if (text_dates)
+				pk_type = SQLITE_TEXT;
+			    else
+				pk_type = SQLITE_FLOAT;
 			    break;
 			case 'F':
 			    pk_type = SQLITE_FLOAT;
@@ -756,7 +774,10 @@ load_shapefile_ex (sqlite3 * sqlite, char *shp_path, char *table, char *charset,
 		  }
 		break;
 	    case 'D':
-		gaiaAppendToOutBuffer (&sql_statement, " DOUBLE");
+		if (text_dates)
+		    gaiaAppendToOutBuffer (&sql_statement, "TEXT");
+		else
+		    gaiaAppendToOutBuffer (&sql_statement, " DOUBLE");
 		break;
 	    case 'F':
 		gaiaAppendToOutBuffer (&sql_statement, " DOUBLE");
@@ -1078,7 +1099,7 @@ load_shapefile_ex (sqlite3 * sqlite, char *shp_path, char *table, char *charset,
     while (1)
       {
 	  /* inserting rows from shapefile */
-	  ret = gaiaReadShpEntity (shp, current_row, srid);
+	  ret = gaiaReadShpEntity_ex (shp, current_row, srid, text_dates);
 	  if (!ret)
 	    {
 		if (!(shp->LastError))	/* normal SHP EOF */
@@ -1106,8 +1127,9 @@ load_shapefile_ex (sqlite3 * sqlite, char *shp_path, char *table, char *charset,
 		      if (pk_type == SQLITE_TEXT)
 			  sqlite3_bind_text (stmt, 1,
 					     dbf_field->Value->TxtValue,
-					     strlen (dbf_field->Value->
-						     TxtValue), SQLITE_STATIC);
+					     strlen (dbf_field->
+						     Value->TxtValue),
+					     SQLITE_STATIC);
 		      else if (pk_type == SQLITE_FLOAT)
 			  sqlite3_bind_double (stmt, 1,
 					       dbf_field->Value->DblValue);
@@ -1216,8 +1238,6 @@ load_shapefile_ex (sqlite3 * sqlite, char *shp_path, char *table, char *charset,
 		spatialite_e ("load shapefile error: <%s>\n", errMsg);
 		sqlite3_free (errMsg);
 	    }
-	  if (rows)
-	      *rows = current_row;
 	  return 0;
       }
     else
@@ -2498,11 +2518,11 @@ get_attached_view_extent_legacy (sqlite3 * handle, const char *db_prefix,
 		    (const char *) sqlite3_column_text (stmt, 0);
 		const char *geometry_column =
 		    (const char *) sqlite3_column_text (stmt, 1);
-		int count;
-		double min_x;
-		double min_y;
-		double max_x;
-		double max_y;
+		int count = 0;
+		double min_x = DBL_MAX;
+		double min_y = DBL_MAX;
+		double max_x = 0.0 - DBL_MAX;
+		double max_y = 0.0 - DBL_MAX;
 		if (sqlite3_column_type (stmt, 2) == SQLITE_NULL)
 		    is_null = 1;
 		else
@@ -2621,6 +2641,8 @@ dump_shapefile (sqlite3 * sqlite, char *table, char *column, char *shp_path,
     char *xxtable;
     struct auxdbf_list *auxdbf = NULL;
 
+    if (xrows)
+	*xrows = -1;
     if (geom_type)
       {
 	  /* normalizing required geometry type */
@@ -2934,7 +2956,7 @@ dump_shapefile (sqlite3 * sqlite, char *table, char *column, char *shp_path,
 	  if (fld->TextValuesCount > 0)
 	    {
 		sql_type = SQLITE_TEXT;
-		max_len = 255;
+		max_len = 254;
 		if (fld->MaxSize)
 		    max_len = fld->MaxSize->MaxSize;
 	    }
@@ -2949,6 +2971,11 @@ dump_shapefile (sqlite3 * sqlite, char *table, char *column, char *shp_path,
 	    {
 		if (max_len == 0)	/* avoiding ZERO-length fields */
 		    max_len = 1;
+		if (max_len > 254)
+		  {
+		      /* DBF C: max allowed lenght */
+		      max_len = 254;
+		  }
 		gaiaAddDbfField (dbf_list, fld->AttributeFieldName, 'C', offset,
 				 max_len, 0);
 		offset += max_len;
@@ -3052,8 +3079,8 @@ dump_shapefile (sqlite3 * sqlite, char *table, char *column, char *shp_path,
 				      SQLITE_TEXT)
 				    {
 					dummy =
-					    (char *)
-					    sqlite3_column_text (stmt, i);
+					    (char *) sqlite3_column_text (stmt,
+									  i);
 					gaiaSetStrValue (dbf_field, dummy);
 				    }
 				  else if (sqlite3_column_type (stmt, i) ==
@@ -3162,6 +3189,15 @@ SPATIALITE_DECLARE int
 load_dbf_ex (sqlite3 * sqlite, char *dbf_path, char *table, char *pk_column,
 	     char *charset, int verbose, int *rows, char *err_msg)
 {
+    return load_dbf_ex2 (sqlite, dbf_path, table, pk_column, charset, verbose,
+			 0, rows, err_msg);
+}
+
+SPATIALITE_DECLARE int
+load_dbf_ex2 (sqlite3 * sqlite, char *dbf_path, char *table, char *pk_column,
+	      char *charset, int verbose, int text_dates, int *rows,
+	      char *err_msg)
+{
     sqlite3_stmt *stmt;
     int ret;
     char *errMsg = NULL;
@@ -3189,6 +3225,8 @@ load_dbf_ex (sqlite3 * sqlite, char *dbf_path, char *table, char *pk_column,
     int pk_type = SQLITE_INTEGER;
     int pk_set;
     qtable = gaiaDoubleQuotedSql (table);
+    if (rows)
+	*rows = -1;
 /* checking if TABLE already exists */
     sql = sqlite3_mprintf ("SELECT name FROM sqlite_master WHERE "
 			   "type = 'table' AND Lower(name) = Lower(%Q)", table);
@@ -3303,7 +3341,10 @@ load_dbf_ex (sqlite3 * sqlite, char *dbf_path, char *table, char *pk_column,
 			      }
 			    break;
 			case 'D':
-			    pk_type = SQLITE_FLOAT;
+			    if (text_dates)
+				pk_type = SQLITE_TEXT;
+			    else
+				pk_type = SQLITE_FLOAT;
 			    break;
 			case 'F':
 			    pk_type = SQLITE_FLOAT;
@@ -3437,7 +3478,10 @@ load_dbf_ex (sqlite3 * sqlite, char *dbf_path, char *table, char *pk_column,
 		  }
 		break;
 	    case 'D':
-		gaiaAppendToOutBuffer (&sql_statement, " DOUBLE");
+		if (text_dates)
+		    gaiaAppendToOutBuffer (&sql_statement, " TEXT");
+		else
+		    gaiaAppendToOutBuffer (&sql_statement, " DOUBLE");
 		break;
 	    case 'F':
 		gaiaAppendToOutBuffer (&sql_statement, " DOUBLE");
@@ -3527,7 +3571,7 @@ load_dbf_ex (sqlite3 * sqlite, char *dbf_path, char *table, char *pk_column,
     while (1)
       {
 	  /* inserting rows from DBF */
-	  ret = gaiaReadDbfEntity (dbf, current_row, &deleted);
+	  ret = gaiaReadDbfEntity_ex (dbf, current_row, &deleted, text_dates);
 	  if (!ret)
 	    {
 		if (!(dbf->LastError))	/* normal DBF EOF */
@@ -3559,8 +3603,9 @@ load_dbf_ex (sqlite3 * sqlite, char *dbf_path, char *table, char *pk_column,
 		      if (pk_type == SQLITE_TEXT)
 			  sqlite3_bind_text (stmt, 1,
 					     dbf_field->Value->TxtValue,
-					     strlen (dbf_field->Value->
-						     TxtValue), SQLITE_STATIC);
+					     strlen (dbf_field->
+						     Value->TxtValue),
+					     SQLITE_STATIC);
 		      else if (pk_type == SQLITE_FLOAT)
 			  sqlite3_bind_double (stmt, 1,
 					       dbf_field->Value->DblValue);
@@ -3654,8 +3699,6 @@ load_dbf_ex (sqlite3 * sqlite, char *dbf_path, char *table, char *pk_column,
 		spatialite_e ("load DBF error: <%s>\n", errMsg);
 		sqlite3_free (errMsg);
 	    };
-	  if (rows)
-	      *rows = current_row;
 	  if (qtable)
 	      free (qtable);
 	  if (qpk_name)
@@ -3690,6 +3733,14 @@ SPATIALITE_DECLARE int
 dump_dbf (sqlite3 * sqlite, char *table, char *dbf_path, char *charset,
 	  char *err_msg)
 {
+    int rows;
+    return dump_dbf_ex (sqlite, table, dbf_path, charset, &rows, err_msg);
+}
+
+SPATIALITE_DECLARE int
+dump_dbf_ex (sqlite3 * sqlite, char *table, char *dbf_path, char *charset,
+	     int *xrows, char *err_msg)
+{
 /* DBF dump */
     int rows;
     int i;
@@ -3715,6 +3766,7 @@ dump_dbf (sqlite3 * sqlite, char *table, char *dbf_path, char *charset,
     char *table_name = NULL;
     struct auxdbf_list *auxdbf = NULL;
 
+    *xrows = -1;
     shp_parse_table_name (table, &db_prefix, &table_name);
 /*
 / preparing SQL statement 
@@ -3778,6 +3830,11 @@ dump_dbf (sqlite3 * sqlite, char *table, char *dbf_path, char *charset,
 		      if (type == SQLITE_TEXT)
 			{
 			    len = sqlite3_column_bytes (stmt, i);
+			    if (len > 254)
+			      {
+				  /* DBF C type: max allowed length */
+				  len = 254;
+			      }
 			    sql_type[i] = SQLITE_TEXT;
 			    if (len > max_length[i])
 				max_length[i] = len;
@@ -3895,8 +3952,9 @@ dump_dbf (sqlite3 * sqlite, char *table, char *dbf_path, char *charset,
 				  if (sqlite3_column_type (stmt, i) ==
 				      SQLITE_TEXT)
 				    {
-					dummy = (char *)
-					    sqlite3_column_text (stmt, i);
+					dummy =
+					    (char *) sqlite3_column_text (stmt,
+									  i);
 					gaiaSetStrValue (dbf_field, dummy);
 				    }
 				  else if (sqlite3_column_type (stmt, i) ==
@@ -3945,6 +4003,7 @@ dump_dbf (sqlite3 * sqlite, char *table, char *dbf_path, char *charset,
 	free (db_prefix);
     if (table_name != NULL)
 	free (table_name);
+    *xrows = rows;
     return 1;
   sql_error:
 /* some SQL error occurred */
@@ -4058,6 +4117,15 @@ SPATIALITE_DECLARE int
 dump_kml (sqlite3 * sqlite, char *table, char *geom_col, char *kml_path,
 	  char *name_col, char *desc_col, int precision)
 {
+    int rows;
+    return dump_kml_ex (sqlite, table, geom_col, kml_path, name_col, desc_col,
+			precision, &rows);
+}
+
+SPATIALITE_DECLARE int
+dump_kml_ex (sqlite3 * sqlite, char *table, char *geom_col, char *kml_path,
+	     char *name_col, char *desc_col, int precision, int *xrows)
+{
 /* dumping a  geometry table as KML */
     char *sql;
     char *xname;
@@ -4070,6 +4138,7 @@ dump_kml (sqlite3 * sqlite, char *table, char *geom_col, char *kml_path,
     int rows = 0;
     int is_const = 1;
 
+    *xrows = -1;
 /* opening/creating the KML file */
     out = fopen (kml_path, "wb");
     if (!out)
@@ -4152,6 +4221,7 @@ dump_kml (sqlite3 * sqlite, char *table, char *geom_col, char *kml_path,
     fprintf (out, "</kml>\r\n");
     sqlite3_finalize (stmt);
     fclose (out);
+    *xrows = rows;
     return 1;
 
   sql_error:
@@ -4235,6 +4305,7 @@ check_duplicated_rows (sqlite3 * sqlite, char *table, int *dupl_count)
     if (is_table (sqlite, table) == 0)
       {
 	  spatialite_e (".chkdupl %s: no such table\n", table);
+	  *dupl_count = -1;
 	  return;
       }
 /* extracting the column names (excluding any Primary Key) */
@@ -4477,6 +4548,8 @@ remove_duplicated_rows_ex (sqlite3 * sqlite, char *table, int *removed)
     if (is_table (sqlite, table) == 0)
       {
 	  spatialite_e (".remdupl %s: no such table\n", table);
+	  if (removed != NULL)
+	      *removed = -1;
 	  return;
       }
 /* extracting the column names (excluding any Primary Key) */
@@ -5078,6 +5151,17 @@ elementary_geometries (sqlite3 * sqlite,
 		       char *pKey, char *multiId)
 {
 /* attempting to create a derived table surely containing elemetary Geoms */
+    int rows;
+    elementary_geometries_ex (sqlite, inTable, geometry, outTable, pKey,
+			      multiId, &rows);
+}
+
+SPATIALITE_DECLARE void
+elementary_geometries_ex (sqlite3 * sqlite,
+			  char *inTable, char *geometry, char *outTable,
+			  char *pKey, char *multiId, int *xrows)
+{
+/* attempting to create a derived table surely containing elemetary Geoms */
     char type[128];
     int srid;
     char dims[64];
@@ -5102,12 +5186,14 @@ elementary_geometries (sqlite3 * sqlite,
     sqlite3_stmt *stmt_out = NULL;
     int n_columns;
     sqlite3_int64 id = 0;
+    int inserted = 0;
 
     if (check_elementary
 	(sqlite, inTable, geometry, outTable, pKey, multiId, type, &srid,
 	 dims) == 0)
       {
 	  spatialite_e (".elemgeo: invalid args\n");
+	  *xrows = 0;
 	  return;
       }
 
@@ -5332,6 +5418,7 @@ elementary_geometries (sqlite3 * sqlite,
 					  sqlite3_errmsg (sqlite));
 			    goto abort;
 			}
+		      inserted++;
 		  }
 		else
 		  {
@@ -5411,6 +5498,7 @@ elementary_geometries (sqlite3 * sqlite,
 						sqlite3_errmsg (sqlite));
 				  goto abort;
 			      }
+			    inserted++;
 			    pt = pt->Next;
 			}
 		      ln = g->FirstLinestring;
@@ -5484,6 +5572,7 @@ elementary_geometries (sqlite3 * sqlite,
 						sqlite3_errmsg (sqlite));
 				  goto abort;
 			      }
+			    inserted++;
 			    ln = ln->Next;
 			}
 		      pg = g->FirstPolygon;
@@ -5557,6 +5646,7 @@ elementary_geometries (sqlite3 * sqlite,
 						sqlite3_errmsg (sqlite));
 				  goto abort;
 			      }
+			    inserted++;
 			    pg = pg->Next;
 			}
 		      gaiaFreeGeomColl (g);
@@ -5580,6 +5670,7 @@ elementary_geometries (sqlite3 * sqlite,
 	  sqlite3_free (errMsg);
 	  goto abort;
       }
+    *xrows = inserted;
     return;
 
   abort:
@@ -5587,6 +5678,7 @@ elementary_geometries (sqlite3 * sqlite,
 	sqlite3_finalize (stmt_in);
     if (stmt_out)
 	sqlite3_finalize (stmt_out);
+    *xrows = 0;
 }
 
 #ifndef OMIT_FREEXL		/* including FreeXL */
@@ -5613,6 +5705,8 @@ load_XL (sqlite3 * sqlite, const char *path, const char *table,
     gaiaOutBuffer sql_statement;
     FreeXL_CellValue cell;
     int already_exists = 0;
+
+    *rows = 0;
 /* checking if TABLE already exists */
     sql =
 	sqlite3_mprintf ("SELECT name FROM sqlite_master WHERE type = 'table' "
@@ -5715,8 +5809,8 @@ load_XL (sqlite3 * sqlite, const char *path, const char *table,
 						     cell.value.int_value);
 			    else if (cell.type == FREEXL_CELL_DOUBLE)
 				dummy = sqlite3_mprintf ("%1.2f ",
-							 cell.value.
-							 double_value);
+							 cell.
+							 value.double_value);
 			    else if (cell.type == FREEXL_CELL_TEXT
 				     || cell.type == FREEXL_CELL_SST_TEXT
 				     || cell.type == FREEXL_CELL_DATE
@@ -5727,8 +5821,8 @@ load_XL (sqlite3 * sqlite, const char *path, const char *table,
 				  if (len < 256)
 				      dummy =
 					  sqlite3_mprintf ("%s",
-							   cell.value.
-							   text_value);
+							   cell.
+							   value.text_value);
 				  else
 				      dummy = sqlite3_mprintf ("col_%d", col);
 			      }
@@ -5945,16 +6039,27 @@ load_XL (sqlite3 * sqlite, const char *path, const char *table,
 	spatialite_e ("XL datasource '%s' is not valid\n", path);
     else
 	sprintf (err_msg, "XL datasource '%s' is not valid\n", path);
+    *rows = 0;
     return 0;
 }
 
 #endif /* FreeXL enabled/disabled */
 
 SPATIALITE_DECLARE int
-dump_geojson (sqlite3 * sqlite, char *table, char *geom_col, char *outfile_path,
-	      int precision, int option)
+dump_geojson (sqlite3 * sqlite, char *table, char *geom_col,
+	      char *outfile_path, int precision, int option)
+{
+    int rows;
+    return dump_geojson_ex (sqlite, table, geom_col, outfile_path, precision,
+			    option, &rows);
+}
+
+SPATIALITE_DECLARE int
+dump_geojson_ex (sqlite3 * sqlite, char *table, char *geom_col,
+		 char *outfile_path, int precision, int option, int *xrows)
 {
 /* dumping a  geometry table as GeoJSON - Brad Hards 2011-11-09 */
+/* sandro furieri 2014-08-30: adding the "int *xrows" argument */
     char *sql;
     char *xgeom_col;
     char *xtable;
@@ -5963,6 +6068,7 @@ dump_geojson (sqlite3 * sqlite, char *table, char *geom_col, char *outfile_path,
     int ret;
     int rows = 0;
 
+    *xrows = -1;
 /* opening/creating the GeoJSON output file */
     out = fopen (outfile_path, "wb");
     if (!out)
@@ -6007,6 +6113,7 @@ dump_geojson (sqlite3 * sqlite, char *table, char *geom_col, char *outfile_path,
 
     sqlite3_finalize (stmt);
     fclose (out);
+    *xrows = rows;
     return 1;
 
   sql_error:

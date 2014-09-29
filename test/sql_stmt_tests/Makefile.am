@@ -310,8 +310,25 @@ EXTRA_DIST = addpoint10.testcase \
 	checkspatialmetadata1.testcase \
 	checkspatialmetadata2.testcase \
 	checkspatialmetadata3.testcase \
+	checkdupl1.testcase \
+	checkdupl2.testcase \
 	checkspatialmetadata4.testcase \
 	checkspatialmetadata5.testcase \
+	clonetable1.testcase \
+	clonetable2.testcase \
+	clonetable3.testcase \
+	clonetable4.testcase \
+	clonetable5.testcase \
+	clonetable6.testcase \
+	clonetable7.testcase \
+	clonetable8.testcase \
+	clonetable9.testcase \
+	clonetable10.testcase \
+	clonetable11.testcase \
+	clonetable12.testcase \
+	clonetable13.testcase \
+	clonetable14.testcase \
+	clonetable15.testcase \
 	ch_m.testcase \
 	cm_m.testcase \
 	collect10.testcase \
@@ -508,6 +525,17 @@ EXTRA_DIST = addpoint10.testcase \
 	dm_m.testcase \
 	DSC_1467.JPG \
 	DSCN0042.JPG \
+	dropgeo1.testcase \
+	dropgeo2.testcase \
+	dropgeo3.testcase \
+	dropgeo4.testcase \
+	dropgeo5.testcase \
+	elemgeo1.testcase \
+	elemgeo2.testcase \
+	elemgeo3.testcase \
+	elemgeo4.testcase \
+	elemgeo5.testcase \
+	elemgeo6.testcase \
 	emptyfile.txt \
 	endpoint1.testcase \
 	envelope1.testcase \
@@ -1507,6 +1535,8 @@ EXTRA_DIST = addpoint10.testcase \
 	reflectcoords7.testcase \
 	reflectcoords8.testcase \
 	reflectcoords9.testcase \
+	removedupl1.testcase \
+	removedupl2.testcase \
 	removepoint10.testcase \
 	removepoint11.testcase \
 	removepoint12.testcase \
@@ -1634,6 +1664,38 @@ EXTRA_DIST = addpoint10.testcase \
 	setpoint7.testcase \
 	setpoint8.testcase \
 	setpoint9.testcase \
+	setendpoint10.testcase \
+	setendpoint11.testcase \
+	setendpoint12.testcase \
+	setendpoint13.testcase \
+	setendpoint14.testcase \
+	setendpoint15.testcase \
+	setendpoint16.testcase \
+	setendpoint1.testcase \
+	setendpoint2.testcase \
+	setendpoint3.testcase \
+	setendpoint4.testcase \
+	setendpoint5.testcase \
+	setendpoint6.testcase \
+	setendpoint7.testcase \
+	setendpoint8.testcase \
+	setendpoint9.testcase \
+	setstartpoint10.testcase \
+	setstartpoint11.testcase \
+	setstartpoint12.testcase \
+	setstartpoint13.testcase \
+	setstartpoint14.testcase \
+	setstartpoint15.testcase \
+	setstartpoint16.testcase \
+	setstartpoint1.testcase \
+	setstartpoint2.testcase \
+	setstartpoint3.testcase \
+	setstartpoint4.testcase \
+	setstartpoint5.testcase \
+	setstartpoint6.testcase \
+	setstartpoint7.testcase \
+	setstartpoint8.testcase \
+	setstartpoint9.testcase \
 	shiftcoords10.testcase \
 	shiftcoords11.testcase \
 	shiftcoords12.testcase \

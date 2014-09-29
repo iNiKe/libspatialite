@@ -87,22 +87,23 @@ check_PROGRAMS = check_endian$(EXEEXT) check_version$(EXEEXT) \
 	check_shp_load_3d$(EXEEXT) shape_cp1252$(EXEEXT) \
 	shape_primitives$(EXEEXT) shape_utf8_1$(EXEEXT) \
 	shape_utf8_1ex$(EXEEXT) shape_utf8_2$(EXEEXT) \
-	shape_3d$(EXEEXT) check_xls_load$(EXEEXT) \
-	check_math_funcs$(EXEEXT) check_gaia_util$(EXEEXT) \
-	check_gaia_utf8$(EXEEXT) check_extension$(EXEEXT) \
-	check_recover_geom$(EXEEXT) check_sql_stmt$(EXEEXT) \
-	check_multithread$(EXEEXT) check_virtualtable1$(EXEEXT) \
-	check_virtualtable2$(EXEEXT) check_virtualtable3$(EXEEXT) \
-	check_virtualtable4$(EXEEXT) check_virtualtable5$(EXEEXT) \
-	check_virtualtable6$(EXEEXT) check_virtual_ovflw$(EXEEXT) \
-	check_mbrcache$(EXEEXT) check_spatialindex$(EXEEXT) \
-	check_exif$(EXEEXT) check_exif2$(EXEEXT) \
-	check_relations_fncts$(EXEEXT) \
+	shape_3d$(EXEEXT) check_clone_table$(EXEEXT) \
+	check_xls_load$(EXEEXT) check_math_funcs$(EXEEXT) \
+	check_gaia_util$(EXEEXT) check_gaia_utf8$(EXEEXT) \
+	check_extension$(EXEEXT) check_recover_geom$(EXEEXT) \
+	check_sql_stmt$(EXEEXT) check_multithread$(EXEEXT) \
+	check_virtualtable1$(EXEEXT) check_virtualtable2$(EXEEXT) \
+	check_virtualtable3$(EXEEXT) check_virtualtable4$(EXEEXT) \
+	check_virtualtable5$(EXEEXT) check_virtualtable6$(EXEEXT) \
+	check_virtual_ovflw$(EXEEXT) check_mbrcache$(EXEEXT) \
+	check_spatialindex$(EXEEXT) check_exif$(EXEEXT) \
+	check_exif2$(EXEEXT) check_relations_fncts$(EXEEXT) \
 	check_extra_relations_fncts$(EXEEXT) \
 	check_geoscvt_fncts$(EXEEXT) check_libxml2$(EXEEXT) \
 	check_styling$(EXEEXT) check_virtualxpath$(EXEEXT) \
 	check_virtualbbox$(EXEEXT) check_wfsin$(EXEEXT) \
-	check_dxf$(EXEEXT) check_metacatalog$(EXEEXT) $(am__EXEEXT_1)
+	check_dxf$(EXEEXT) check_metacatalog$(EXEEXT) \
+	check_virtualelem$(EXEEXT) $(am__EXEEXT_1)
 @ENABLE_GEOPACKAGE_TRUE@am__append_1 = \
 @ENABLE_GEOPACKAGE_TRUE@		check_createBaseTables \
 @ENABLE_GEOPACKAGE_TRUE@		check_gpkgCreateTilesTable \
@@ -191,6 +192,9 @@ check_add_tile_triggers_bad_table_name_LDADD = $(LDADD)
 check_bufovflw_SOURCES = check_bufovflw.c
 check_bufovflw_OBJECTS = check_bufovflw.$(OBJEXT)
 check_bufovflw_LDADD = $(LDADD)
+check_clone_table_SOURCES = check_clone_table.c
+check_clone_table_OBJECTS = check_clone_table.$(OBJEXT)
+check_clone_table_LDADD = $(LDADD)
 check_create_SOURCES = check_create.c
 check_create_OBJECTS = check_create.$(OBJEXT)
 check_create_LDADD = $(LDADD)
@@ -409,6 +413,9 @@ check_virtual_ovflw_LDADD = $(LDADD)
 check_virtualbbox_SOURCES = check_virtualbbox.c
 check_virtualbbox_OBJECTS = check_virtualbbox.$(OBJEXT)
 check_virtualbbox_LDADD = $(LDADD)
+check_virtualelem_SOURCES = check_virtualelem.c
+check_virtualelem_OBJECTS = check_virtualelem.$(OBJEXT)
+check_virtualelem_LDADD = $(LDADD)
 check_virtualtable1_SOURCES = check_virtualtable1.c
 check_virtualtable1_OBJECTS = check_virtualtable1.$(OBJEXT)
 check_virtualtable1_LDADD = $(LDADD)
@@ -490,10 +497,10 @@ am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
 SOURCES = check_add_tile_triggers.c \
 	check_add_tile_triggers_bad_table_name.c check_bufovflw.c \
-	check_create.c check_createBaseTables.c check_dbf_load.c \
-	check_dxf.c check_endian.c check_exif.c check_exif2.c \
-	check_extension.c check_extra_relations_fncts.c check_fdo1.c \
-	check_fdo2.c check_fdo3.c check_fdo_bufovflw.c \
+	check_clone_table.c check_create.c check_createBaseTables.c \
+	check_dbf_load.c check_dxf.c check_endian.c check_exif.c \
+	check_exif2.c check_extension.c check_extra_relations_fncts.c \
+	check_fdo1.c check_fdo2.c check_fdo3.c check_fdo_bufovflw.c \
 	check_gaia_utf8.c check_gaia_util.c check_geom_aux.c \
 	check_geometry_cols.c check_geoscvt_fncts.c \
 	check_get_normal_row.c check_get_normal_row_bad_geopackage.c \
@@ -520,18 +527,18 @@ SOURCES = check_add_tile_triggers.c \
 	check_relations_fncts.c check_shp_load.c check_shp_load_3d.c \
 	check_spatialindex.c check_sql_stmt.c check_styling.c \
 	check_version.c check_virtual_ovflw.c check_virtualbbox.c \
-	check_virtualtable1.c check_virtualtable2.c \
-	check_virtualtable3.c check_virtualtable4.c \
-	check_virtualtable5.c check_virtualtable6.c \
-	check_virtualxpath.c check_wfsin.c check_xls_load.c shape_3d.c \
-	shape_cp1252.c shape_primitives.c shape_utf8_1.c \
-	shape_utf8_1ex.c shape_utf8_2.c
+	check_virtualelem.c check_virtualtable1.c \
+	check_virtualtable2.c check_virtualtable3.c \
+	check_virtualtable4.c check_virtualtable5.c \
+	check_virtualtable6.c check_virtualxpath.c check_wfsin.c \
+	check_xls_load.c shape_3d.c shape_cp1252.c shape_primitives.c \
+	shape_utf8_1.c shape_utf8_1ex.c shape_utf8_2.c
 DIST_SOURCES = check_add_tile_triggers.c \
 	check_add_tile_triggers_bad_table_name.c check_bufovflw.c \
-	check_create.c check_createBaseTables.c check_dbf_load.c \
-	check_dxf.c check_endian.c check_exif.c check_exif2.c \
-	check_extension.c check_extra_relations_fncts.c check_fdo1.c \
-	check_fdo2.c check_fdo3.c check_fdo_bufovflw.c \
+	check_clone_table.c check_create.c check_createBaseTables.c \
+	check_dbf_load.c check_dxf.c check_endian.c check_exif.c \
+	check_exif2.c check_extension.c check_extra_relations_fncts.c \
+	check_fdo1.c check_fdo2.c check_fdo3.c check_fdo_bufovflw.c \
 	check_gaia_utf8.c check_gaia_util.c check_geom_aux.c \
 	check_geometry_cols.c check_geoscvt_fncts.c \
 	check_get_normal_row.c check_get_normal_row_bad_geopackage.c \
@@ -558,12 +565,12 @@ DIST_SOURCES = check_add_tile_triggers.c \
 	check_relations_fncts.c check_shp_load.c check_shp_load_3d.c \
 	check_spatialindex.c check_sql_stmt.c check_styling.c \
 	check_version.c check_virtual_ovflw.c check_virtualbbox.c \
-	check_virtualtable1.c check_virtualtable2.c \
-	check_virtualtable3.c check_virtualtable4.c \
-	check_virtualtable5.c check_virtualtable6.c \
-	check_virtualxpath.c check_wfsin.c check_xls_load.c shape_3d.c \
-	shape_cp1252.c shape_primitives.c shape_utf8_1.c \
-	shape_utf8_1ex.c shape_utf8_2.c
+	check_virtualelem.c check_virtualtable1.c \
+	check_virtualtable2.c check_virtualtable3.c \
+	check_virtualtable4.c check_virtualtable5.c \
+	check_virtualtable6.c check_virtualxpath.c check_wfsin.c \
+	check_xls_load.c shape_3d.c shape_cp1252.c shape_primitives.c \
+	shape_utf8_1.c shape_utf8_1ex.c shape_utf8_2.c
 RECURSIVE_TARGETS = all-recursive check-recursive cscopelist-recursive \
 	ctags-recursive dvi-recursive html-recursive info-recursive \
 	install-data-recursive install-dvi-recursive \
@@ -1056,7 +1063,8 @@ SUBDIRS = sql_stmt_geosadvanced_tests sql_stmt_geos_tests \
 	sql_stmt_libxml2_tests sql_stmt_lwgeom_tests \
 	sql_stmt_mathsql_tests sql_stmt_proj_tests \
 	sql_stmt_security_tests sql_stmt_tests \
-	sql_stmt_xmlsec_tests sql_stmt_geopackage_tests
+	sql_stmt_xmlsec_tests sql_stmt_geopackage_tests \
+	sql_stmt_freexl_tests
 
 all: all-recursive
 
@@ -1113,6 +1121,10 @@ check_add_tile_triggers_bad_table_name$(EXEEXT): $(check_add_tile_triggers_bad_t
 check_bufovflw$(EXEEXT): $(check_bufovflw_OBJECTS) $(check_bufovflw_DEPENDENCIES) $(EXTRA_check_bufovflw_DEPENDENCIES) 
 	@rm -f check_bufovflw$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(check_bufovflw_OBJECTS) $(check_bufovflw_LDADD) $(LIBS)
+
+check_clone_table$(EXEEXT): $(check_clone_table_OBJECTS) $(check_clone_table_DEPENDENCIES) $(EXTRA_check_clone_table_DEPENDENCIES) 
+	@rm -f check_clone_table$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(check_clone_table_OBJECTS) $(check_clone_table_LDADD) $(LIBS)
 
 check_create$(EXEEXT): $(check_create_OBJECTS) $(check_create_DEPENDENCIES) $(EXTRA_check_create_DEPENDENCIES) 
 	@rm -f check_create$(EXEEXT)
@@ -1358,6 +1370,10 @@ check_virtualbbox$(EXEEXT): $(check_virtualbbox_OBJECTS) $(check_virtualbbox_DEP
 	@rm -f check_virtualbbox$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(check_virtualbbox_OBJECTS) $(check_virtualbbox_LDADD) $(LIBS)
 
+check_virtualelem$(EXEEXT): $(check_virtualelem_OBJECTS) $(check_virtualelem_DEPENDENCIES) $(EXTRA_check_virtualelem_DEPENDENCIES) 
+	@rm -f check_virtualelem$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(check_virtualelem_OBJECTS) $(check_virtualelem_LDADD) $(LIBS)
+
 check_virtualtable1$(EXEEXT): $(check_virtualtable1_OBJECTS) $(check_virtualtable1_DEPENDENCIES) $(EXTRA_check_virtualtable1_DEPENDENCIES) 
 	@rm -f check_virtualtable1$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(check_virtualtable1_OBJECTS) $(check_virtualtable1_LDADD) $(LIBS)
@@ -1427,6 +1443,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_add_tile_triggers.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_add_tile_triggers_bad_table_name.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_bufovflw.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_clone_table.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_create.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_createBaseTables.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_dbf_load.Po@am__quote@
@@ -1488,6 +1505,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_version.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_virtual_ovflw.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_virtualbbox.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_virtualelem.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_virtualtable1.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_virtualtable2.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_virtualtable3.Po@am__quote@
@@ -1925,6 +1943,13 @@ shape_3d.log: shape_3d$(EXEEXT)
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
+check_clone_table.log: check_clone_table$(EXEEXT)
+	@p='check_clone_table$(EXEEXT)'; \
+	b='check_clone_table'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 check_xls_load.log: check_xls_load$(EXEEXT)
 	@p='check_xls_load$(EXEEXT)'; \
 	b='check_xls_load'; \
@@ -2124,6 +2149,13 @@ check_dxf.log: check_dxf$(EXEEXT)
 check_metacatalog.log: check_metacatalog$(EXEEXT)
 	@p='check_metacatalog$(EXEEXT)'; \
 	b='check_metacatalog'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+check_virtualelem.log: check_virtualelem$(EXEEXT)
+	@p='check_virtualelem$(EXEEXT)'; \
+	b='check_virtualelem'; \
 	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \

@@ -11,7 +11,7 @@
 			i {color:navy;}
 		</style>
 	</head><body bgcolor="#fffff0">
-		<h2>SpatiaLite 4.2.0&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SQL functions reference list</h2>
+		<h2>SpatiaLite 4.2.1&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SQL functions reference list</h2>
 		<a href="https://www.gaia-gis.it/fossil/libspatialite">back</a>
 		<ul>
 			<li><a href="#version">SQL Version Info [and build options testing] functions</a></li>
@@ -54,6 +54,7 @@
 			<li><a href="#p17">SQL functions for MbrCache-based queries</a></li>
 			<li><a href="#p18">SQL functions for R*Tree-based queries (Geometry Callbacks)</a></li>
 			<li><a href="#xmlBlob">SQL functions supporting XmlBLOB</a></li>
+			<li><a href="#advanced">miscellaneous advanced SQL functions</a></li>
 		</ul>
 		<table bgcolor="#e2eae2" border="1" cellpadding="2" cellspacing="2" width="100%">
 			<tbody><tr><td colspan="5" align="center" bgcolor="#f0e0c0">
@@ -437,10 +438,15 @@
 				<td colspan="3">The return type is Integer, with a return value of 1 for TRUE, 0 for FALSE, and &#8211;1 for UNKNOWN
 					corresponding to a function invocation on NULL or not-BLOB argument.<hr>
 					TRUE if this BLOB object corresponds to a valid WebP image</td></tr>
+			<tr><td><b>IsJP2Blob</b></td>
+				<td>IsJP2Blob( image <i>BLOB</i> ) : <i>Integer</i></td>
+				<td colspan="3">The return type is Integer, with a return value of 1 for TRUE, 0 for FALSE, and &#8211;1 for UNKNOWN
+					corresponding to a function invocation on NULL or not-BLOB argument.<hr>
+					TRUE if this BLOB object corresponds to a valid JP2 [Jpeg2000] image</td></tr>
 			<tr><td><b>GetMimeType</b></td>
 				<td>GetMimeType( payload <i>BLOB</i> ) : <i>String</i></td>
 				<td colspan="3">The return type is Text, and could be one of: <b>image/gif</b>, <b>image/png</b>,
-					<b>image/jpeg</b>, <b>image/tiff</b>, <b>image/svg+xml</b>, <b>application/xml</b>,
+					<b>image/jpeg</b>, <b>image/jp2</b>, </b></v><b>image/tiff</b>, <b>image/svg+xml</b>, <b>application/xml</b>,
 					<b>application/zip</b>,	<b>application/pdf</b>.<br>
 					NULL could be returned for an invalid argument or if no valid mime-type is detected.</td></tr>
 			<tr><td><b>BlobFromFile</b></td>
@@ -527,7 +533,7 @@
 				<td></td>
 				<td align="center" bgcolor="#d0f0d0">base</td>
 				<td>a Linestring Geometry will be returned connecting all the input Points (accordingly to input sequence); <b>direction=FALSE</b> implies <u>reverse order</u>.<br>
-				<u>Please note</u>: similar to the previuous one, but this one is an ordinary (not aggregate) function; a MultiPoint input is always expected.</b><hr>
+				<u>Please note</u>: similar to the previuous one, but this one is an ordinary (not aggregate) function; a MultiPoint input is always expected.<hr>
 				NULL will be returned if any error is encountered</td></tr>
                         <tr><td><b>MakeCircle</b></td>
 				<td>MakeCircle( cx <i>Double precision</i> , cy <i>Double precision</i> ,
@@ -994,22 +1000,6 @@ a Geometry will be returned representing the MBR for the corresponding GARS area
 				<td></td>
 				<td align="center" bgcolor="#d0f0d0">base</td>
 				<td>construct a geometric object given its FGF binary Representation</td></tr>
-			<tr><td><b>ExportDXF</b></td>
-				<td>ExportDXF( out_dir <i>String</i> , filename <i>String</i> , sql_query <i>String</i> , layer_col_name <i>String</i> , 
-                                geom_col_name <i>String</i> , label_col_name <i>String</i> , text_height_col_name <i>String</i> , 
-                                text_rotation_col_name <i>String</i> , geom_filter <i>Geometry</i> [ , precision <i>Integer</i> ] ) : <i>Integer</i></td>
-				<td colspan="3">Will export a whole DXF file.<ul>
-                                        <li>The output file path is controlled by <b>out_dir</b> and <b>filename</b>.</li>
-					<li><b>sql_query</b> is a complete SQL Statement returning the dataset to be exported.</li>
-					<li><b>layer_col_name</b>, <b>geom_col_name</b>, <b>label_col_name</b>, <b>text_height_col_name</b> 
-					and <b>text_rotation_col_name</b> must specify the corresponding <u>column names</u> within the resultset
-					returned by <b>sql_query</b> (<i>label_col_name</i>, <i>text_height_col_name</i> and <i>text_rotation_col_name</i> could be eventually <b>NULL</b>).</li>
-					<li><b>geom_filter</b> acts as a <u>spatial filter</u> selecting which entities have to be exported (could be <b>NULL</b>).</li>
-					<li>the optional argument <b>precision</b> specificies how many <u>decimal digits</u> are required for coordinate values: if not specified the default is <b>3</b>.</li>
-					</ul>
-					Will return <b>0</b> (i.e. <b>FALSE</b>) on failure, any other value (i.e. <b>TRUE</b>) on success.<hr>
-                                        <u>Please note well</u>: this SQL function open the doors to many potential security issues, and thus is always <i>disabled by default</i>.<br>
-                                        Explicitly setting the environment variable <b>SPATIALITE_SECURITY=relaxed</b> is absolutely required in order to effectively enable this function.</td></tr>	
 			<tr><td colspan="5" align="center" bgcolor="#f0f0c0">
 				<h3><a name="p4">SQL functions on type Geometry</a></h3></td></tr>
 			<tr><th bgcolor="#d0d0d0">Function</th>
@@ -1462,6 +1452,20 @@ algorithm with given <i>tolerance</i> and respecting topology</td></tr>
 				<td></td>
 				<td align="center" bgcolor="#d0f0d0">base</td>
 				<td>returns a new Linestring by replacing the Point at <b>position</b> (zero-based index).<br>
+                                <b>NULL</b> will be returned if any error is encountered.</td></tr>
+			<tr><td><b>SetStartPoint</b></td>
+				<td>SetStartPoint( line <i>LineString</i> , point <i>Point</i> ) : <i>Linestring</i><hr>
+					ST_SetStartPoint( line <i>LineString</i> , point <i>Point</i> ) : <i>Linestring</i></td>
+				<td></td>
+				<td align="center" bgcolor="#d0f0d0">base</td>
+				<td>returns a new Linestring by replacing its StartPoint.<br>
+                                <b>NULL</b> will be returned if any error is encountered.</td></tr>
+			<tr><td><b>SetEndPoint</b></td>
+				<td>SetEndPoint( line <i>LineString</i> , point <i>Point</i> ) : <i>Linestring</i><hr>
+					ST_SetEndtPoint( line <i>LineString</i> , point <i>Point</i> ) : <i>Linestring</i></td>
+				<td></td>
+				<td align="center" bgcolor="#d0f0d0">base</td>
+				<td>returns a new Linestring by replacing its EndPoint.<br>
                                 <b>NULL</b> will be returned if any error is encountered.</td></tr>
 			<tr><td><b>RemovePoint</b></td>
 				<td>RemovePoint( line <i>LineString</i> , position <i>Integer</i> ) : <i>Linestring</i><hr>
@@ -2514,6 +2518,22 @@ the return type is Integer, with a return value of 1 for TRUE (success) or 0 for
 				<td align="center" bgcolor="#d0f0d0">base</td>
 				<td>Creates the <b>raster_coverages</b> table required by <b>RasterLite-2</b><hr>
 the return type is Integer, with a return value of 1 for TRUE (success) or 0 for FALSE (failure)</td></tr>
+			<tr><td><b>RebuildGeometryTriggers</b></td>
+				<td>RebuildGeometryTriggers( table_name <i>String</i> , geometry_column_name <i>String</i> ) : <i>integer</i></td>
+				<td></td>
+				<td align="center" bgcolor="#d0f0d0">base</td>
+				<td>This function will reinstall all geometry-related Triggers for the named table.<hr>
+the return type is Integer, with a return value of 1 for TRUE (success) or 0 for FALSE (failure)</td></tr>
+			<tr><td><b>UpgradeGeometryTriggers</b></td>
+				<td>UpgradeGeometryTriggers(  transaction <i>Integer</i>  ) : <i>integer</i></td>
+				<td></td>
+				<td align="center" bgcolor="#d0f0d0">base</td>
+				<td>This function will upgrade all geometry-related Triggers to the latest version 
+				(all DB tables declaring at least one Geometry will be affected by the upgrade).<br>
+				If the <b>transaction</b> argument is set to TRUE then the whole upgrade will be safely
+				executed within an internally defined SQL transaction.<hr>
+				<u>Please note</u>: DB-files created using obsolete versions of SpatiaLite (< 4.0.0) will not be upgraded.<hr>
+the return type is Integer, with a return value of 1 for TRUE (success) or 0 for FALSE (failure)</td></tr>
 			<tr><td colspan="5" align="center" bgcolor="#f0f0c0">
 				<h3><a name="p16metacatalog">SQL functions supporting the MetaCatalog and related Statistics</a></h3></td></tr>
 			<tr><th bgcolor="#d0d0d0">Function</th>
@@ -3038,7 +3058,7 @@ the return type is Integer, with a return value of 1 for TRUE, 0 for FALSE</td><
 				<td align="center" bgcolor="#d0d0d0">geocallbacks</td>
 				<td>Retrieves from an R*Tree Spatial Index any entity whose MBR <u><i>intersect</i></u>
 				the square circumscribed on the given circle (<b>x y</b> center, <b>radius)</b></td></tr>
-                        <tr><td colspan="5" align="center" bgcolor="#f0f0c0">
+            <tr><td colspan="5" align="center" bgcolor="#f0f0c0">
 				<h3><a name="xmlBlob">SQL functions supporting XmlBLOB</a></h3></td></tr>
 			<tr><th bgcolor="#d0d0d0">Function</th>
 				<th bgcolor="#d0d0d0">Syntax</th>
@@ -3269,8 +3289,8 @@ the return type is Integer, with a return value of 1 for TRUE, 0 for FALSE</td><
 					This function is even able to acces a remote XML Document identified by an <b>URL</b>.<br>
 					Otherwise NULL will be returned.<br>
 					<u>Please note:</u> SQLite doesn't support BLOB values bigger than SQLITE_MAX_LENGTH (usually, 1 GB).<hr>
-                                        <u>Please note well</u>: this SQL function open the doors to many potential security issues, and thus is always <i>disabled by default</i>.<br>
-                                        Explicitly setting the environment variable <b>SPATIALITE_SECURITY=relaxed</b> is absolutely required in order to effectively enable this function.<br>
+                    <u>Please note well</u>: this SQL function open the doors to many potential security issues, and thus is always <i>disabled by default</i>.<br>
+                    Explicitly setting the environment variable <b>SPATIALITE_SECURITY=relaxed</b> is absolutely required in order to effectively enable this function.<br>
 					Please see: <b>CountUnsafeTriggers()</b></td></tr>
 			<tr><td><b>XB_StoreXML</b></td>
 				<td>XB_StoreXML( XmlObject <i>XmlBLOB</i> , filepath <i>String</i> ) : <i>Integer</i><hr>
@@ -3284,9 +3304,303 @@ the return type is Integer, with a return value of 1 for TRUE, 0 for FALSE</td><
                                 will be nicely formatted and properly indented by the required factor; <i>ZERO</i> will cause the whole 
                                 XmlDocument to be returned as a single line. (default setting is <i>negative</i> indenting, i.e. not reformatting at all).<hr>
 					The return type is Integer, with a return value of 1 for success, 0 for failure and -1 for invalid arguments.<hr>
-                                        <u>Please note well</u>: this SQL function open the doors to many potential security issues, and thus is always <i>disabled by default</i>.<br>
-                                        Explicitly setting the environment variable <b>SPATIALITE_SECURITY=relaxed</b> is absolutely required in order to effectively enable this function.<br>
+                    <u>Please note well</u>: this SQL function open the doors to many potential security issues, and thus is always <i>disabled by default</i>.<br>
+                    Explicitly setting the environment variable <b>SPATIALITE_SECURITY=relaxed</b> is absolutely required in order to effectively enable this function.<br>
 					Please see: <b>CountUnsafeTriggers()</b></td></tr>
+			<tr><td colspan="5" align="center" bgcolor="#f0e0c0">
+				<h3><a name="advanced">miscellaneous advanced SQL functions</a></h3></td></tr>
+			<tr><th bgcolor="#d0d0d0">Function</th>
+				<th bgcolor="#d0d0d0">Syntax</th>
+				<th bgcolor="#d0d0d0" colspan="3">Summary</th></tr>
+			<tr><td><b>CloneTable</b></td>
+				<td>CloneTable( db-prefix <i>Text</i> , input_table <i>Text</i> , output_table <i>Text</i> , 
+				transaction <i>Integer</i> ) : <i>Integer</i><hr>
+				CloneTable(  db-prefix <i>Text</i> , input_table <i>Text</i> , output_table <i>Text</i> , 
+				transaction <i>Integer</i> , option_1 <i>Text</i> [ , ... , option_10 <i>Text</i> ] ) : <i>Integer</i></td>
+				<td colspan="3">Will clone (i.e. create+copy) an origin table into a destination table: 
+				the origin could be eventually located into some <i>attached</i> DB, but the destination is always
+				assumed to be located into the primary DB</b>.<ul>
+				<li>Mandatory arguments:
+				<ul>
+					<li><b>db-prefix</b> corresponding to the origin; the primary DB always corresponds to the <i>main</i> prefix.</li>
+					<li><b>input_table</b> name of the origin table</li>
+					<li><b>output_table</b> name of the destination table</li>
+					<li><b>transaction</b> a <i>boolean</i> values stating if the whole operation has to be atomically confined
+					within a monolithic SQL transaction</li>
+				</ul></li>
+				<li>Optional arguments: a maximum of 10 further options could be eventually specified. Valid options are:
+				<ul>
+					<li><b>::with-foreign-keys::</b></li>
+					<li><b>::with-triggers::</b></li>
+					<li><b>::resequence::</b></li>
+					<li><b>::append::</b></li>
+					<li><b>::ignore::</b><i>column_name</i></li>
+					<li><b>::cast2multi::</b><i>geometry_column</i></li>
+				</ul></li>
+				</ul>
+				<hr>
+				Will return <b>0</b> (i.e. <b>FALSE</b>) on failure, any other value (i.e. <b>TRUE</b>) on success. <b>NULL</b> will be returned on invalid arguments.</td></tr>
+			<tr><td><b>CheckDuplicateRows</b></td>
+				<td>CheckDuplicateRows( table <i>Text</i> ) : <i>Integer</i></td>
+				<td colspan="3">Will check if the given <b>table</b> does contain duplicate rows, i.e. rows presenting identical 
+				values for all columns (ignoring any Primary Key column).
+				<hr>
+				Will return the total number of duplicate rows found.<br> <b>NULL</b> will be returned on invalid arguments.</td></tr>
+			<tr><td><b>RemoveDuplicateRows</b></td>
+				<td>RemoveDuplicateRows( table <i>Text</i> ) : <i>Integer</i></td>
+				<td colspan="3">Will remove all duplicate rows from the given <b>table</b> preserving only a songle occurrence.
+				<hr>
+				Will return the total number of deleted rows.<br> <b>NULL</b> will be returned on invalid arguments.</td></tr>
+			<tr><td><b>ElementaryGeometries</b></td>
+				<td>ElementaryGeometries( in_table <i>Text</i> , geom_column <i>Text</i> , out_table <i>Text</i> ,
+				out_pk <i>Text</i> , out_multi_id <i>Text</i> ) : <i>Integer</i></td>
+				<td colspan="3">Will create a new <b>out_table</b> directly corresponding to <b>in_table</b>.
+				The output table will be arranged in such a way that each row will always contain an elementary Geometry;
+				so each time that a <b>MULTI-type</b> Geometry is found in the input table it will be split into mamy
+				distinct rows.<br>
+				<b>out_pk</b> is the name to be set for the output Primary Key, and <b>out_multi_id</b> is the name to
+				be set for a second column within the output table where to store the original Primary Key.
+				<hr>
+				Will return the total number of rows inserted into the output table.<br> <b>NULL</b> will be returned on invalid arguments.</td></tr>
+			<tr><td><b>DropGeoTable</b></td>
+				<td>DropGeoTable( table <i>Text</i> ) : <i>Integer</i><hr>
+				DropGeoTable( db-prefix <i>Text</i> , table <i>Text</i> ) : <i>Integer</i></td>
+				<td colspan="3">Will completely remove a Geometry Table (or Spatial View) this including any eventual SpatialIndex,
+				metadata and statistics definitions an alike.
+				<hr>
+				Will return <b>0</b> (i.e. <b>FALSE</b>) on failure, any other value (i.e. <b>TRUE</b>) on success..<br> 
+				<b>NULL</b> will be returned on invalid arguments.</td></tr>
+			<tr><td><b>ImportSHP</b></td>
+				<td>ImportSHP( filename <i>Text</i> , table <i>Text</i> , charset <i>Text</i> ) : <i>Integer</i><hr>
+				ImportSHP( filename <i>Text</i> , table <i>Text</i> , charset <i>Text</i> [ , srid <i>Integer</i>  [ ,
+				    geom_column <i>Text</i> [ , pk_column <i>Text</i> [ , geometry_type <i>Text</i> [ , coerce2D <i>Integer</i> 
+				    [ , compressed <i>Integer</i> [ , spatial_index <i>Integer</i> [ , text_dats <i>Integer</i> ] ] ] ] ] ] ] ] )
+				    : <i>Integer</i></td>
+				<td colspan="3">Will import an external Shapfile into an internal Table:
+				<ul>
+				<li>Mandatory arguments:
+				<ul>
+					<li><b>filename</b> absolute or relative path leading to the Shapefile (omitting any <i>.shp</i>, <i>.shx</i> or <i>.dbf</i> suffix).</li>
+					<li><b>table</b> name of the table to be created.</li>
+					<li><b>charset</b> the character encoding adopted by the DBF member, as e.g. <i>UTF-8</i> or <i>CP1252</i></li>
+				</ul></li>
+				<li>Optional arguments:
+				<ul>
+					<li><b>srid</b> EPSG SRID value; <i>-1</i> by default.</li>
+					<li><b>geom_column</b> name to assigned to the Geometry column; <i>Geometry</i> by default.</li>
+					<li><b>pk_column</b> name of a DBF column to be used in the Primary Key role; an <i>INTEGER AUTOINCREMENT</i> 
+					PK will be created by default.</li>
+					<li><b>geometry_type</b> one between: <i>AUTO</i>, <i>POINT|Z|M|ZM</i>, <i>LINESTRING|Z|M|ZM</i>,
+						<i>POLYGON|Z|M|ZM</i>, <i>MULTIPOINT|Z|M|ZM</i>, <i>LINESTRING|Z|M|ZM</i>, <i>MULTIPOLYGON|Z|M|ZM</i>;
+						 by default <i>AUTO</i>.</li>
+					<li><b>coerce2D</b> boolean flag: casting to 2D or not; <i>0</i> by default.</li>
+					<li><b>compressed</b> boolean flag; compressed geometries or not; <i>0</i> by default.</li>
+					<li><b>spatial_index</b> boolean flag: immediately building a Spatial Index or not; <i>0</i> by default.</li>
+					<li><b>text_dates</b> boolean flag: interpreting DBF dates as plaintext or not: <i>0</i> by default
+					(i.e. as <i>Julian Day</i>).</li>
+				</ul></li>
+				</ul>
+				<hr>
+				Will return the total number of imported rows.<br> <b>NULL</b> will be returned on invalid arguments.<hr>
+                <u>Please note well</u>: this SQL function open the doors to many potential security issues, and thus is always <i>disabled by default</i>.<br>
+                Explicitly setting the environment variable <b>SPATIALITE_SECURITY=relaxed</b> is absolutely required in order to effectively enable this function.</td></tr>
+			<tr><td><b>ExportSHP</b></td>
+				<td>ExportSHP( table <i>Text</i> , geom_column <i>Text</i> , filename <i>Text</i> , charset <i>Text</i> ) : <i>Integer</i><hr>
+				ExportSHP( table <i>Text</i> , geom_column <i>Text</i> , filename <i>Text</i> , charset <i>Text</i> , geom_type <i>Text</i>) : <i>Integer</i></td>
+				<td colspan="3">Will export an internal Table as an external Shapefile:
+				<ul>
+					<li><b>table</b> name of the table to be exported.</li>
+					<li><b>geom_column</b> name of the Geometry column.</li>
+					<li><b>filename</b> absolute or relative path leading to the Shapefile (omitting any <i>.shp</i>, <i>.shx</i> or <i>.dbf</i> suffix).</li>
+					<li><b>charset</b> the character encoding adopted by the DBF member, as e.g. <i>UTF-8</i> or <i>CP1252</i></li>
+					<li>the optional argument <b>geom_type</b> is useful when exporting unregistered Geometries, and
+					can be one between: <i>POINT</i>, <i>LINESTRING</i>, <i>POLYGON</i> or <i>MULTUPOINT</i>.</li>
+				</ul>
+				<hr>
+				Will return the total number of exported rows.<br> <b>NULL</b> will be returned on invalid arguments.<hr>
+                <u>Please note well</u>: this SQL function open the doors to many potential security issues, and thus is always <i>disabled by default</i>.<br>
+                Explicitly setting the environment variable <b>SPATIALITE_SECURITY=relaxed</b> is absolutely required in order to effectively enable this function.</td></tr>
+			<tr><td><b>ImportDBF</b></td>
+				<td>ImportDBF( filename <i>Text</i> , table <i>Text</i> , charset <i>Text</i> ) : <i>Integer</i><hr>
+				ImportDBF( filename <i>Text</i> , table <i>Text</i> , charset <i>Text</i> [ , pk_column <i>Text</i>  
+				    [ , text_dats <i>Integer</i> ] ] ) : <i>Integer</i></td>
+				<td colspan="3">Will import an external DBF file into an internal Table:
+				<ul>
+				<li>Mandatory arguments:
+				<ul>
+					<li><b>filename</b> absolute or relative path leading to the DBF (including the <i>.dbf</i> suffix).</li>
+					<li><b>table</b> name of the table to be created.</li>
+					<li><b>charset</b> the character encoding adopted by the DBF, as e.g. <i>UTF-8</i> or <i>CP1252</i></li>
+				</ul></li>
+				<li>Optional arguments:
+				<ul>
+					<li><b>pk_column</b> name of a DBF column to be used in the Primary Key role; an <i>INTEGER AUTOINCREMENT</i> 
+					PK will be created by default.</li>
+					<li><b>text_dates</b> boolean flag: interpreting DBF dates as plaintext or not: <i>0</i> by default
+					(i.e. as <i>Julian Day</i>).</li>
+				</ul></li>
+				</ul>
+				<hr>
+				Will return the total number of imported rows.<br> <b>NULL</b> will be returned on invalid arguments.<hr>
+                <u>Please note well</u>: this SQL function open the doors to many potential security issues, and thus is always <i>disabled by default</i>.<br>
+                Explicitly setting the environment variable <b>SPATIALITE_SECURITY=relaxed</b> is absolutely required in order to effectively enable this function.</td></tr>
+			<tr><td><b>ExportDBF</b></td>
+				<td>ExportDBF( table <i>Text</i> , filename <i>Text</i> , charset <i>Text</i> ) : <i>Integer</i></td>
+				<td colspan="3">Will export an internal Table as an external DBF file:
+				<ul>
+					<li><b>table</b> name of the table to be exported.</li>
+					<li><b>filename</b> absolute or relative path leading to the DBF (including the <i>.dbf</i> suffix).</li>
+					<li><b>charset</b> the character encoding adopted by the DBF, as e.g. <i>UTF-8</i> or <i>CP1252</i></li>
+				</ul>
+				<hr>
+				Will return the total number of exported rows.<br> <b>NULL</b> will be returned on invalid arguments.<hr>
+                <u>Please note well</u>: this SQL function open the doors to many potential security issues, and thus is always <i>disabled by default</i>.<br>
+                Explicitly setting the environment variable <b>SPATIALITE_SECURITY=relaxed</b> is absolutely required in order to effectively enable this function.</td></tr>
+			<tr><td><b>ExportKML</b></td>
+				<td>ExportKML( table <i>Text</i> , geo_column <i>Text</i> , filename <i>Text</i> ) : <i>Integer</i><hr>
+				ExportKML( table <i>Text</i> , geo_column <i>Text</i> , filename <i>Text</i> [ , precision <i>Integer</i>
+				[ , name_column <i>Text</i> [ , description <i>Text</i> ] ] ] ) : <i>Integer</i></td>
+				<td colspan="3">Will export an internal Table as an external KML file:
+				<ul>
+					<li>Mandatory aguments:
+					<ul>
+						<li><b>table</b> name of the table to be exported.</li>
+						<li><b>geom_column</b> name of the Geometry column.</li>
+						<li><b>filename</b> absolute or relative path leading to the KML file.</li>
+					</ul></li>
+					<li>Optional aguments:
+					<ul>
+						<li><b>precision</b> number of decimal digits to be exported; <i>8</i> by default.</li>
+						<li><b>name_column</b> name of the table's column containing KML names.</li>
+						<li><b>description_column</b> name of the table's column containing KML descriptions.</li>
+					</ul></li>
+				</ul>
+				<hr>
+				Will return the total number of exported rows.<br> <b>NULL</b> will be returned on invalid arguments.<hr>
+                <u>Please note well</u>: this SQL function open the doors to many potential security issues, and thus is always <i>disabled by default</i>.<br>
+                Explicitly setting the environment variable <b>SPATIALITE_SECURITY=relaxed</b> is absolutely required in order to effectively enable this function.</td></tr>
+			<tr><td><b>ExportGeoJSON</b></td>
+				<td>ExportGeoJSON( table <i>Text</i> , geo_column <i>Text</i> , filename <i>Text</i> ) : <i>Integer</i><hr>
+				ExportGeoJSON( table <i>Text</i> , geo_column <i>Text</i> , filename <i>Text</i> [ , format <i>Text</i>
+				[ , precision <i>Integer</i> ] ] ) : <i>Integer</i></td>
+				<td colspan="3">Will export an internal Table as an external GeoJSON file:
+				<ul>
+					<li>Mandatory aguments:
+					<ul>
+						<li><b>table</b> name of the table to be exported.</li>
+						<li><b>geom_column</b> name of the Geometry column.</li>
+						<li><b>filename</b> absolute or relative path leading to the GeoJSON file.</li>
+					</ul></li>
+					<li>Optional aguments:
+					<ul>
+						<li><b>format</b> specifies one of the several alternative GeoJSON formats; allowed values are
+						<i>none</i>, <i>MBR</i>, <i>withShortCRS</i>, <i>MBRwithShortCRS</i>, <i>withLongCRS</i>
+						or <i>MBRwithLongCRS</i>.</li>
+						<li><b>precision</b> number of decimal digits to be exported; <i>8</i> by default.</li>
+					</ul></li>
+				</ul>
+				<hr>
+				Will return the total number of exported rows.<br> <b>NULL</b> will be returned on invalid arguments.<hr>
+                <u>Please note well</u>: this SQL function open the doors to many potential security issues, and thus is always <i>disabled by default</i>.<br>
+                Explicitly setting the environment variable <b>SPATIALITE_SECURITY=relaxed</b> is absolutely required in order to effectively enable this function.</td></tr>
+			<tr><td><b>ImportXLS</b></td>
+				<td>ImportXLS( filename <i>Text</i> , table <i>Text</i> ) : <i>Integer</i><hr>
+				ImportXLS( filename <i>Text</i> , table <i>Text</i> [ , worksheet_index <i>Integer</i>  
+				    [ , first_line_titles <i>Integer</i> ] ] ) : <i>Integer</i></td>
+				<td colspan="3">Will import an external spreadsheet file (<i>Microsoft .xls format</i>) into an internal Table:
+				<ul>
+				<li>Mandatory arguments:
+				<ul>
+					<li><b>filename</b> absolute or relative path leading to the spreadsheet file.</li>
+					<li><b>table</b> name of the table to be created.</li>
+				</ul></li>
+				<li>Optional arguments:
+				<ul>
+					<li><b>worksheet_index</b> a positive integer selecting the target worksheet in the case of a multi-sheet: <i>0</i> by default..</li>
+					<li><b>first_line_titles</b> boolean flag: the first line of the worksheet contains column names or not: <i>0</i> by default.</li>
+				</ul></li>
+				</ul>
+				<hr>
+				Will return the total number of imported rows.<br> <b>NULL</b> will be returned on invalid arguments.<hr>
+                <u>Please note well</u>: this SQL function open the doors to many potential security issues, and thus is always <i>disabled by default</i>.<br>
+                Explicitly setting the environment variable <b>SPATIALITE_SECURITY=relaxed</b> is absolutely required in order to effectively enable this function.</td></tr>
+			<tr><td><b>ImportWFS</b></td>
+				<td>ImportWFS( filename_or_url <i>Text</i> , layer_name <i>Text</i> , table <i>Text</i> ) : <i>Integer</i><hr>
+				ImportXLS( filename_or_url <i>Text</i> , layer_name <i>Text</i> , table <i>Text</i> [ , pk_column <i>Text</i>  
+				    [ , swap_axes <i>Integer</i> [ , page_size <i>Integer</i> [ , spatial_index <i>Integer</i> ] ] ] ] ) : <i>Integer</i></td>
+				<td colspan="3">Will import data from a WFS datasource:
+				<ul>
+				<li>Mandatory arguments:
+				<ul>
+					<li><b>filename_or_url</b> absolute or relative path leading to the WFS file.<br>
+					Alternatively an URL corresponding to a WFS service.</li>
+					<li><b>layer_name</b> name of the WFS layer.</li>
+					<li><b>table</b> name of the table to be created.</li>
+				</ul></li>
+				<li>Optional arguments:
+				<ul>
+					<li><b>pk_column</b> name of a WFS column to be used in the Primary Key role; an <i>INTEGER AUTOINCREMENT</i> 
+					PK will be created by default.</li>
+					<li><b>swap_axes</b> boolean flag: swapping the <i>X</i> and <i>Y</i> axes or not: <i>0</i> by default.</li>
+					<li><b>page_size</b> : how many features for each WFS paged requests; a <i>negative</i> number or <i>zero</i> if
+					you don't intend to activate WFS paging. <i>-1</i> by default.</li>
+					<li><b>spatial_index</b> boolean flag: immediately building a Spatial Index or not; <i>0</i> by default.</li>
+				</ul></li>
+				</ul>
+				<hr>
+				Will return the total number of imported rows.<br> <b>NULL</b> will be returned on invalid arguments.<hr>
+                <u>Please note well</u>: this SQL function open the doors to many potential security issues, and thus is always <i>disabled by default</i>.<br>
+                Explicitly setting the environment variable <b>SPATIALITE_SECURITY=relaxed</b> is absolutely required in order to effectively enable this function.</td></tr>
+			<tr><td><b>ImportDXF</b></td>
+				<td>ImportDXF( filename <i>String</i> ) : <i>Integer</i><hr>
+					ImportDXF( filename <i>String</i> [ , srid <i>Integer</i>, append <i>Integer</i>, dimensions <i>Text</i>,
+					mode <i>Text</i> , special_rings <i>Text</i> , table_prefix <i>Text</i> , layer_name <i>Text</i> ] ) : <i>Integer</i></td>
+				<td colspan="3">Will import an external DXF file.<ul>
+                    <li><b>filename</b> absolute or relative path leading to the DXF file.</li>
+					<li><b>srid</b> EPSG SRID value; <i>-1</i> by default.</li>
+					<li><b>append</b> boolean flag: enabling or not <i>append mode</i>: <i>0</i> by default.</li>
+					<li><b>dimensions</b> one between <i>AUTO</i>, <i>2D</i> or <i>3D</i>.</li>
+					<li><b>mode</b> one between <i>DISTINCT</i> or <i>MIXED</i>.</li>
+					<li><b>special_rings</b> one between <i>NONE</i>, <i>LINKED</i> or <i>UNLINKED</i>.</li>
+					<li><b>table_prefix</b>: a prefix for table names; <i>NULL</i> if no prefix is required.</li>
+					<li><b>layer_name</b>: name of a single DXF layer to be imported: <i>NULL</i> will import all layers found.</li>
+					</ul>
+					Will return <b>0</b> (i.e. <b>FALSE</b>) on failure, any other value (i.e. <b>TRUE</b>) on success.<br> <b>NULL</b> will be returned on invalid arguments.<hr>
+                    <u>Please note well</u>: this SQL function open the doors to many potential security issues, and thus is always <i>disabled by default</i>.<br>
+                    Explicitly setting the environment variable <b>SPATIALITE_SECURITY=relaxed</b> is absolutely required in order to effectively enable this function.</td></tr>
+			<tr><td><b>ImportDXFfromDir</b></td>
+				<td>ImportDXFfromDir( dir_path <i>String</i> ) : <i>Integer</i><hr>
+					ImportDXFfromDir( dir_path <i>String</i> [ , srid <i>Integer</i>, append <i>Integer</i>, dimensions <i>Text</i>,
+					mode <i>Text</i> , special_rings <i>Text</i> , table_prefix <i>Text</i> , layer_name <i>Text</i> ] ) : <i>Integer</i></td>
+				<td colspan="3">Will import all DXF files found within a given Directory.<ul>
+                    <li><b>dir_path</b> absolute or relative path leading to a directory containing all the <i>*.dxf</i> files to be imported.</li>
+					<li><b>srid</b> EPSG SRID value; <i>-1</i> by default.</li>
+					<li><b>append</b> boolean flag: enabling or not <i>append mode</i>: <i>0</i> by default.</li>
+					<li><b>dimensions</b> one between <i>AUTO</i>, <i>2D</i> or <i>3D</i>.</li>
+					<li><b>mode</b> one between <i>DISTINCT</i> or <i>MIXED</i>.</li>
+					<li><b>special_rings</b> one between <i>NONE</i>, <i>LINKED</i> or <i>UNLINKED</i>.</li>
+					<li><b>table_prefix</b>: a prefix for table names; <i>NULL</i> if no prefix is required.</li>
+					<li><b>layer_name</b>: name of a single DXF layer to be imported: <i>NULL</i> will import all layers found.</li>
+					</ul>
+					Will return <b>0</b> (i.e. <b>FALSE</b>) on failure, any other value (i.e. <b>TRUE</b>) on success.<br> <b>NULL</b> will be returned on invalid arguments.<hr>
+                    <u>Please note well</u>: this SQL function open the doors to many potential security issues, and thus is always <i>disabled by default</i>.<br>
+                    Explicitly setting the environment variable <b>SPATIALITE_SECURITY=relaxed</b> is absolutely required in order to effectively enable this function.</td></tr>		
+			<tr><td><b>ExportDXF</b></td>
+				<td>ExportDXF( out_dir <i>String</i> , filename <i>String</i> , sql_query <i>String</i> , layer_col_name <i>String</i> , 
+                geom_col_name <i>String</i> , label_col_name <i>String</i> , text_height_col_name <i>String</i> , 
+                text_rotation_col_name <i>String</i> , geom_filter <i>Geometry</i> [ , precision <i>Integer</i> ] ) : <i>Integer</i></td>
+				<td colspan="3">Will export a whole DXF file.<ul>
+                    <li>The output file path is controlled by <b>out_dir</b> and <b>filename</b>.</li>
+					<li><b>sql_query</b> is a complete SQL Statement returning the dataset to be exported.</li>
+					<li><b>layer_col_name</b>, <b>geom_col_name</b>, <b>label_col_name</b>, <b>text_height_col_name</b> 
+					and <b>text_rotation_col_name</b> must specify the corresponding <u>column names</u> within the resultset
+					returned by <b>sql_query</b> (<i>label_col_name</i>, <i>text_height_col_name</i> and <i>text_rotation_col_name</i> could be eventually <b>NULL</b>).</li>
+					<li><b>geom_filter</b> acts as a <u>spatial filter</u> selecting which entities have to be exported (could be <b>NULL</b>).</li>
+					<li>the optional argument <b>precision</b> specificies how many <u>decimal digits</u> are required for coordinate values: if not specified the default is <b>3</b>.</li>
+					</ul>
+					Will return <b>0</b> (i.e. <b>FALSE</b>) on failure, any other value (i.e. <b>TRUE</b>) on success.<hr>
+                    <u>Please note well</u>: this SQL function open the doors to many potential security issues, and thus is always <i>disabled by default</i>.<br>
+                    Explicitly setting the environment variable <b>SPATIALITE_SECURITY=relaxed</b> is absolutely required in order to effectively enable this function.</td></tr>	
 		</tbody></table>
 		<a href="https://www.gaia-gis.it/fossil/libspatialite">back</a>
 	</body></html>

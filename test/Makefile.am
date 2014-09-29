@@ -22,6 +22,7 @@ check_PROGRAMS = check_endian \
 		shape_utf8_1ex \
 		shape_utf8_2 \
 		shape_3d \
+		check_clone_table \
 		check_xls_load \
 		check_math_funcs \
 		check_gaia_util \
@@ -50,7 +51,8 @@ check_PROGRAMS = check_endian \
 		check_virtualbbox \
 		check_wfsin \
 		check_dxf \
-		check_metacatalog
+		check_metacatalog \
+		check_virtualelem
 		
 if ENABLE_GEOPACKAGE
 check_PROGRAMS += \
@@ -179,4 +181,5 @@ SUBDIRS = sql_stmt_geosadvanced_tests sql_stmt_geos_tests \
 	sql_stmt_libxml2_tests sql_stmt_lwgeom_tests \
 	sql_stmt_mathsql_tests sql_stmt_proj_tests \
 	sql_stmt_security_tests sql_stmt_tests \
-	sql_stmt_xmlsec_tests sql_stmt_geopackage_tests
+	sql_stmt_xmlsec_tests sql_stmt_geopackage_tests \
+	sql_stmt_freexl_tests
