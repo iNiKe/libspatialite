@@ -2,8 +2,8 @@ ACLOCAL_AMFLAGS = -I m4
 
 AUTOMAKE_OPTIONS = dist-zip
 
-EXTRA_DIST = makefile.vc nmake.opt Android.mk Android_4.2.0.mk \
-	spatialite-4.2.0.mk mainpage.doxy README.coverage \
+EXTRA_DIST = makefile.vc nmake.opt Android.mk Android_4.3.0.mk \
+	spatialite-4.3.0.mk mainpage.doxy README.coverage \
 	spatialite-sql-latest.html config-msvc.h
 
 if ENABLE_EXAMPLES
@@ -19,7 +19,7 @@ coverage-init:
 	lcov --directory src --capture --initial --output-file libspatialite_cov.info
 
 coverage::
-	lcov --directory src --output-file libspatialite_cov.info --capture
-	genhtml -o covresults libspatialite_cov.info
+	lcov --rc lcov_branch_coverage=1 --directory src --output-file libspatialite_cov.info --capture
+	genhtml --rc lcov_branch_coverage=1 -o covresults libspatialite_cov.info
 
 MOSTLYCLEANFILES = libspatialite_cov.info

@@ -1,3 +1,4 @@
+AUTOMAKE_OPTIONS = subdir-objects
 
 SUBDIRS = headers \
 	gaiaaux \
@@ -11,7 +12,8 @@ SUBDIRS = headers \
 	virtualtext \
 	wfs \
 	dxf \
-	md5
+	md5 \
+	control_points
 
 AM_CPPFLAGS = @CFLAGS@
 AM_CPPFLAGS += -I$(top_srcdir)/src/headers
@@ -28,21 +30,22 @@ libspatialite_la_LIBADD = ./gaiaaux/libgaiaaux.la \
 	./spatialite/libsplite.la \
 	./shapefiles/libshapefiles.la \
 	./dxf/libdxf.la \
-	./md5/libmd5.la \
+	./md5/libmd5.la  \
+	./control_points/libcontrol_points.la\
 	./srsinit/libsrsinit.la \
 	./connection_cache/libconnection_cache.la \
 	./virtualtext/libvirtualtext.la \
 	./wfs/libwfs.la @LIBXML2_LIBS@
 
 if MINGW
-libspatialite_la_LDFLAGS = -version-info 4:2:0 -no-undefined
+libspatialite_la_LDFLAGS = -version-info 4:3:0 -no-undefined
 libspatialite_la_LIBADD += -lm
 else 
 if ANDROID
-libspatialite_la_LDFLAGS = -version-info 7:0:1
+libspatialite_la_LDFLAGS = version-info 8:0:1
 libspatialite_la_LIBADD += -ldl -lm
 else
-libspatialite_la_LDFLAGS = -version-info 7:0:1
+libspatialite_la_LDFLAGS = version-info 8:0:1
 libspatialite_la_LIBADD += -lpthread -ldl -lm
 endif
 endif
@@ -57,6 +60,7 @@ mod_spatialite_la_LIBADD = ./gaiaaux/gaiaaux.la \
 	./shapefiles/shapefiles.la \
 	./dxf/dxf.la \
 	./md5/md5.la \
+	./control_points/control_points.la \
 	./srsinit/srsinit.la \
 	./connection_cache/connection_cache.la \
 	./virtualtext/virtualtext.la \
@@ -72,10 +76,10 @@ mod_spatialite_la_LDFLAGS = -module -avoid-version -no-undefined
 mod_spatialite_la_LIBADD += -lm
 else 
 if ANDROID
-mod_spatialite_la_LDFLAGS = -module -version-info 7:0:1
+mod_spatialite_la_LDFLAGS = -module version-info 8:0:1
 mod_spatialite_la_LIBADD += -ldl -lm
 else
-mod_spatialite_la_LDFLAGS = -module -version-info 7:0:1
+mod_spatialite_la_LDFLAGS = -module version-info 8:0:1
 mod_spatialite_la_LIBADD += -lpthread -ldl -lm
 endif
 endif

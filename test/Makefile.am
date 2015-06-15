@@ -52,7 +52,9 @@ check_PROGRAMS = check_endian \
 		check_wfsin \
 		check_dxf \
 		check_metacatalog \
-		check_virtualelem
+		check_virtualelem \
+		check_srid_fncts \
+		check_control_points
 		
 if ENABLE_GEOPACKAGE
 check_PROGRAMS += \
@@ -60,7 +62,7 @@ check_PROGRAMS += \
 		check_gpkgCreateTilesTable \
 		check_gpkgCreateTilesTableMissingSRID \
 		check_gpkgCreateTilesZoomLevel \
-		check_gpkgInsertEpsgSRID \
+		check_gpkgInsertEpsgSRID check_gpkgMode \
 		check_gpkgCreateFeaturesTable \
 		check_gpkg_base_core_container_data_file_format_application_id \
 		check_gpkg_base_core_spatial_ref_sys_data_table_def \
@@ -165,7 +167,8 @@ EXTRA_DIST = asprintf4win.h \
 	books.xml books.xsd opera.xml opera.xsd \
 	movies.xml movies.xsd books-bad.xml books-bad.xsd \
 	inspire-data-example.xml stazioni_se.xml \
-	raster_se.xml sld_sample.xml thunderstorm_mild.svg \
+	stazioni2_se.xml raster_se.xml raster2_se.xml \
+	sld_sample.xml sld_sample2.xml thunderstorm_mild.svg \
 	tile000.jpeg  tile101.jpeg  tile111.jpeg \
 	test.webp tile100.jpeg  tile110.jpeg \
 	Apple-iPhone-4.jpg empty.png  empty.tif \
@@ -175,11 +178,13 @@ EXTRA_DIST = asprintf4win.h \
 	describefeaturetype.wfs	\
 	22.dxf f06.dxf l02.dxf p05.dxf \
 	archaic.dxf linked.dxf hatch.dxf \
-	symbol.dxf gpkg_test.sqlite gpkg_test.gpkg
+	symbol.dxf gpkg_test.sqlite gpkg_test.gpkg \
+	gpkg_test_broken.gpkg gpkg_test_extrasrid.gpkg
 
 SUBDIRS = sql_stmt_geosadvanced_tests sql_stmt_geos_tests \
 	sql_stmt_libxml2_tests sql_stmt_lwgeom_tests \
 	sql_stmt_mathsql_tests sql_stmt_proj_tests \
 	sql_stmt_security_tests sql_stmt_tests \
 	sql_stmt_xmlsec_tests sql_stmt_geopackage_tests \
-	sql_stmt_freexl_tests
+	sql_stmt_freexl_tests sql_stmt_cache_tests \
+	sql_stmt_nocache_tests

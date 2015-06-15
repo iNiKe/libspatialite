@@ -285,7 +285,7 @@ extern "C"
  \param sqlite handle of the current DB connection
  \param sqllog_pk the Primary Key identifying the corresponding Log event.
  \n expected to be exactely the same returned by the most recent call to gaiaInsertIntoSqlLog()
- \param success expected to be TRUE if the SQL statement was succesfully executed.
+ \param success expected to be TRUE if the SQL statement was successfully executed.
  \param errMsg expected to be the error message returned by SQLite on failure, NULL on success.
 
  \sa gaiaInsertIntoSqlLog
@@ -397,6 +397,101 @@ extern "C"
  You are required to explicitly free() any string returned by this function.
  */
     GAIAAUX_DECLARE char *gaiaConvertToDMS (double longitude, double latitude);
+
+/**
+ Return a percent-encoded URL
+
+ \param url the URL to be percent-encoded
+
+ \return the corresponding percent-encoded URL text string,
+ or NULL on failure
+
+ \sa gaiaDecodeURL
+
+ \note this function will return a dynamically allocated buffer created 
+ by malloc(). 
+ You are required to explicitly free() any string returned by this function.
+ */
+    GAIAAUX_DECLARE char *gaiaEncodeURL (const char *url);
+
+/**
+ Return a clean URL from its percent-encoded representation
+
+ \param encoded the percent-encoded URL to be decoded
+
+ \return the corresponding clean URL text string,
+ or NULL on failure
+
+ \sa gaiaEncodeURL
+
+ \note this function will return a dynamically allocated buffer created 
+ by malloc(). 
+ You are required to explicitly free() any string returned by this function.
+ */
+    GAIAAUX_DECLARE char *gaiaDecodeURL (const char *encoded);
+
+/**
+ Return the DirName component (if any) from a Path
+
+ \param path full or relative pathname
+
+ \return the corresponding DirName text string,
+ or NULL on failure
+
+ \sa gaiaFullFileNameFromPath, gaiaFileNameFromPath, gaiaFileExtFromPath
+
+ \note this function will return a dynamically allocated buffer created 
+ by malloc(). 
+ You are required to explicitly free() any string returned by this function.
+ */
+    GAIAAUX_DECLARE char *gaiaDirNameFromPath (const char *path);
+
+/**
+ Return the FullFileName from a Path
+
+ \param path full or relative pathname
+
+ \return the corresponding FullFileName (including an eventual extension),
+  or NULL on failure
+
+ \sa gaiaDirNameFromPath, gaiaFileNameFromPath, gaiaFileExtFromPath
+
+ \note this function will return a dynamically allocated buffer created 
+ by malloc(). 
+ You are required to explicitly free() any string returned by this function.
+ */
+    GAIAAUX_DECLARE char *gaiaFullFileNameFromPath (const char *path);
+
+/**
+ Return the FileName from a Path
+
+ \param path full or relative pathname
+
+ \return the corresponding FileName (excluding an eventual extension),
+  or NULL on failure
+
+ \sa gaiaDirNameFromPath, gaiaFullFileNameFromPath, gaiaFileExtFromPath
+
+ \note this function will return a dynamically allocated buffer created 
+ by malloc(). 
+ You are required to explicitly free() any string returned by this function.
+ */
+    GAIAAUX_DECLARE char *gaiaFileNameFromPath (const char *path);
+
+/**
+ Return the FileExtension from a Path
+
+ \param path full or relative pathname
+
+ \return the corresponding FileExtension (if any), or NULL on failure
+
+ \sa gaiaDirNameFromPath, gaiaFullFileNameFromPath, gaiaFileNameFromPath
+
+ \note this function will return a dynamically allocated buffer created 
+ by malloc(). 
+ You are required to explicitly free() any string returned by this function.
+ */
+    GAIAAUX_DECLARE char *gaiaFileExtFromPath (const char *path);
 
 #ifdef __cplusplus
 }

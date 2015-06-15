@@ -444,7 +444,8 @@ extern "C"
 
  \return the pointer to the newly created Geometry object: NULL on failure
 
- \sa gaiaFreeGeomColl, gaiaToSpatiaLiteBlobWkb, gaiaToCompressedBlobWkb
+ \sa gaiaFreeGeomColl, gaiaToSpatiaLiteBlobWkb, gaiaToCompressedBlobWkb,
+ gaiaFromSpatiaLiteBlobWkbEx
 
  \note you are responsible to destroy (before or after) any allocated Geometry,
  unless you've passed ownership of the Geometry object to some further object:
@@ -455,6 +456,32 @@ extern "C"
 							       char *blob,
 							       unsigned int
 							       size);
+
+/**
+ Creates a Geometry object from the corresponding BLOB-Geometry 
+
+ \param blob pointer to BLOB-Geometry
+ \param size the BLOB's size
+ \param gpkg_mode is set to TRUE will accept only GPKG Geometry-BLOBs
+ \param gpkg_amphibious is set to TRUE will indifferenctly accept
+  either SpatiaLite Geometry-BLOBs or GPKG Geometry-BLOBs
+
+ \return the pointer to the newly created Geometry object: NULL on failure
+
+ \sa gaiaFreeGeomColl, gaiaToSpatiaLiteBlobWkb, gaiaToCompressedBlobWkb
+
+ \note you are responsible to destroy (before or after) any allocated Geometry,
+ unless you've passed ownership of the Geometry object to some further object:
+ in this case destroying the higher order object will implicitly destroy any 
+ contained child object. 
+ */
+    GAIAGEO_DECLARE gaiaGeomCollPtr gaiaFromSpatiaLiteBlobWkbEx (const unsigned
+								 char *blob,
+								 unsigned int
+								 size,
+								 int gpkg_mode,
+								 int
+								 gpkg_amphibious);
 
 /**
  Creates a BLOB-Geometry corresponding to a Geometry object
@@ -473,6 +500,25 @@ extern "C"
     GAIAGEO_DECLARE void gaiaToSpatiaLiteBlobWkb (gaiaGeomCollPtr geom,
 						  unsigned char **result,
 						  int *size);
+
+/**
+ Creates a BLOB-Geometry corresponding to a Geometry object
+
+ \param geom pointer to the Geometry object.
+ \param result on completion will containt a pointer to BLOB-Geometry:
+ NULL on failure.
+ \param size on completion this variable will contain the BLOB's size (in bytes)
+ \param gpkg_mode is set to TRUE will always return GPKG Geometry-BLOBs
+
+ \sa gaiaFromSpatiaLiteBlobWkb, gaiaToCompressedBlobWkb
+
+ \note the BLOB buffer corresponds to dynamically allocated memory:
+ so you are responsible to free() it [unless SQLite will take care
+ of memory cleanup via buffer binding].
+ */
+    GAIAGEO_DECLARE void gaiaToSpatiaLiteBlobWkbEx (gaiaGeomCollPtr geom,
+						    unsigned char **result,
+						    int *size, int gpkg_mode);
 
 /**
  Creates a Compressed BLOB-Geometry corresponding to a Geometry object
@@ -750,7 +796,8 @@ extern "C"
  \param out_buf pointer to dynamically growing Text buffer
  \param geom pointer to Geometry object
 
- \sa gaiaParseWkt, gaiaOutWktStrict, gaiaParseEWKT, gaiaToEWKT
+ \sa gaiaParseWkt, gaiaOutWktStrict, gaiaParseEWKT, gaiaToEWKT,
+ gaiaOutWktEx
 
  \note this function will apply 3D WKT encoding as internally intended by
  SpatiaLite: not necessarily intended by other OGC-like implementations.
@@ -758,6 +805,22 @@ extern "C"
  */
     GAIAGEO_DECLARE void gaiaOutWkt (gaiaOutBufferPtr out_buf,
 				     gaiaGeomCollPtr geom);
+
+/**
+ Encodes a Geometry object into WKT notation
+
+ \param out_buf pointer to dynamically growing Text buffer
+ \param geom pointer to Geometry object
+ \param precision decimal digits to be used for coordinates
+
+ \sa gaiaParseWkt, gaiaOutWktStrict, gaiaParseEWKT, gaiaToEWKT
+
+ \note this function will apply 3D WKT encoding as internally intended by
+ SpatiaLite: not necessarily intended by other OGC-like implementations.
+ \n Anyway, 2D WKT is surely standard and safely interoperable.
+ */
+    GAIAGEO_DECLARE void gaiaOutWktEx (gaiaOutBufferPtr out_buf,
+				       gaiaGeomCollPtr geom, int precision);
 
 /**
  Encodes a Geometry object into strict 2D WKT notation
@@ -811,7 +874,7 @@ extern "C"
  \param out_buf pointer to dynamically growing Text buffer
  \param point pointer to Point object
 
- \sa gaiaOutLinestringZ, gaiaOutPolygonZ
+ \sa gaiaOutLinestringZ, gaiaOutPolygonZ, gaiaOutPointZex
  
  \remark mainly intended for internal usage.
  */
@@ -819,12 +882,26 @@ extern "C"
 					gaiaPointPtr point);
 
 /**
+ Encodes a WKT 3D Point [XYZ]
+
+ \param out_buf pointer to dynamically growing Text buffer
+ \param point pointer to Point object
+ \param precision decimal digits to be used for coordinates
+
+ \sa gaiaOutLinestringZ, gaiaOutPolygonZ
+ 
+ \remark mainly intended for internal usage.
+ */
+    GAIAGEO_DECLARE void gaiaOutPointZex (gaiaOutBufferPtr out_buf,
+					  gaiaPointPtr point, int precision);
+
+/**
  Encodes a WKT 3D Linestring [XYZ]
 
  \param out_buf pointer to dynamically growing Text buffer
  \param linestring pointer to Linestring object
 
- \sa gaiaOutPointZ, gaiaOutPolygonZ
+ \sa gaiaOutPointZ, gaiaOutPolygonZ, gaiaOutLinestringZex
  
  \remark mainly intended for internal usage.
  */
@@ -832,17 +909,48 @@ extern "C"
 					     gaiaLinestringPtr linestring);
 
 /**
+ Encodes a WKT 3D Linestring [XYZ]
+
+ \param out_buf pointer to dynamically growing Text buffer
+ \param linestring pointer to Linestring object
+ \param precision decimal digits to be used for coordinates
+
+ \sa gaiaOutPointZ, gaiaOutPolygonZ
+ 
+ \remark mainly intended for internal usage.
+ */
+    GAIAGEO_DECLARE void gaiaOutLinestringZex (gaiaOutBufferPtr out_buf,
+					       gaiaLinestringPtr linestring,
+					       int precision);
+
+/**
  Encodes a WKT 3D Polygon [XYZ]
 
  \param out_buf pointer to dynamically growing Text buffer
  \param polygon pointer to Point object
 
- \sa gaiaOutPointZ, gaiaOutLinestringZ
+ \sa gaiaOutPointZ, gaiaOutLinestringZ, gaiaOutPolygonZex
  
  \remark mainly intended for internal usage.
  */
     GAIAGEO_DECLARE void gaiaOutPolygonZ (gaiaOutBufferPtr out_buf,
 					  gaiaPolygonPtr polygon);
+
+/**
+ Encodes a WKT 3D Polygon [XYZ]
+
+ \param out_buf pointer to dynamically growing Text buffer
+ \param polygon pointer to Point object
+ \param precision decimal digits to be used for coordinates
+
+ \sa gaiaOutPointZ, gaiaOutLinestringZ
+ 
+ \remark mainly intended for internal usage.
+ */
+    GAIAGEO_DECLARE void gaiaOutPolygonZex (gaiaOutBufferPtr out_buf,
+					    gaiaPolygonPtr polygon,
+					    int precision);
+
 /**
  Creates a Geometry object from KML notation
 

@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT(libspatialite, 4.2.1-rc1, a.furieri@lqt.it)
+AC_INIT(libspatialite, 4.3.0-RC0, a.furieri@lqt.it)
 AC_LANG(C)
 AC_CONFIG_MACRO_DIR([m4])
 
@@ -21,7 +21,7 @@ AH_TEMPLATE([_LARGEFILE_SOURCE],
             [Must be defined in order to enable huge-file support.])
 AC_DEFINE(_LARGEFILE_SOURCE)
 
-# disablibg debug support
+# disabling debug support
 AH_TEMPLATE([NDEBUG],
             [Must be defined in order to disable debug mode.])
 AC_DEFINE(NDEBUG)
@@ -35,6 +35,8 @@ AH_TEMPLATE([GEOS_TRUNK],
             [Should be defined in order to enable GEOS_TRUNK experimental support.])
 AH_TEMPLATE([ENABLE_LWGEOM],
             [Should be defined in order to enable LWGEOM support.])
+AH_TEMPLATE([ENABLE_GCP],
+            [Should be defined in order to enable GCP support.])
 AH_TEMPLATE([OMIT_PROJ],
             [Should be defined in order to disable PROJ.4 support.])
 AH_TEMPLATE([OMIT_ICONV],
@@ -118,6 +120,7 @@ AC_CONFIG_FILES([Makefile \
 		src/shapefiles/Makefile \
 		src/dxf/Makefile \
 		src/md5/Makefile \
+		src/control_points/Makefile \
 		src/srsinit/Makefile \
 		src/srsinit/epsg_update/Makefile \
 		src/connection_cache/Makefile \
@@ -136,6 +139,8 @@ AC_CONFIG_FILES([Makefile \
 		test/sql_stmt_security_tests/Makefile \
 		test/sql_stmt_xmlsec_tests/Makefile \
 		test/sql_stmt_freexl_tests/Makefile \
+		test/sql_stmt_cache_tests/Makefile \
+		test/sql_stmt_nocache_tests/Makefile \
 		examples/Makefile \
 		Doxyfile \
 		spatialite.pc])
@@ -210,7 +215,7 @@ AC_ARG_ENABLE(freexl, [AS_HELP_STRING(
   [], [enable_freexl=yes])
 if test x"$enable_freexl" != "xno"; then
   AC_CHECK_HEADERS(freexl.h,, [AC_MSG_ERROR([cannot find freexl.h, bailing out])])
-  AC_SEARCH_LIBS(freexl_open,freexl,,AC_MSG_ERROR(['libfreexl' is required but it doesn't seem to be installed on this system.]),-lm)
+  AC_SEARCH_LIBS(freexl_version,freexl,,AC_MSG_ERROR([could not find 'freexl' (or obsolete 'freexl' < v.1.0.1 found).]),-lm)
 else
   AC_DEFINE(OMIT_FREEXL)
 fi
@@ -275,6 +280,16 @@ if test x"$enable_geos" != "xno"; then
   AC_SEARCH_LIBS(GEOSCoveredBy,geos_c,,AC_MSG_ERROR([could not find libgeos_c (or obsolete 'libgeos_c' < v.3.3.0 found) - you may need to specify the directory of a geos-config file using --with-geosconfig]))
   LIBS="$LIBS_SAVE"
   LIBS="$LIBS $GEOS_LDFLAGS -lgeos_c"
+
+  #-----------------------------------------------------------------------
+  #   --enable-controlpoints
+  #
+  AC_ARG_ENABLE(gcp, [AS_HELP_STRING(
+	  [--enable-gcp], [enables Control Points (from Grass GIS) [default=no]])],
+	  [], [enable_gcp=no])
+  if test x"$enable_gcp" != "xno"; then
+	  AC_DEFINE(ENABLE_GCP)
+  fi
 
   #-----------------------------------------------------------------------
   #   --enable-geosadvanced
@@ -366,3 +381,33 @@ AM_CONDITIONAL([MACOSX], [test "$target_alias" = "macosx"])
 AM_CONDITIONAL([ANDROID], [test "$target_alias" = "android"])
 
 AC_OUTPUT
+
+#-----------------------------------------------------------------------
+# printing an eventual message reporting about GPL escalation
+#-----------------------------------------------------------------------
+gpl_escalation=no;
+if test x"$enable_lwgeom" != "xno"; then
+    gpl_escalation=yes
+fi
+if test x"$enable_gcp" != "xno"; then
+    gpl_escalation=yes
+fi
+if test x"$gpl_escalation" != xno; then
+    echo 
+    echo
+    echo "=============================================================="
+    echo "                        IMPORTANT NOTICE"
+    echo "=============================================================="
+    echo "You have selected --enable-lwgeom and/or --enable-gcp"
+    echo
+    echo "Both modules strictly depend on code released under the GPLv2+"
+    echo "license, wich is virally infective by definition."
+    echo "Consequently the copy of libspatialite you are going to build"
+    echo "if configured this way *must* be released under the GPLv2+ license."
+    echo
+    echo "If you wish better preserving the initial MPL tri-license you"
+    echo "simply have to reconfigure by specifying the following options:"
+    echo "        --disable-lwgeom --disable-gcp"
+    echo "=============================================================="
+    
+fi

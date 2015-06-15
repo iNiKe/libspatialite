@@ -69,6 +69,7 @@ the terms of any one of the MPL, the GPL or the LGPL.
 #include <spatialite.h>
 #include <spatialite_private.h>
 #include <spatialite/gg_advanced.h>
+#include <spatialite/gaiamatrix.h>
 
 #ifndef OMIT_GEOS		/* including GEOS */
 #include <geos_c.h>
@@ -251,6 +252,9 @@ spatialite_alloc_connection ()
       }
     cache->magic1 = SPATIALITE_CACHE_MAGIC1;
     cache->magic2 = SPATIALITE_CACHE_MAGIC2;
+    cache->gpkg_mode = 0;
+    cache->gpkg_amphibious_mode = 0;
+    cache->decimal_precision = -1;
     cache->GEOS_handle = NULL;
     cache->PROJ_handle = NULL;
     cache->pool_index = pool_index;

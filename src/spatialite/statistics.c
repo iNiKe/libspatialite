@@ -2060,7 +2060,6 @@ check_drop_layout (sqlite3 * sqlite, const char *prefix, const char *table,
     int rows;
     int columns;
     char jolly = '%';
-    char *x_name;
     int ret;
     char *sql;
     char *q_prefix = gaiaDoubleQuotedSql (prefix);
@@ -2143,14 +2142,15 @@ check_drop_layout (sqlite3 * sqlite, const char *prefix, const char *table,
 
 /* identifying any possible R*Tree supporting the main target */
     q_prefix = gaiaDoubleQuotedSql (prefix);
-    x_name = sqlite3_mprintf ("idx_%s_%c", table, jolly);
     sql =
 	sqlite3_mprintf
-	("SELECT name FROM \"%s\".sqlite_master WHERE type = 'table' "
-	 "AND name LIKE(%Q) AND sql LIKE('%cvirtual%c') AND sql LIKE('%crtree%c')",
-	 q_prefix, x_name, jolly, jolly, jolly, jolly);
+	("SELECT name FROM \"%s\".sqlite_master WHERE type = 'table' AND "
+	 "Lower(name) IN (SELECT "
+	 "Lower('idx_' || f_table_name || '_' || f_geometry_column) "
+	 "FROM geometry_columns WHERE Lower(f_table_name) = Lower(%Q)) "
+	 "AND sql LIKE('%cvirtual%c') AND sql LIKE('%crtree%c')",
+	 q_prefix, table, jolly, jolly, jolly, jolly);
     free (q_prefix);
-    sqlite3_free (x_name);
     ret = sqlite3_get_table (sqlite, sql, &results, &rows, &columns, NULL);
     sqlite3_free (sql);
     if (ret != SQLITE_OK)
@@ -2183,6 +2183,13 @@ gaiaDropTable (sqlite3 * sqlite, const char *table)
 SPATIALITE_DECLARE int
 gaiaDropTableEx (sqlite3 * sqlite, const char *prefix, const char *table)
 {
+    return gaiaDropTableEx2 (sqlite, prefix, table, 1);
+}
+
+SPATIALITE_DECLARE int
+gaiaDropTableEx2 (sqlite3 * sqlite, const char *prefix, const char *table,
+		  int transaction)
+{
 /* dropping a Spatial Table and any other related stuff */
     int ret;
     struct drop_params aux;
@@ -2213,10 +2220,15 @@ gaiaDropTableEx (sqlite3 * sqlite, const char *prefix, const char *table)
 	return 0;
     if (table == NULL)
 	return 0;
-/* the whole operation is a single transaction */
-    ret = sqlite3_exec (sqlite, "BEGIN", NULL, NULL, NULL);
-    if (ret != SQLITE_OK)
-	return 0;
+
+    if (transaction)
+      {
+	  /* the whole operation is a single transaction */
+	  ret = sqlite3_exec (sqlite, "BEGIN", NULL, NULL, NULL);
+	  if (ret != SQLITE_OK)
+	      return 0;
+      }
+
 /* checking the actual DB configuration */
     if (!check_drop_layout (sqlite, prefix, table, &aux))
 	goto rollback;
@@ -2225,10 +2237,15 @@ gaiaDropTableEx (sqlite3 * sqlite, const char *prefix, const char *table)
 	goto rollback;
     if (!do_drop_table (sqlite, prefix, table, &aux))
 	goto rollback;
-/* committing the still pending transaction */
-    ret = sqlite3_exec (sqlite, "COMMIT", NULL, NULL, NULL);
-    if (ret != SQLITE_OK)
-	goto rollback;
+
+    if (transaction)
+      {
+	  /* committing the still pending transaction */
+	  ret = sqlite3_exec (sqlite, "COMMIT", NULL, NULL, NULL);
+	  if (ret != SQLITE_OK)
+	      goto rollback;
+      }
+
     if (aux.rtrees)
       {
 	  /* memory cleanup - rtrees */
@@ -2244,8 +2261,12 @@ gaiaDropTableEx (sqlite3 * sqlite, const char *prefix, const char *table)
 
   rollback:
 
-/* invalidating the still pending transaction */
-    sqlite3_exec (sqlite, "ROLLBACK", NULL, NULL, NULL);
+    if (transaction)
+      {
+	  /* invalidating the still pending transaction */
+	  sqlite3_exec (sqlite, "ROLLBACK", NULL, NULL, NULL);
+      }
+
     if (aux.rtrees)
       {
 	  /* memory cleanup - rtrees */
