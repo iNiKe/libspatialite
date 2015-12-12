@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT(libspatialite, 4.3.0a, a.furieri@lqt.it)
+AC_INIT(libspatialite, 4.4.0-RC0, a.furieri@lqt.it)
 AC_LANG(C)
 AC_CONFIG_MACRO_DIR([m4])
 
@@ -31,8 +31,10 @@ AH_TEMPLATE([OMIT_GEOS],
             [Should be defined in order to disable GEOS support.])
 AH_TEMPLATE([GEOS_ADVANCED],
             [Should be defined in order to enable GEOS_ADVANCED support.])
-AH_TEMPLATE([GEOS_TRUNK],
-            [Should be defined in order to enable GEOS_TRUNK experimental support.])
+AH_TEMPLATE([GEOS_REENTRANT],
+            [Should be defined in order to enable GEOS_REENTRANT (fully thread-safe).])
+AH_TEMPLATE([GEOS_ONLY_REENTRANT],
+            [Should be defined in order to fully disable GEOS non-thread-safe API.])
 AH_TEMPLATE([ENABLE_LWGEOM],
             [Should be defined in order to enable LWGEOM support.])
 AH_TEMPLATE([ENABLE_GCP],
@@ -55,6 +57,8 @@ AH_TEMPLATE([ENABLE_GEOPACKAGE],
             [Should be defined in order to enable GeoPackage support.])
 AH_TEMPLATE([POSTGIS_2_1],
             [Should be defined when linking liblwgeom from PostGIS 2.1 (or later).])
+AH_TEMPLATE([POSTGIS_2_2],
+            [Should be defined when linking liblwgeom from PostGIS 2.2 (or later).])
 AH_TEMPLATE([TARGET_CPU],
             [Should contain a text-string describing the intended target CPU])
 
@@ -121,6 +125,8 @@ AC_CONFIG_FILES([Makefile \
 		src/dxf/Makefile \
 		src/md5/Makefile \
 		src/control_points/Makefile \
+		src/cutter/Makefile \
+		src/topology/Makefile \
 		src/srsinit/Makefile \
 		src/srsinit/epsg_update/Makefile \
 		src/connection_cache/Makefile \
@@ -135,12 +141,16 @@ AC_CONFIG_FILES([Makefile \
 		test/sql_stmt_proj_tests/Makefile \
 		test/sql_stmt_mathsql_tests/Makefile \
 		test/sql_stmt_lwgeom_tests/Makefile \
+		test/sql_stmt_lwgeom_20_tests/Makefile \
+		test/sql_stmt_lwgeom_22_tests/Makefile \
 		test/sql_stmt_libxml2_tests/Makefile \
 		test/sql_stmt_security_tests/Makefile \
 		test/sql_stmt_xmlsec_tests/Makefile \
 		test/sql_stmt_freexl_tests/Makefile \
 		test/sql_stmt_cache_tests/Makefile \
 		test/sql_stmt_nocache_tests/Makefile \
+		test/sql_stmt_voronoj1_tests/Makefile \
+		test/sql_stmt_voronoj2_tests/Makefile \
 		examples/Makefile \
 		Doxyfile \
 		spatialite.pc])
@@ -298,8 +308,29 @@ if test x"$enable_geos" != "xno"; then
 	  [--enable-geosadvanced], [enables GEOS advanced features [default=yes]])],
 	  [], [enable_geosadvanced=yes])
   if test x"$enable_geosadvanced" != "xno"; then
-	  AC_SEARCH_LIBS(GEOSDelaunayTriangulation,geos_c,,AC_MSG_ERROR(['libgeos_c' (>= v.3.4.0) is required but it doesn't seem to be installed on this system.]))
+	  AC_SEARCH_LIBS(GEOSDelaunayTriangulation,geos_c,,AC_MSG_ERROR(['libgeos_c' (>= v.3.4.0) is required but it doesn't seem to be installed on this system. You may need to try re-running configure with a --disable-geosadvanced parameter.]))
 	  AC_DEFINE(GEOS_ADVANCED)
+  fi
+
+  #-----------------------------------------------------------------------
+  #   --enable-geosreentrant
+  #
+  AC_ARG_ENABLE(geosreentrant, [AS_HELP_STRING(
+	  [--enable-geosreentrant], [enables GEOS reentrant (fully thread safe) [default=yes]])],
+	  [], [enable_geosreentrant=yes])
+  if test x"$enable_geosreentrant" != "xno"; then
+	  AC_SEARCH_LIBS(GEOSContext_setErrorMessageHandler_r,geos_c,,AC_MSG_ERROR(['libgeos_c' (>= v.3.5.0) is required but it doesn't seem to be installed on this system. You may need to try re-running configure with a --disable-geosreentrant parameter.]))
+	  AC_DEFINE(GEOS_REENTRANT)
+  fi
+
+  #-----------------------------------------------------------------------
+  #   --with-geosonlyreentrant
+  #
+  AC_ARG_WITH(geosonlyreentrant, [AS_HELP_STRING(
+	  [--with-geosonlyreentrant], [completely disables GEOS non-thread safe API [default=no]])],
+	  [], [with_geosonlyreentrant=no])
+  if test x"$with_geosonlyreentrant" != "xno"; then
+	  AC_DEFINE(GEOS_ONLY_REENTRANT)
   fi
 
   #-----------------------------------------------------------------------
@@ -322,6 +353,10 @@ if test x"$enable_geos" != "xno"; then
 	# testing for PostGIS 2.1 - lwgeom_set_handlers
 	#
 	  AC_SEARCH_LIBS(lwgeom_set_handlers,geos_c,AC_DEFINE(POSTGIS_2_1))
+	#
+	# testing for PostGIS 2.2 - lwt_AddIsoNode
+	#
+	  AC_SEARCH_LIBS(lwt_AddIsoNode,geos_c,AC_DEFINE(POSTGIS_2_2))
   fi
 else
   AC_DEFINE(OMIT_GEOS)
@@ -373,6 +408,15 @@ AC_ARG_ENABLE(examples, [AS_HELP_STRING(
 AM_CONDITIONAL(ENABLE_EXAMPLES, [test x"$enable_examples" != "xno"])
 #-----------------------------------------------------------------------
 
+#-----------------------------------------------------------------------
+#   --enable-module-only
+#
+AC_ARG_ENABLE(module-only, [AS_HELP_STRING(
+       [--enable-module-only], [builds only mod_spatialite alone [default=no]])],
+       [], [enable_module_only=no])
+AM_CONDITIONAL(MODULE_ONLY, [test x"$enable_module_only" != "xno"])
+#-----------------------------------------------------------------------
+
 # Checking for MinGW
 AM_CONDITIONAL([MINGW], [test "$target_alias" = "mingw32"])
 # Checking for Mac OsX
@@ -401,7 +445,7 @@ if test x"$gpl_escalation" != xno; then
     echo "You have selected --enable-lwgeom and/or --enable-gcp"
     echo
     echo "Both modules strictly depend on code released under the GPLv2+"
-    echo "license, wich is virally infective by definition."
+    echo "license, wich takes precedence over any other license."
     echo "Consequently the copy of libspatialite you are going to build"
     echo "if configured this way *must* be released under the GPLv2+ license."
     echo
@@ -409,5 +453,5 @@ if test x"$gpl_escalation" != xno; then
     echo "simply have to reconfigure by specifying the following options:"
     echo "        --disable-lwgeom --disable-gcp"
     echo "=============================================================="
-    
+  
 fi

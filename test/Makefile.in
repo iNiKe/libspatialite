@@ -114,7 +114,11 @@ check_PROGRAMS = check_endian$(EXEEXT) check_version$(EXEEXT) \
 	check_virtualbbox$(EXEEXT) check_wfsin$(EXEEXT) \
 	check_dxf$(EXEEXT) check_metacatalog$(EXEEXT) \
 	check_virtualelem$(EXEEXT) check_srid_fncts$(EXEEXT) \
-	check_control_points$(EXEEXT) $(am__EXEEXT_1)
+	check_control_points$(EXEEXT) check_cutter$(EXEEXT) \
+	check_topology2d$(EXEEXT) check_topology3d$(EXEEXT) \
+	check_topoplus$(EXEEXT) check_network2d$(EXEEXT) \
+	check_network3d$(EXEEXT) check_network_log$(EXEEXT) \
+	check_virtualknn$(EXEEXT) $(am__EXEEXT_1)
 @ENABLE_GEOPACKAGE_TRUE@am__append_1 = \
 @ENABLE_GEOPACKAGE_TRUE@		check_createBaseTables \
 @ENABLE_GEOPACKAGE_TRUE@		check_gpkgCreateTilesTable \
@@ -215,6 +219,9 @@ check_create_LDADD = $(LDADD)
 check_createBaseTables_SOURCES = check_createBaseTables.c
 check_createBaseTables_OBJECTS = check_createBaseTables.$(OBJEXT)
 check_createBaseTables_LDADD = $(LDADD)
+check_cutter_SOURCES = check_cutter.c
+check_cutter_OBJECTS = check_cutter.$(OBJEXT)
+check_cutter_LDADD = $(LDADD)
 check_dbf_load_SOURCES = check_dbf_load.c
 check_dbf_load_OBJECTS = check_dbf_load.$(OBJEXT)
 check_dbf_load_LDADD = $(LDADD)
@@ -400,6 +407,15 @@ check_metacatalog_LDADD = $(LDADD)
 check_multithread_SOURCES = check_multithread.c
 check_multithread_OBJECTS = check_multithread.$(OBJEXT)
 check_multithread_LDADD = $(LDADD)
+check_network2d_SOURCES = check_network2d.c
+check_network2d_OBJECTS = check_network2d.$(OBJEXT)
+check_network2d_LDADD = $(LDADD)
+check_network3d_SOURCES = check_network3d.c
+check_network3d_OBJECTS = check_network3d.$(OBJEXT)
+check_network3d_LDADD = $(LDADD)
+check_network_log_SOURCES = check_network_log.c
+check_network_log_OBJECTS = check_network_log.$(OBJEXT)
+check_network_log_LDADD = $(LDADD)
 check_recover_geom_SOURCES = check_recover_geom.c
 check_recover_geom_OBJECTS = check_recover_geom.$(OBJEXT)
 check_recover_geom_LDADD = $(LDADD)
@@ -424,6 +440,15 @@ check_srid_fncts_LDADD = $(LDADD)
 check_styling_SOURCES = check_styling.c
 check_styling_OBJECTS = check_styling.$(OBJEXT)
 check_styling_LDADD = $(LDADD)
+check_topology2d_SOURCES = check_topology2d.c
+check_topology2d_OBJECTS = check_topology2d.$(OBJEXT)
+check_topology2d_LDADD = $(LDADD)
+check_topology3d_SOURCES = check_topology3d.c
+check_topology3d_OBJECTS = check_topology3d.$(OBJEXT)
+check_topology3d_LDADD = $(LDADD)
+check_topoplus_SOURCES = check_topoplus.c
+check_topoplus_OBJECTS = check_topoplus.$(OBJEXT)
+check_topoplus_LDADD = $(LDADD)
 check_version_SOURCES = check_version.c
 check_version_OBJECTS = check_version.$(OBJEXT)
 check_version_LDADD = $(LDADD)
@@ -436,6 +461,9 @@ check_virtualbbox_LDADD = $(LDADD)
 check_virtualelem_SOURCES = check_virtualelem.c
 check_virtualelem_OBJECTS = check_virtualelem.$(OBJEXT)
 check_virtualelem_LDADD = $(LDADD)
+check_virtualknn_SOURCES = check_virtualknn.c
+check_virtualknn_OBJECTS = check_virtualknn.$(OBJEXT)
+check_virtualknn_LDADD = $(LDADD)
 check_virtualtable1_SOURCES = check_virtualtable1.c
 check_virtualtable1_OBJECTS = check_virtualtable1.$(OBJEXT)
 check_virtualtable1_LDADD = $(LDADD)
@@ -518,13 +546,13 @@ am__v_CCLD_1 =
 SOURCES = check_add_tile_triggers.c \
 	check_add_tile_triggers_bad_table_name.c check_bufovflw.c \
 	check_clone_table.c check_control_points.c check_create.c \
-	check_createBaseTables.c check_dbf_load.c check_dxf.c \
-	check_endian.c check_exif.c check_exif2.c check_extension.c \
-	check_extra_relations_fncts.c check_fdo1.c check_fdo2.c \
-	check_fdo3.c check_fdo_bufovflw.c check_gaia_utf8.c \
-	check_gaia_util.c check_geom_aux.c check_geometry_cols.c \
-	check_geoscvt_fncts.c check_get_normal_row.c \
-	check_get_normal_row_bad_geopackage.c \
+	check_createBaseTables.c check_cutter.c check_dbf_load.c \
+	check_dxf.c check_endian.c check_exif.c check_exif2.c \
+	check_extension.c check_extra_relations_fncts.c check_fdo1.c \
+	check_fdo2.c check_fdo3.c check_fdo_bufovflw.c \
+	check_gaia_utf8.c check_gaia_util.c check_geom_aux.c \
+	check_geometry_cols.c check_geoscvt_fncts.c \
+	check_get_normal_row.c check_get_normal_row_bad_geopackage.c \
 	check_get_normal_row_bad_geopackage2.c check_get_normal_zoom.c \
 	check_get_normal_zoom_bad_geopackage.c \
 	check_get_normal_zoom_bad_geopackage2.c \
@@ -544,26 +572,29 @@ SOURCES = check_add_tile_triggers.c \
 	check_gpkg_opt_extension_mechanism_extensions_data_table_def.c \
 	check_init.c check_init2.c check_libxml2.c check_math_funcs.c \
 	check_mbrcache.c check_md5.c check_metacatalog.c \
-	check_multithread.c check_recover_geom.c \
+	check_multithread.c check_network2d.c check_network3d.c \
+	check_network_log.c check_recover_geom.c \
 	check_relations_fncts.c check_shp_load.c check_shp_load_3d.c \
 	check_spatialindex.c check_sql_stmt.c check_srid_fncts.c \
-	check_styling.c check_version.c check_virtual_ovflw.c \
-	check_virtualbbox.c check_virtualelem.c check_virtualtable1.c \
-	check_virtualtable2.c check_virtualtable3.c \
-	check_virtualtable4.c check_virtualtable5.c \
-	check_virtualtable6.c check_virtualxpath.c check_wfsin.c \
-	check_xls_load.c shape_3d.c shape_cp1252.c shape_primitives.c \
-	shape_utf8_1.c shape_utf8_1ex.c shape_utf8_2.c
+	check_styling.c check_topology2d.c check_topology3d.c \
+	check_topoplus.c check_version.c check_virtual_ovflw.c \
+	check_virtualbbox.c check_virtualelem.c check_virtualknn.c \
+	check_virtualtable1.c check_virtualtable2.c \
+	check_virtualtable3.c check_virtualtable4.c \
+	check_virtualtable5.c check_virtualtable6.c \
+	check_virtualxpath.c check_wfsin.c check_xls_load.c shape_3d.c \
+	shape_cp1252.c shape_primitives.c shape_utf8_1.c \
+	shape_utf8_1ex.c shape_utf8_2.c
 DIST_SOURCES = check_add_tile_triggers.c \
 	check_add_tile_triggers_bad_table_name.c check_bufovflw.c \
 	check_clone_table.c check_control_points.c check_create.c \
-	check_createBaseTables.c check_dbf_load.c check_dxf.c \
-	check_endian.c check_exif.c check_exif2.c check_extension.c \
-	check_extra_relations_fncts.c check_fdo1.c check_fdo2.c \
-	check_fdo3.c check_fdo_bufovflw.c check_gaia_utf8.c \
-	check_gaia_util.c check_geom_aux.c check_geometry_cols.c \
-	check_geoscvt_fncts.c check_get_normal_row.c \
-	check_get_normal_row_bad_geopackage.c \
+	check_createBaseTables.c check_cutter.c check_dbf_load.c \
+	check_dxf.c check_endian.c check_exif.c check_exif2.c \
+	check_extension.c check_extra_relations_fncts.c check_fdo1.c \
+	check_fdo2.c check_fdo3.c check_fdo_bufovflw.c \
+	check_gaia_utf8.c check_gaia_util.c check_geom_aux.c \
+	check_geometry_cols.c check_geoscvt_fncts.c \
+	check_get_normal_row.c check_get_normal_row_bad_geopackage.c \
 	check_get_normal_row_bad_geopackage2.c check_get_normal_zoom.c \
 	check_get_normal_zoom_bad_geopackage.c \
 	check_get_normal_zoom_bad_geopackage2.c \
@@ -583,16 +614,19 @@ DIST_SOURCES = check_add_tile_triggers.c \
 	check_gpkg_opt_extension_mechanism_extensions_data_table_def.c \
 	check_init.c check_init2.c check_libxml2.c check_math_funcs.c \
 	check_mbrcache.c check_md5.c check_metacatalog.c \
-	check_multithread.c check_recover_geom.c \
+	check_multithread.c check_network2d.c check_network3d.c \
+	check_network_log.c check_recover_geom.c \
 	check_relations_fncts.c check_shp_load.c check_shp_load_3d.c \
 	check_spatialindex.c check_sql_stmt.c check_srid_fncts.c \
-	check_styling.c check_version.c check_virtual_ovflw.c \
-	check_virtualbbox.c check_virtualelem.c check_virtualtable1.c \
-	check_virtualtable2.c check_virtualtable3.c \
-	check_virtualtable4.c check_virtualtable5.c \
-	check_virtualtable6.c check_virtualxpath.c check_wfsin.c \
-	check_xls_load.c shape_3d.c shape_cp1252.c shape_primitives.c \
-	shape_utf8_1.c shape_utf8_1ex.c shape_utf8_2.c
+	check_styling.c check_topology2d.c check_topology3d.c \
+	check_topoplus.c check_version.c check_virtual_ovflw.c \
+	check_virtualbbox.c check_virtualelem.c check_virtualknn.c \
+	check_virtualtable1.c check_virtualtable2.c \
+	check_virtualtable3.c check_virtualtable4.c \
+	check_virtualtable5.c check_virtualtable6.c \
+	check_virtualxpath.c check_wfsin.c check_xls_load.c shape_3d.c \
+	shape_cp1252.c shape_primitives.c shape_utf8_1.c \
+	shape_utf8_1ex.c shape_utf8_2.c
 RECURSIVE_TARGETS = all-recursive check-recursive cscopelist-recursive \
 	ctags-recursive dvi-recursive html-recursive info-recursive \
 	install-data-recursive install-dvi-recursive \
@@ -1000,8 +1034,7 @@ AM_CFLAGS = -I@srcdir@/../src/headers -I@srcdir@
 @MINGW_TRUE@AM_LDFLAGS = -L../src -lspatialite -lm -lxml2 $(GCOV_FLAGS)
 TESTS = $(check_PROGRAMS)
 MOSTLYCLEANFILES = *.gcna *.gcno *.gcda
-EXTRA_DIST = asprintf4win.h \
-	fnmatch_impl4win.h \
+EXTRA_DIST = fnmatch_impl4win.h \
 	fnmatch4win.h \
 	scandir4win.h \
 	test_helpers.h \
@@ -1084,15 +1117,20 @@ EXTRA_DIST = asprintf4win.h \
 	22.dxf f06.dxf l02.dxf p05.dxf \
 	archaic.dxf linked.dxf hatch.dxf \
 	symbol.dxf gpkg_test.sqlite gpkg_test.gpkg \
-	gpkg_test_broken.gpkg gpkg_test_extrasrid.gpkg
+	gpkg_test_broken.gpkg gpkg_test_extrasrid.gpkg \
+	elba-pg.shp elba-pg.shx elba-pg.dbf \
+	elba-ln.shp elba-ln.shx elba-ln.dbf \
+	Gpx-sample.gpx 000323485.gpx
 
 SUBDIRS = sql_stmt_geosadvanced_tests sql_stmt_geos_tests \
 	sql_stmt_libxml2_tests sql_stmt_lwgeom_tests \
+	sql_stmt_lwgeom_20_tests sql_stmt_lwgeom_22_tests \
 	sql_stmt_mathsql_tests sql_stmt_proj_tests \
 	sql_stmt_security_tests sql_stmt_tests \
 	sql_stmt_xmlsec_tests sql_stmt_geopackage_tests \
 	sql_stmt_freexl_tests sql_stmt_cache_tests \
-	sql_stmt_nocache_tests
+	sql_stmt_nocache_tests sql_stmt_voronoj1_tests \
+	sql_stmt_voronoj2_tests
 
 all: all-recursive
 
@@ -1164,6 +1202,10 @@ check_create$(EXEEXT): $(check_create_OBJECTS) $(check_create_DEPENDENCIES) $(EX
 check_createBaseTables$(EXEEXT): $(check_createBaseTables_OBJECTS) $(check_createBaseTables_DEPENDENCIES) $(EXTRA_check_createBaseTables_DEPENDENCIES) 
 	@rm -f check_createBaseTables$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(check_createBaseTables_OBJECTS) $(check_createBaseTables_LDADD) $(LIBS)
+
+check_cutter$(EXEEXT): $(check_cutter_OBJECTS) $(check_cutter_DEPENDENCIES) $(EXTRA_check_cutter_DEPENDENCIES) 
+	@rm -f check_cutter$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(check_cutter_OBJECTS) $(check_cutter_LDADD) $(LIBS)
 
 check_dbf_load$(EXEEXT): $(check_dbf_load_OBJECTS) $(check_dbf_load_DEPENDENCIES) $(EXTRA_check_dbf_load_DEPENDENCIES) 
 	@rm -f check_dbf_load$(EXEEXT)
@@ -1365,6 +1407,18 @@ check_multithread$(EXEEXT): $(check_multithread_OBJECTS) $(check_multithread_DEP
 	@rm -f check_multithread$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(check_multithread_OBJECTS) $(check_multithread_LDADD) $(LIBS)
 
+check_network2d$(EXEEXT): $(check_network2d_OBJECTS) $(check_network2d_DEPENDENCIES) $(EXTRA_check_network2d_DEPENDENCIES) 
+	@rm -f check_network2d$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(check_network2d_OBJECTS) $(check_network2d_LDADD) $(LIBS)
+
+check_network3d$(EXEEXT): $(check_network3d_OBJECTS) $(check_network3d_DEPENDENCIES) $(EXTRA_check_network3d_DEPENDENCIES) 
+	@rm -f check_network3d$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(check_network3d_OBJECTS) $(check_network3d_LDADD) $(LIBS)
+
+check_network_log$(EXEEXT): $(check_network_log_OBJECTS) $(check_network_log_DEPENDENCIES) $(EXTRA_check_network_log_DEPENDENCIES) 
+	@rm -f check_network_log$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(check_network_log_OBJECTS) $(check_network_log_LDADD) $(LIBS)
+
 check_recover_geom$(EXEEXT): $(check_recover_geom_OBJECTS) $(check_recover_geom_DEPENDENCIES) $(EXTRA_check_recover_geom_DEPENDENCIES) 
 	@rm -f check_recover_geom$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(check_recover_geom_OBJECTS) $(check_recover_geom_LDADD) $(LIBS)
@@ -1397,6 +1451,18 @@ check_styling$(EXEEXT): $(check_styling_OBJECTS) $(check_styling_DEPENDENCIES) $
 	@rm -f check_styling$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(check_styling_OBJECTS) $(check_styling_LDADD) $(LIBS)
 
+check_topology2d$(EXEEXT): $(check_topology2d_OBJECTS) $(check_topology2d_DEPENDENCIES) $(EXTRA_check_topology2d_DEPENDENCIES) 
+	@rm -f check_topology2d$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(check_topology2d_OBJECTS) $(check_topology2d_LDADD) $(LIBS)
+
+check_topology3d$(EXEEXT): $(check_topology3d_OBJECTS) $(check_topology3d_DEPENDENCIES) $(EXTRA_check_topology3d_DEPENDENCIES) 
+	@rm -f check_topology3d$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(check_topology3d_OBJECTS) $(check_topology3d_LDADD) $(LIBS)
+
+check_topoplus$(EXEEXT): $(check_topoplus_OBJECTS) $(check_topoplus_DEPENDENCIES) $(EXTRA_check_topoplus_DEPENDENCIES) 
+	@rm -f check_topoplus$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(check_topoplus_OBJECTS) $(check_topoplus_LDADD) $(LIBS)
+
 check_version$(EXEEXT): $(check_version_OBJECTS) $(check_version_DEPENDENCIES) $(EXTRA_check_version_DEPENDENCIES) 
 	@rm -f check_version$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(check_version_OBJECTS) $(check_version_LDADD) $(LIBS)
@@ -1412,6 +1478,10 @@ check_virtualbbox$(EXEEXT): $(check_virtualbbox_OBJECTS) $(check_virtualbbox_DEP
 check_virtualelem$(EXEEXT): $(check_virtualelem_OBJECTS) $(check_virtualelem_DEPENDENCIES) $(EXTRA_check_virtualelem_DEPENDENCIES) 
 	@rm -f check_virtualelem$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(check_virtualelem_OBJECTS) $(check_virtualelem_LDADD) $(LIBS)
+
+check_virtualknn$(EXEEXT): $(check_virtualknn_OBJECTS) $(check_virtualknn_DEPENDENCIES) $(EXTRA_check_virtualknn_DEPENDENCIES) 
+	@rm -f check_virtualknn$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(check_virtualknn_OBJECTS) $(check_virtualknn_LDADD) $(LIBS)
 
 check_virtualtable1$(EXEEXT): $(check_virtualtable1_OBJECTS) $(check_virtualtable1_DEPENDENCIES) $(EXTRA_check_virtualtable1_DEPENDENCIES) 
 	@rm -f check_virtualtable1$(EXEEXT)
@@ -1486,6 +1556,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_control_points.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_create.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_createBaseTables.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_cutter.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_dbf_load.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_dxf.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_endian.Po@am__quote@
@@ -1536,6 +1607,9 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_md5.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_metacatalog.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_multithread.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_network2d.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_network3d.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_network_log.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_recover_geom.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_relations_fncts.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_shp_load.Po@am__quote@
@@ -1544,10 +1618,14 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_sql_stmt.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_srid_fncts.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_styling.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_topology2d.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_topology3d.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_topoplus.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_version.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_virtual_ovflw.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_virtualbbox.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_virtualelem.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_virtualknn.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_virtualtable1.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_virtualtable2.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_virtualtable3.Po@am__quote@
@@ -2212,6 +2290,62 @@ check_srid_fncts.log: check_srid_fncts$(EXEEXT)
 check_control_points.log: check_control_points$(EXEEXT)
 	@p='check_control_points$(EXEEXT)'; \
 	b='check_control_points'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+check_cutter.log: check_cutter$(EXEEXT)
+	@p='check_cutter$(EXEEXT)'; \
+	b='check_cutter'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+check_topology2d.log: check_topology2d$(EXEEXT)
+	@p='check_topology2d$(EXEEXT)'; \
+	b='check_topology2d'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+check_topology3d.log: check_topology3d$(EXEEXT)
+	@p='check_topology3d$(EXEEXT)'; \
+	b='check_topology3d'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+check_topoplus.log: check_topoplus$(EXEEXT)
+	@p='check_topoplus$(EXEEXT)'; \
+	b='check_topoplus'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+check_network2d.log: check_network2d$(EXEEXT)
+	@p='check_network2d$(EXEEXT)'; \
+	b='check_network2d'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+check_network3d.log: check_network3d$(EXEEXT)
+	@p='check_network3d$(EXEEXT)'; \
+	b='check_network3d'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+check_network_log.log: check_network_log$(EXEEXT)
+	@p='check_network_log$(EXEEXT)'; \
+	b='check_network_log'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+check_virtualknn.log: check_virtualknn$(EXEEXT)
+	@p='check_virtualknn$(EXEEXT)'; \
+	b='check_virtualknn'; \
 	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \

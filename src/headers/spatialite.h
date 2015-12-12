@@ -188,6 +188,18 @@ extern "C"
     SPATIALITE_DECLARE void spatialite_cleanup_ex (const void *ptr);
 
 /**
+ Partially Cleaning-up a SpatiaLite connection
+
+ This function will destroy all TopoGeo and TopoNet objects from within a local cache.
+
+ \param ptr the same memory pointer passed to the corresponding call to
+ spatialite_init_ex() and returned by spatialite_alloc_connection()
+
+ \sa spatialite_init_ex, spatialite_alloc_connection
+*/
+    SPATIALITE_DECLARE void spatialite_finalize_topologies (const void *ptr);
+
+/**
  Dumps a full geometry-table into an external Shapefile
 
  \param sqlite handle to current DB connection
@@ -711,7 +723,7 @@ extern "C"
 
  \sa check_duplicated_rows, remove_duplicated_rows_ex
 
- \note when two (or more) duplicated rows exist, only the first occurence
+ \note when two (or more) duplicated rows exist, only the first occurrence
  will be preserved, then deleting any further occurrence.
  */
     SPATIALITE_DECLARE void remove_duplicated_rows (sqlite3 * sqlite,
@@ -727,7 +739,7 @@ extern "C"
 
  \sa check_duplicated_rows, remove_duplicated_rows_ex2
 
- \note when two (or more) duplicated rows exist, only the first occurence
+ \note when two (or more) duplicated rows exist, only the first occurrence
  will be preserved, then deleting any further occurrence.
  */
     SPATIALITE_DECLARE void remove_duplicated_rows_ex (sqlite3 * sqlite,
@@ -746,7 +758,7 @@ extern "C"
 
  \sa check_duplicated_rows, remove_duplicated_rows
 
- \note when two (or more) duplicated rows exist, only the first occurence
+ \note when two (or more) duplicated rows exist, only the first occurrence
  will be preserved, then deleting any further occurrence.
  */
     SPATIALITE_DECLARE void remove_duplicated_rows_ex2 (sqlite3 * sqlite,
@@ -1403,6 +1415,54 @@ extern "C"
 							    *output_dir,
 							    int *not_repaired,
 							    char **err_msg);
+
+/**
+  Will precisely cut the input dataset against polygonal blade(s)
+  and will consequently create and populate an output dataset
+  
+ \param db_handle handle to the current SQLite connection
+ \param cache a memory pointer returned by spatialite_alloc_connection()
+ \param in_db_prefix prefix of the database where the input table
+ is expected to be found. if NULL then "MAIN" will be assumed.
+ \param input_table name of the input table to be processed.
+ \param input_geometry name of the input table Geometry column;
+ it could be NULL and in this case the appropriate column name will
+ be automatically determind. anyway if the input table do contains
+ two or more Geometries passing a NULL geometry name will raise a
+ fatal error.
+ \param blade_db_prefix prefix of the database where the "blade" table
+ is expected to be found. if NULL then "MAIN" will be assumed.
+ \param blade_table name of the table expected to contain Polygons
+ or MultiPolygon Geometries acting as blades.
+ \param blade_geometry name of the "blade" table Geometry column;
+ it could be NULL and in this case the appropriate column name will
+ be automatically determind. anyway if the input table do contains
+ two or more Geometries passing a NULL geometry name will raise a
+ fatal error.
+ \param output_table name to assinged to the destination table intended
+ to permanently store all results. this table must non exists.
+ \param transaction boolean; if set to TRUE will internally handle
+ a SQL Transaction.
+ \param ram_tmp_store boolean: if set to TRUE all TEMPORARY tables
+ and indices will be created in RAM, otherwise in a file.
+ \param message pointer to a string buffer; if not NULL it will point
+ on completion an eventual error message.
+ 
+ \return 0 on failure, any other value on success
+ 
+ \note the message buffer if not NULL will point to a dymanic memory
+ allocation and is expected to be released by calling sqlite3_free()
+ */
+    SPATIALITE_DECLARE int gaiaCutter (sqlite3 * db_handle, const void *cache,
+				       const char *in_db_prefix,
+				       const char *input_table,
+				       const char *input_geom,
+				       const char *blade_db_prefix,
+				       const char *blade_table,
+				       const char *blade_geom,
+				       const char *output_table,
+				       int transaction, int ram_tmp_store,
+				       char **message);
 
     SPATIALITE_DECLARE int gaiaGPKG2Spatialite (sqlite3 * handle_in,
 						const char *gpkg_in_path,

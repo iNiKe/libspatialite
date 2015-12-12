@@ -138,12 +138,24 @@ extern "C"
 	void *xmlParsingErrors;
 	void *xmlSchemaValidationErrors;
 	void *xmlXPathErrors;
+	char *cutterMessage;
 	struct splite_geos_cache_item cacheItem1;
 	struct splite_geos_cache_item cacheItem2;
 	struct splite_xmlSchema_cache_item xmlSchemaCache[MAX_XMLSCHEMA_CACHE];
 	int pool_index;
 	void (*geos_warning) (const char *fmt, ...);
 	void (*geos_error) (const char *fmt, ...);
+	char *gaia_geos_error_msg;
+	char *gaia_geos_warning_msg;
+	char *gaia_geosaux_error_msg;
+	void *firstTopology;
+	void *lastTopology;
+	void *firstNetwork;
+	void *lastNetwork;
+	unsigned int next_topo_savepoint;
+	char *topo_savepoint_name;
+	unsigned int next_network_savepoint;
+	char *network_savepoint_name;
 	unsigned char magic2;
     };
 
@@ -204,6 +216,10 @@ extern "C"
 
     SPATIALITE_PRIVATE void free_internal_cache (struct splite_internal_cache
 						 *cache);
+
+    SPATIALITE_PRIVATE void free_internal_cache_topologies (void *first);
+
+    SPATIALITE_PRIVATE void free_internal_cache_networks (void *first);
 
     SPATIALITE_PRIVATE struct epsg_defs *add_epsg_def (int filter_srid,
 						       struct epsg_defs **first,
@@ -328,10 +344,6 @@ extern "C"
 
     SPATIALITE_PRIVATE void getProjParams (void *p_sqlite, int srid,
 					   char **params);
-
-    SPATIALITE_PRIVATE void getProjParamsEx (void *p_sqlite, int srid,
-					     char **params,
-					     int gpkg_amphibious_mode);
 
     SPATIALITE_PRIVATE int getEllipsoidParams (void *p_sqlite, int srid,
 					       double *a, double *b,
@@ -629,6 +641,8 @@ extern "C"
 
     SPATIALITE_PRIVATE void splite_lwgeom_init (void);
 
+    SPATIALITE_PRIVATE void splite_lwgeomtopo_init (void);
+
     SPATIALITE_PRIVATE void splite_free_geos_cache_item (struct
 							 splite_geos_cache_item
 							 *p);
@@ -679,6 +693,12 @@ extern "C"
 							const char *in_table,
 							const char *out_table);
 
+    SPATIALITE_PRIVATE const void *gaiaAuxClonerCreateEx (const void *sqlite,
+							  const char *db_prefix,
+							  const char *in_table,
+							  const char *out_table,
+							  int create_only);
+
     SPATIALITE_PRIVATE void gaiaAuxClonerDestroy (const void *cloner);
 
     SPATIALITE_PRIVATE void gaiaAuxClonerAddOption (const void *cloner,
@@ -691,6 +711,282 @@ extern "C"
     SPATIALITE_PRIVATE int gaia_matrix_to_arrays (const unsigned char *blob,
 						  int blob_sz, double *E,
 						  double *N, double *Z);
+
+/* Topology SQL functions */
+    SPATIALITE_PRIVATE void fnctaux_GetLastTopologyException (const void
+							      *context,
+							      int argc,
+							      const void *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_CreateTopology (const void *context,
+						    int argc, const void *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_DropTopology (const void *context, int argc,
+						  const void *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_AddIsoNode (const void *context, int argc,
+						const void *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_MoveIsoNode (const void *context, int argc,
+						 const void *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_RemIsoNode (const void *context,
+						int argc, const void *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_AddIsoEdge (const void *context, int argc,
+						const void *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_AddEdgeModFace (const void *context,
+						    int argc, const void *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_AddEdgeNewFaces (const void *context,
+						     int argc,
+						     const void *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_RemEdgeNewFace (const void *context,
+						    int argc, const void *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_RemEdgeModFace (const void *context,
+						    int argc, const void *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_ChangeEdgeGeom (const void *context,
+						    int argc, const void *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_RemIsoEdge (const void *context,
+						int argc, const void *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_AddIsoEdge (const void *context, int argc,
+						const void *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_ModEdgeSplit (const void *context, int argc,
+						  const void *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_NewEdgesSplit (const void *context,
+						   int argc, const void *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_ModEdgeHeal (const void *context, int argc,
+						 const void *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_NewEdgeHeal (const void *context, int argc,
+						 const void *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_GetFaceEdges (const void *context, int argc,
+						  const void *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_GetFaceGeometry (const void *context,
+						     int argc,
+						     const void *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_ValidateTopoGeo (const void *context,
+						     int argc,
+						     const void *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_CreateTopoGeo (const void *context,
+						   int argc, const void *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_GetNodeByPoint (const void *context,
+						    int argc, const void *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_GetEdgeByPoint (const void *context,
+						    int argc, const void *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_GetFaceByPoint (const void *context,
+						    int argc, const void *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_TopoGeo_AddPoint (const void *context,
+						      int argc,
+						      const void *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_TopoGeo_AddLineString (const void *context,
+							   int argc,
+							   const void *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_TopoGeo_FromGeoTable (const void *context,
+							  int argc,
+							  const void *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_TopoGeo_ToGeoTable (const void *context,
+							int argc,
+							const void *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_TopoGeo_ToGeoTableGeneralize (const void
+								  *context,
+								  int argc,
+								  const void
+								  *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_TopoGeo_CreateTopoLayer (const void
+							     *context, int argc,
+							     const void *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_TopoGeo_InitTopoLayer (const void
+							   *context, int argc,
+							   const void *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_TopoGeo_RemoveTopoLayer (const void
+							     *context, int argc,
+							     const void *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_TopoGeo_ExportTopoLayer (const void
+							     *context, int argc,
+							     const void *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_TopoGeo_InsertFeatureFromTopoLayer (const
+									void
+									*context,
+									int
+									argc,
+									const
+									void
+									*argv);
+
+    SPATIALITE_PRIVATE void fnctaux_TopoGeo_Clone (const void *context,
+						   int argc, const void *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_TopoGeo_SubdivideLines (const void *context,
+							    int argc,
+							    const void *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_TopoGeo_GetEdgeSeed (const void *context,
+							 int argc,
+							 const void *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_TopoGeo_GetFaceSeed (const void *context,
+							 int argc,
+							 const void *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_TopoGeo_UpdateSeeds (const void *context,
+							 int argc,
+							 const void *argv);
+
+    SPATIALITE_PRIVATE void start_topo_savepoint (const void *handle,
+						  const void *cache);
+
+    SPATIALITE_PRIVATE void release_topo_savepoint (const void *handle,
+						    const void *cache);
+
+    SPATIALITE_PRIVATE void rollback_topo_savepoint (const void *handle,
+						     const void *cache);
+
+/* Topology-Network SQL functions */
+    SPATIALITE_PRIVATE void fnctaux_GetLastNetworkException (const void
+							     *context,
+							     int argc,
+							     const void *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_CreateNetwork (const void *context,
+						   int argc, const void *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_DropNetwork (const void *context, int argc,
+						 const void *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_AddIsoNetNode (const void *context,
+						   int argc, const void *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_MoveIsoNetNode (const void *context,
+						    int argc, const void *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_RemIsoNetNode (const void *context,
+						   int argc, const void *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_AddLink (const void *context, int argc,
+					     const void *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_ChangeLinkGeom (const void *context,
+						    int argc, const void *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_RemoveLink (const void *context, int argc,
+						const void *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_NewLogLinkSplit (const void *context,
+						     int argc,
+						     const void *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_ModLogLinkSplit (const void *context,
+						     int argc,
+						     const void *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_NewGeoLinkSplit (const void *context,
+						     int argc,
+						     const void *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_ModGeoLinkSplit (const void *context,
+						     int argc,
+						     const void *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_NewLinkHeal (const void *context, int argc,
+						 const void *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_ModLinkHeal (const void *context, int argc,
+						 const void *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_LogiNetFromTGeo (const void *context,
+						     int argc,
+						     const void *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_SpatNetFromTGeo (const void *context,
+						     int argc,
+						     const void *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_SpatNetFromGeom (const void *context,
+						     int argc,
+						     const void *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_ValidLogicalNet (const void *context,
+						     int argc,
+						     const void *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_ValidSpatialNet (const void *context,
+						     int argc,
+						     const void *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_GetNetNodeByPoint (const void *context,
+						       int argc,
+						       const void *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_GetLinkByPoint (const void *context,
+						    int argc, const void *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_TopoNet_FromGeoTable (const void *context,
+							  int argc,
+							  const void *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_TopoNet_ToGeoTable (const void *context,
+							int argc,
+							const void *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_TopoNet_ToGeoTableGeneralize (const void
+								  *context,
+								  int argc,
+								  const void
+								  *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_TopoNet_ToGeoTableGeneralize (const void
+								  *context,
+								  int argc,
+								  const void
+								  *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_TopoNet_Clone (const void *context,
+						   int argc, const void *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_TopoNet_GetLinkSeed (const void *context,
+							 int argc,
+							 const void *argv);
+
+    SPATIALITE_PRIVATE void fnctaux_TopoNet_UpdateSeeds (const void *context,
+							 int argc,
+							 const void *argv);
+
+    SPATIALITE_PRIVATE void start_net_savepoint (const void *handle,
+						 const void *cache);
+
+    SPATIALITE_PRIVATE void release_net_savepoint (const void *handle,
+						   const void *cache);
+
+    SPATIALITE_PRIVATE void rollback_net_savepoint (const void *handle,
+						    const void *cache);
+
 
 #ifdef __cplusplus
 }

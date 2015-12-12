@@ -54,7 +54,15 @@ check_PROGRAMS = check_endian \
 		check_metacatalog \
 		check_virtualelem \
 		check_srid_fncts \
-		check_control_points
+		check_control_points \
+		check_cutter \
+		check_topology2d \
+		check_topology3d \
+		check_topoplus \
+		check_network2d \
+		check_network3d \
+		check_network_log \
+		check_virtualknn
 		
 if ENABLE_GEOPACKAGE
 check_PROGRAMS += \
@@ -100,8 +108,7 @@ TESTS = $(check_PROGRAMS)
 
 MOSTLYCLEANFILES = *.gcna *.gcno *.gcda
 
-EXTRA_DIST = asprintf4win.h \
-	fnmatch_impl4win.h \
+EXTRA_DIST = fnmatch_impl4win.h \
 	fnmatch4win.h \
 	scandir4win.h \
 	test_helpers.h \
@@ -184,12 +191,17 @@ EXTRA_DIST = asprintf4win.h \
 	22.dxf f06.dxf l02.dxf p05.dxf \
 	archaic.dxf linked.dxf hatch.dxf \
 	symbol.dxf gpkg_test.sqlite gpkg_test.gpkg \
-	gpkg_test_broken.gpkg gpkg_test_extrasrid.gpkg
+	gpkg_test_broken.gpkg gpkg_test_extrasrid.gpkg \
+	elba-pg.shp elba-pg.shx elba-pg.dbf \
+	elba-ln.shp elba-ln.shx elba-ln.dbf \
+	Gpx-sample.gpx 000323485.gpx
 
 SUBDIRS = sql_stmt_geosadvanced_tests sql_stmt_geos_tests \
 	sql_stmt_libxml2_tests sql_stmt_lwgeom_tests \
+	sql_stmt_lwgeom_20_tests sql_stmt_lwgeom_22_tests \
 	sql_stmt_mathsql_tests sql_stmt_proj_tests \
 	sql_stmt_security_tests sql_stmt_tests \
 	sql_stmt_xmlsec_tests sql_stmt_geopackage_tests \
 	sql_stmt_freexl_tests sql_stmt_cache_tests \
-	sql_stmt_nocache_tests
+	sql_stmt_nocache_tests sql_stmt_voronoj1_tests \
+	sql_stmt_voronoj2_tests

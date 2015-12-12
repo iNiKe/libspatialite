@@ -1888,10 +1888,10 @@ getProjParamsFromGeopackageTable (sqlite3 * sqlite, int srid,
 }
 
 SPATIALITE_PRIVATE void
-getProjParamsEx (void *p_sqlite, int srid, char **proj_params,
-		 int gpkg_amphibious_mode)
+getProjParams (void *p_sqlite, int srid, char **proj_params)
 {
-/* retrives the PROJ params - generic interface */sqlite3 *sqlite = (sqlite3 *) p_sqlite;
+/* retrives the PROJ params from SPATIAL_SYS_REF table */
+    sqlite3 *sqlite = (sqlite3 *) p_sqlite;
     *proj_params = NULL;
 
 /* searching within "vanilla" spatial_reference_sys */
@@ -1901,14 +1901,4 @@ getProjParamsEx (void *p_sqlite, int srid, char **proj_params,
 
 /* last opportunity: search within GPKG srs */
     getProjParamsFromGeopackageTable (sqlite, srid, proj_params);
-}
-
-SPATIALITE_PRIVATE void
-getProjParams (void *p_sqlite, int srid, char **proj_params)
-{
-/* 
-* retrives the PROJ params from SPATIAL_SYS_REF table, if possible 
-* convenience method - disabling GPKG amphibious mode
-*/
-    getProjParamsEx (p_sqlite, srid, proj_params, 0);
 }

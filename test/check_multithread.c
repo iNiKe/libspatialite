@@ -73,7 +73,6 @@ the terms of any one of the MPL, the GPL or the LGPL.
 #ifdef _WIN32
 #include "fnmatch4win.h"
 #include "scandir4win.h"
-#include "asprintf4win.h"
 #include "fnmatch_impl4win.h"
 #endif
 
@@ -116,7 +115,7 @@ struct thread_params
     pthread_t thread_id;
     pthread_attr_t attr;
 #endif
-} mt_params[64];
+} mt_params[128];
 
 static struct db_conn *
 alloc_connection (void)
@@ -898,8 +897,8 @@ main (int argc, char *argv[])
 	  num_threads = atoi (env_var);
 	  if (num_threads < 1)
 	      num_threads = 1;
-	  if (num_threads > 64)
-	      num_threads = 64;
+	  if (num_threads > 128)
+	      num_threads = 128;
       }
     printf ("Testing %d concurrent threads\n", num_threads);
 

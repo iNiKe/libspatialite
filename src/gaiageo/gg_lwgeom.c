@@ -90,29 +90,60 @@ splite_lwgeom_version (void)
 static void
 lwgaia_noticereporter (const char *fmt, va_list ap)
 {
-    char *msg;
-    if (!lw_vasprintf (&msg, fmt, ap))
+    char *msg = sqlite3_vmprintf (fmt, ap);
+    if (msg == NULL)
       {
 	  va_end (ap);
 	  return;
       }
-    spatialite_e ("LWGEOM notice: %s\n", msg);
+    if (strlen (msg) > 1)
+	spatialite_e ("LWGEOM notice: %s\n", msg);
     gaiaSetLwGeomWarningMsg (msg);
-    free (msg);
+    sqlite3_free (msg);
+}
+
+static void
+lwgaiatopo_noticereporter (const char *fmt, va_list ap)
+{
+    char *msg = sqlite3_vmprintf (fmt, ap);
+    if (msg == NULL)
+      {
+	  va_end (ap);
+	  return;
+      }
+    if (strlen (msg) > 1)
+	spatialite_e ("LWGEOM notice: %s\n", msg);
+    gaiaSetLwGeomWarningMsg (msg);
+    sqlite3_free (msg);
 }
 
 static void
 lwgaia_errorreporter (const char *fmt, va_list ap)
 {
-    char *msg;
-    if (!lw_vasprintf (&msg, fmt, ap))
+    char *msg = sqlite3_vmprintf (fmt, ap);
+    if (msg == NULL)
       {
 	  va_end (ap);
 	  return;
       }
-    spatialite_e ("LWGEOM error: %s\n", msg);
+    if (strlen (msg) > 1)
+	spatialite_e ("LWGEOM error: %s\n", msg);
     gaiaSetLwGeomErrorMsg (msg);
-    free (msg);
+    sqlite3_free (msg);
+}
+
+static void
+lwgaiatopo_errorreporter (const char *fmt, va_list ap)
+{
+    char *msg = sqlite3_vmprintf (fmt, ap);
+    if (msg == NULL)
+      {
+	  va_end (ap);
+	  return;
+      }
+    if (strlen (msg) > 1)
+	gaiaSetLwGeomErrorMsg (msg);
+    sqlite3_free (msg);
 }
 
 #ifndef POSTGIS_2_1
@@ -135,6 +166,13 @@ splite_lwgeom_init (void)
 {
     lwgeom_set_handlers (NULL, NULL, NULL, lwgaia_errorreporter,
 			 lwgaia_noticereporter);
+}
+
+SPATIALITE_PRIVATE void
+splite_lwgeomtopo_init (void)
+{
+    lwgeom_set_handlers (NULL, NULL, NULL, lwgaiatopo_errorreporter,
+			 lwgaiatopo_noticereporter);
 }
 #endif
 
@@ -738,8 +776,8 @@ toLWGeom (const gaiaGeomCollPtr gaia)
 			      }
 			    else if (gaia->DimensionModel == GAIA_XY_Z_M)
 			      {
-				  gaiaGetPointXYZM (rng->Coords, 0, &x, &y, &z,
-						    &m);
+				  gaiaGetPointXYZM (rng->Coords, 0, &x, &y,
+						    &z, &m);
 			      }
 			    else
 			      {
@@ -1543,22 +1581,12 @@ check_split_args (gaiaGeomCollPtr input, gaiaGeomCollPtr blade)
 	  b_pts++;
 	  pt = pt->Next;
       }
-    if (b_pts > 1)
-      {
-	  /* MultiPoint on Blade is forbidden !!!! */
-	  return 0;
-      }
     ln = blade->FirstLinestring;
     while (ln)
       {
 	  /* counting how many Linestrings are there */
 	  b_lns++;
 	  ln = ln->Next;
-      }
-    if (b_lns > 1)
-      {
-	  /* MultiLinestring on Blade is forbidden !!!! */
-	  return 0;
       }
     if (blade->FirstPolygon != NULL)
       {
@@ -1570,19 +1598,19 @@ check_split_args (gaiaGeomCollPtr input, gaiaGeomCollPtr blade)
 	  /* empty Blade */
 	  return 0;
       }
-    if (b_pts + b_lns > 1)
+    if (b_pts >= 1 && b_lns >= 1)
       {
 	  /* invalid Blade [point + linestring] */
 	  return 0;
       }
 
 /* compatibility check */
-    if (b_lns == 1)
+    if (b_lns >= 1)
       {
 	  /* Linestring blade is always valid */
 	  return 1;
       }
-    if (i_lns >= 1 && b_pts == 1)
+    if (i_lns >= 1 && b_pts >= 1)
       {
 	  /* Linestring or MultiLinestring input and Point blade is allowed */
 	  return 1;
@@ -2381,6 +2409,82 @@ gaia3DMaxDistance (gaiaGeomCollPtr geom1, gaiaGeomCollPtr geom2, double *dist)
     lwgeom_free (g1);
     lwgeom_free (g2);
     *dist = d;
+
+/* unlocking the semaphore */
+    splite_lwgeom_semaphore_unlock ();
+    return ret;
+}
+
+static LWLINE *
+linestring2lwline (gaiaLinestringPtr ln, int srid)
+{
+/* converting a Linestring into an LWLINE */
+    POINTARRAY *pa;
+    POINT4D point;
+    int iv;
+    double x;
+    double y;
+    double z;
+    double m;
+    int has_z = 0;
+
+    if (ln->DimensionModel == GAIA_XY_Z || ln->DimensionModel == GAIA_XY_Z_M)
+	has_z = 1;
+
+    pa = ptarray_construct (has_z, 0, ln->Points);
+    for (iv = 0; iv < ln->Points; iv++)
+      {
+	  /* copying vertices */
+	  if (ln->DimensionModel == GAIA_XY_Z)
+	    {
+		gaiaGetPointXYZ (ln->Coords, iv, &x, &y, &z);
+	    }
+	  else if (ln->DimensionModel == GAIA_XY_M)
+	    {
+		gaiaGetPointXYM (ln->Coords, iv, &x, &y, &m);
+	    }
+	  else if (ln->DimensionModel == GAIA_XY_Z_M)
+	    {
+		gaiaGetPointXYZM (ln->Coords, iv, &x, &y, &z, &m);
+	    }
+	  else
+	    {
+		gaiaGetPoint (ln->Coords, iv, &x, &y);
+	    }
+	  point.x = x;
+	  point.y = y;
+	  if (has_z)
+	      point.z = z;
+	  else
+	      point.z = 0.0;
+	  point.m = 0.0;
+	  ptarray_set_point4d (pa, iv, &point);
+      }
+    return lwline_construct (srid, NULL, pa);
+}
+
+GAIAGEO_DECLARE int
+gaia3dLength (gaiaGeomCollPtr geom, double *length)
+{
+/* wrapping LWGEOM lwline_length */
+    LWLINE *line;
+    gaiaLinestringPtr ln;
+    double l = 0.0;
+    int ret = 0;
+
+/* locking the semaphore */
+    splite_lwgeom_semaphore_lock ();
+
+    ln = geom->FirstLinestring;
+    while (ln != NULL)
+      {
+	  ret = 1;
+	  line = linestring2lwline (ln, geom->Srid);
+	  l += lwgeom_length ((LWGEOM *) line);
+	  lwline_free (line);
+	  ln = ln->Next;
+      }
+    *length = l;
 
 /* unlocking the semaphore */
     splite_lwgeom_semaphore_unlock ();

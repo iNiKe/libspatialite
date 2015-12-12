@@ -108,6 +108,22 @@ EXTRA_DIST = bdmpolyfromtext10.testcase \
 	convexhull7.testcase \
 	convexhull8.testcase \
 	convexhull9.testcase \
+	acuttermessage.testcase \
+	cutter1.testcase \
+	cutter2.testcase \
+	cutter3.testcase \
+	cutter4.testcase \
+	cutter5.testcase \
+	cutter6.testcase \
+	cutter7.testcase \
+	cutter8.testcase \
+	cutter9.testcase \
+	cutter10.testcase \
+	cutter11.testcase \
+	cutter12.testcase \
+	cutter13.testcase \
+	cutter14.testcase \
+	cutter15.testcase \
 	difference10.testcase \
 	difference11.testcase \
 	difference12.testcase \
@@ -448,24 +464,6 @@ EXTRA_DIST = bdmpolyfromtext10.testcase \
 	covers_covered5.testcase \
 	covers_covered6.testcase \
 	covers_covered7.testcase \
-	createtopo10.testcase \
-	createtopo11.testcase \
-	createtopo12.testcase \
-	createtopo13.testcase \
-	createtopo14.testcase \
-	createtopo15.testcase \
-	createtopo16.testcase \
-	createtopo17.testcase \
-	createtopo18.testcase \
-	createtopo1.testcase \
-	createtopo2.testcase \
-	createtopo3.testcase \
-	createtopo4.testcase \
-	createtopo5.testcase \
-	createtopo6.testcase \
-	createtopo7.testcase \
-	createtopo8.testcase \
-	createtopo9.testcase \
 	distance_geogr10.testcase \
 	distance_geogr11.testcase \
 	distance_geogr12.testcase \

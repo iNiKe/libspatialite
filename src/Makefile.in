@@ -141,7 +141,8 @@ libspatialite_la_DEPENDENCIES = ./gaiaaux/libgaiaaux.la \
 	./gaiaexif/libgaiaexif.la ./gaiageo/libgaiageo.la \
 	./geopackage/libgeopackage.la ./spatialite/libsplite.la \
 	./shapefiles/libshapefiles.la ./dxf/libdxf.la ./md5/libmd5.la \
-	./control_points/libcontrol_points.la ./srsinit/libsrsinit.la \
+	./control_points/libcontrol_points.la ./cutter/libcutter.la \
+	./topology/libtopology.la ./srsinit/libsrsinit.la \
 	./connection_cache/libconnection_cache.la \
 	./virtualtext/libvirtualtext.la ./wfs/libwfs.la \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
@@ -157,11 +158,13 @@ libspatialite_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
 	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
 	$(AM_CFLAGS) $(CFLAGS) $(libspatialite_la_LDFLAGS) $(LDFLAGS) \
 	-o $@
+@MODULE_ONLY_FALSE@am_libspatialite_la_rpath = -rpath $(libdir)
 mod_spatialite_la_DEPENDENCIES = ./gaiaaux/gaiaaux.la \
 	./gaiaexif/gaiaexif.la ./gaiageo/gaiageo.la \
 	./geopackage/geopackage.la ./spatialite/splite.la \
 	./shapefiles/shapefiles.la ./dxf/dxf.la ./md5/md5.la \
-	./control_points/control_points.la ./srsinit/srsinit.la \
+	./control_points/control_points.la ./cutter/cutter.la \
+	./topology/topology.la ./srsinit/srsinit.la \
 	./connection_cache/connection_cache.la \
 	./virtualtext/virtualtext.la ./wfs/wfs.la \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
@@ -173,6 +176,8 @@ mod_spatialite_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
 	$(mod_spatialite_la_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link \
 	$(CCLD) $(AM_CFLAGS) $(CFLAGS) $(mod_spatialite_la_LDFLAGS) \
 	$(LDFLAGS) -o $@
+@MODULE_ONLY_FALSE@am_mod_spatialite_la_rpath = -rpath $(libdir)
+@MODULE_ONLY_TRUE@am_mod_spatialite_la_rpath = -rpath $(libdir)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -421,28 +426,33 @@ SUBDIRS = headers \
 	wfs \
 	dxf \
 	md5 \
-	control_points
+	control_points \
+	cutter \
+	topology
 
 AM_CPPFLAGS = @CFLAGS@ -I$(top_srcdir)/src/headers -I$(top_srcdir)
-lib_LTLIBRARIES = libspatialite.la mod_spatialite.la
+@MODULE_ONLY_FALSE@lib_LTLIBRARIES = libspatialite.la mod_spatialite.la
+@MODULE_ONLY_TRUE@lib_LTLIBRARIES = mod_spatialite.la
 libspatialite_la_SOURCES = versioninfo/version.c
 libspatialite_la_LIBADD = ./gaiaaux/libgaiaaux.la \
 	./gaiaexif/libgaiaexif.la ./gaiageo/libgaiageo.la \
 	./geopackage/libgeopackage.la ./spatialite/libsplite.la \
 	./shapefiles/libshapefiles.la ./dxf/libdxf.la ./md5/libmd5.la \
-	./control_points/libcontrol_points.la ./srsinit/libsrsinit.la \
+	./control_points/libcontrol_points.la ./cutter/libcutter.la \
+	./topology/libtopology.la ./srsinit/libsrsinit.la \
 	./connection_cache/libconnection_cache.la \
 	./virtualtext/libvirtualtext.la ./wfs/libwfs.la @LIBXML2_LIBS@ \
 	$(am__append_1) $(am__append_2) $(am__append_3)
-@ANDROID_FALSE@@MINGW_FALSE@libspatialite_la_LDFLAGS = -version-info 8:0:1
-@ANDROID_TRUE@@MINGW_FALSE@libspatialite_la_LDFLAGS = -version-info 8:0:1
-@MINGW_TRUE@libspatialite_la_LDFLAGS = -version-info 4:3:0 -no-undefined
+@ANDROID_FALSE@@MINGW_FALSE@libspatialite_la_LDFLAGS = -version-info 8:1:1
+@ANDROID_TRUE@@MINGW_FALSE@libspatialite_la_LDFLAGS = -version-info 8:1:1
+@MINGW_TRUE@libspatialite_la_LDFLAGS = -version-info 4:4:0 -no-undefined
 mod_spatialite_la_SOURCES = versioninfo/version.c
 mod_spatialite_la_LIBADD = ./gaiaaux/gaiaaux.la ./gaiaexif/gaiaexif.la \
 	./gaiageo/gaiageo.la ./geopackage/geopackage.la \
 	./spatialite/splite.la ./shapefiles/shapefiles.la ./dxf/dxf.la \
 	./md5/md5.la ./control_points/control_points.la \
-	./srsinit/srsinit.la ./connection_cache/connection_cache.la \
+	./cutter/cutter.la ./topology/topology.la ./srsinit/srsinit.la \
+	./connection_cache/connection_cache.la \
 	./virtualtext/virtualtext.la ./wfs/wfs.la @LIBXML2_LIBS@ \
 	$(am__append_4) $(am__append_5) $(am__append_6)
 mod_spatialite_la_CPPFLAGS = @CFLAGS@ -I$(top_srcdir)/src/headers -I. \
@@ -530,12 +540,12 @@ versioninfo/version.lo: versioninfo/$(am__dirstamp) \
 	versioninfo/$(DEPDIR)/$(am__dirstamp)
 
 libspatialite.la: $(libspatialite_la_OBJECTS) $(libspatialite_la_DEPENDENCIES) $(EXTRA_libspatialite_la_DEPENDENCIES) 
-	$(AM_V_CCLD)$(libspatialite_la_LINK) -rpath $(libdir) $(libspatialite_la_OBJECTS) $(libspatialite_la_LIBADD) $(LIBS)
+	$(AM_V_CCLD)$(libspatialite_la_LINK) $(am_libspatialite_la_rpath) $(libspatialite_la_OBJECTS) $(libspatialite_la_LIBADD) $(LIBS)
 versioninfo/mod_spatialite_la-version.lo: versioninfo/$(am__dirstamp) \
 	versioninfo/$(DEPDIR)/$(am__dirstamp)
 
 mod_spatialite.la: $(mod_spatialite_la_OBJECTS) $(mod_spatialite_la_DEPENDENCIES) $(EXTRA_mod_spatialite_la_DEPENDENCIES) 
-	$(AM_V_CCLD)$(mod_spatialite_la_LINK) -rpath $(libdir) $(mod_spatialite_la_OBJECTS) $(mod_spatialite_la_LIBADD) $(LIBS)
+	$(AM_V_CCLD)$(mod_spatialite_la_LINK) $(am_mod_spatialite_la_rpath) $(mod_spatialite_la_OBJECTS) $(mod_spatialite_la_LIBADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
