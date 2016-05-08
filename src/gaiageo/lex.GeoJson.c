@@ -8,7 +8,7 @@
 #define FLEX_SCANNER
 #define YY_FLEX_MAJOR_VERSION 2
 #define YY_FLEX_MINOR_VERSION 5
-#define YY_FLEX_SUBMINOR_VERSION 35
+#define YY_FLEX_SUBMINOR_VERSION 39
 #if YY_FLEX_SUBMINOR_VERSION > 0
 #define FLEX_BETA
 #endif
@@ -53,7 +53,6 @@ typedef int flex_int32_t;
 typedef unsigned char flex_uint8_t;
 typedef unsigned short int flex_uint16_t;
 typedef unsigned int flex_uint32_t;
-#endif /* ! C99 */
 
 /* Limits of integral types. */
 #ifndef INT8_MIN
@@ -83,6 +82,8 @@ typedef unsigned int flex_uint32_t;
 #ifndef UINT32_MAX
 #define UINT32_MAX             (4294967295U)
 #endif
+
+#endif /* ! C99 */
 
 #endif /* ! FLEXINT_H */
 
@@ -169,11 +170,17 @@ typedef void *yyscan_t;
 typedef struct yy_buffer_state *YY_BUFFER_STATE;
 #endif
 
+#ifndef YY_TYPEDEF_YY_SIZE_T
+#define YY_TYPEDEF_YY_SIZE_T
+typedef size_t yy_size_t;
+#endif
+
 #define EOB_ACT_CONTINUE_SCAN 0
 #define EOB_ACT_END_OF_FILE 1
 #define EOB_ACT_LAST_MATCH 2
 
 #define YY_LESS_LINENO(n)
+#define YY_LINENO_REWIND_TO(ptr)
 
 /* Return all but the first "n" matched characters back to the input stream. */
 #define yyless(n) \
@@ -190,11 +197,6 @@ typedef struct yy_buffer_state *YY_BUFFER_STATE;
 	while ( 0 )
 
 #define unput(c) yyunput( c, yyg->yytext_ptr , yyscanner )
-
-#ifndef YY_TYPEDEF_YY_SIZE_T
-#define YY_TYPEDEF_YY_SIZE_T
-typedef size_t yy_size_t;
-#endif
 
 #ifndef YY_STRUCT_YY_BUFFER_STATE
 #define YY_STRUCT_YY_BUFFER_STATE
@@ -213,7 +215,7 @@ struct yy_buffer_state
     /* Number of characters read into yy_ch_buf, not including EOB
      * characters.
      */
-    int yy_n_chars;
+    yy_size_t yy_n_chars;
 
     /* Whether we "own" the buffer - i.e., we know we created it,
      * and can realloc() it to grow it, and should free() it to
@@ -295,7 +297,7 @@ static void GeoJson_init_buffer (YY_BUFFER_STATE b, FILE * file,
 YY_BUFFER_STATE GeoJson_scan_buffer (char *base, yy_size_t size,
 				     yyscan_t yyscanner);
 YY_BUFFER_STATE GeoJson_scan_string (yyconst char *yy_str, yyscan_t yyscanner);
-YY_BUFFER_STATE GeoJson_scan_bytes (yyconst char *bytes, int len,
+YY_BUFFER_STATE GeoJson_scan_bytes (yyconst char *bytes, yy_size_t len,
 				    yyscan_t yyscanner);
 
 void *GeoJsonalloc (yy_size_t, yyscan_t yyscanner);
@@ -359,27 +361,33 @@ struct yy_trans_info
     flex_int32_t yy_verify;
     flex_int32_t yy_nxt;
 };
-static yyconst flex_int16_t yy_accept[182] = { 0,
+static yyconst flex_int16_t yy_accept[239] = { 0,
     0, 0, 28, 26, 24, 25, 26, 26, 4, 26,
-    1, 5, 8, 9, 6, 7, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 1, 0,
-    1, 1, 1, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 1, 1, 1, 0,
+    1, 1, 5, 8, 9, 6, 7, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+    1, 0, 1, 1, 1, 1, 1, 1, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 1, 1, 0, 0, 0, 0, 0,
-    0, 0, 0, 16, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 13, 0, 0, 14, 0,
-    10, 0, 0, 0, 0, 0, 0, 0, 17, 0,
+    0, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 16,
 
-    0, 0, 0, 0, 2, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 19,
+    0, 0, 0, 0, 0, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    0, 0, 0, 0, 0, 0, 13, 0, 0, 14,
+    0, 10, 0, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 0, 0, 0, 0, 0,
+    0, 17, 0, 0, 0, 0, 0, 1, 1, 1,
+    1, 2, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 19, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 18, 0, 20, 0, 0, 12, 15,
-    0, 0, 0, 0, 11, 0, 0, 0, 22, 0,
-    0, 0, 0, 0, 0, 0, 0, 21, 0, 0,
-    0, 0, 0, 23, 0, 0, 0, 0, 0, 3,
-    0
+
+    18, 0, 20, 0, 0, 12, 15, 0, 0, 0,
+    0, 11, 0, 0, 0, 22, 0, 0, 0, 0,
+    0, 0, 0, 0, 21, 0, 0, 0, 0, 0,
+    23, 0, 0, 0, 0, 0, 3, 0
 };
 
 static yyconst flex_int32_t yy_ec[256] = { 0,
@@ -420,110 +428,144 @@ static yyconst flex_int32_t yy_meta[41] = { 0,
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1
 };
 
-static yyconst flex_int16_t yy_base[183] = { 0,
-    0, 39, 203, 204, 204, 204, 68, 193, 204, 4,
-    3, 204, 204, 204, 204, 204, 185, 176, 172, 162,
-    166, 175, 0, 171, 174, 160, 154, 158, 6, 11,
-    8, 181, 12, 172, 157, 157, 158, 0, 154, 153,
-    149, 151, 152, 149, 147, 148, 168, 167, 166, 161,
-    144, 148, 136, 140, 131, 131, 134, 162, 136, 140,
-    131, 138, 151, 151, 150, 148, 133, 139, 128, 119,
-    127, 148, 128, 204, 126, 145, 124, 143, 115, 15,
-    110, 109, 16, 139, 111, 204, 114, 105, 204, 106,
-    204, 112, 128, 25, 103, 102, 107, 102, 204, 102,
+static yyconst flex_int16_t yy_base[240] = { 0,
+    0, 39, 302, 303, 303, 303, 68, 3, 303, 12,
+    292, 5, 303, 303, 303, 303, 303, 284, 275, 271,
+    261, 265, 274, 0, 270, 273, 259, 253, 257, 280,
+    14, 15, 279, 44, 50, 278, 52, 23, 269, 254,
+    254, 255, 7, 251, 250, 246, 248, 249, 246, 244,
+    245, 61, 265, 58, 63, 264, 86, 92, 93, 263,
+    262, 261, 256, 239, 243, 231, 235, 226, 226, 229,
+    257, 231, 235, 226, 233, 246, 101, 100, 246, 245,
+    244, 106, 107, 243, 242, 241, 240, 239, 238, 113,
+    237, 235, 220, 226, 215, 206, 214, 235, 215, 303,
 
-    101, 97, 94, 106, 204, 89, 99, 95, 8, 120,
-    103, 95, 94, 110, 108, 88, 93, 86, 77, 204,
-    79, 89, 88, 88, 79, 83, 91, 72, 80, 81,
-    68, 67, 75, 69, 92, 60, 89, 61, 57, 84,
-    83, 61, 57, 204, 44, 204, 46, 71, 204, 204,
-    64, 49, 45, 67, 204, 48, 47, 38, 204, 34,
-    31, 39, 30, 36, 58, 51, 29, 204, 47, 25,
-    38, 49, 21, 204, 24, 16, 43, 16, 47, 204,
-    204, 0
+    213, 232, 211, 230, 202, 223, 222, 221, 116, 220,
+    219, 218, 217, 121, 216, 215, 214, 213, 212, 211,
+    62, 184, 183, 72, 213, 185, 303, 188, 179, 303,
+    180, 303, 186, 202, 201, 200, 199, 198, 197, 196,
+    195, 194, 193, 192, 191, 190, 46, 165, 164, 169,
+    164, 303, 164, 163, 159, 156, 168, 180, 179, 178,
+    177, 303, 147, 157, 153, 9, 178, 161, 153, 152,
+    168, 166, 146, 151, 144, 135, 303, 137, 147, 146,
+    146, 137, 141, 149, 130, 138, 139, 128, 127, 136,
+    131, 154, 122, 152, 124, 120, 149, 148, 126, 122,
+
+    303, 116, 303, 118, 143, 303, 303, 136, 121, 117,
+    139, 303, 120, 119, 110, 303, 106, 103, 110, 101,
+    107, 129, 104, 76, 303, 84, 62, 61, 62, 37,
+    303, 12, 14, 120, 6, 128, 303, 303, 0
 };
 
-static yyconst flex_int16_t yy_def[183] = { 0,
-    182, 182, 181, 181, 181, 181, 181, 181, 181, 181,
-    181, 181, 181, 181, 181, 181, 181, 181, 181, 181,
-    181, 181, 181, 181, 181, 181, 181, 181, 181, 181,
-    181, 181, 181, 181, 181, 181, 181, 181, 181, 181,
-    181, 181, 181, 181, 181, 181, 181, 181, 181, 181,
-    181, 181, 181, 181, 181, 181, 181, 181, 181, 181,
-    181, 181, 181, 181, 181, 181, 181, 181, 181, 181,
-    181, 181, 181, 181, 181, 181, 181, 181, 181, 181,
-    181, 181, 181, 181, 181, 181, 181, 181, 181, 181,
-    181, 181, 181, 181, 181, 181, 181, 181, 181, 181,
+static yyconst flex_int16_t yy_def[240] = { 0,
+    239, 239, 238, 238, 238, 238, 238, 238, 238, 238,
+    238, 238, 238, 238, 238, 238, 238, 238, 238, 238,
+    238, 238, 238, 238, 238, 238, 238, 238, 238, 238,
+    238, 238, 238, 238, 238, 238, 238, 238, 238, 238,
+    238, 238, 238, 238, 238, 238, 238, 238, 238, 238,
+    238, 238, 238, 238, 238, 238, 238, 238, 238, 238,
+    238, 238, 238, 238, 238, 238, 238, 238, 238, 238,
+    238, 238, 238, 238, 238, 238, 238, 238, 238, 238,
+    238, 238, 238, 238, 238, 238, 238, 238, 238, 238,
+    238, 238, 238, 238, 238, 238, 238, 238, 238, 238,
 
-    181, 181, 181, 181, 181, 181, 181, 181, 181, 181,
-    181, 181, 181, 181, 181, 181, 181, 181, 181, 181,
-    181, 181, 181, 181, 181, 181, 181, 181, 181, 181,
-    181, 181, 181, 181, 181, 181, 181, 181, 181, 181,
-    181, 181, 181, 181, 181, 181, 181, 181, 181, 181,
-    181, 181, 181, 181, 181, 181, 181, 181, 181, 181,
-    181, 181, 181, 181, 181, 181, 181, 181, 181, 181,
-    181, 181, 181, 181, 181, 181, 181, 181, 181, 181,
-    0, 181
+    238, 238, 238, 238, 238, 238, 238, 238, 238, 238,
+    238, 238, 238, 238, 238, 238, 238, 238, 238, 238,
+    238, 238, 238, 238, 238, 238, 238, 238, 238, 238,
+    238, 238, 238, 238, 238, 238, 238, 238, 238, 238,
+    238, 238, 238, 238, 238, 238, 238, 238, 238, 238,
+    238, 238, 238, 238, 238, 238, 238, 238, 238, 238,
+    238, 238, 238, 238, 238, 238, 238, 238, 238, 238,
+    238, 238, 238, 238, 238, 238, 238, 238, 238, 238,
+    238, 238, 238, 238, 238, 238, 238, 238, 238, 238,
+    238, 238, 238, 238, 238, 238, 238, 238, 238, 238,
+
+    238, 238, 238, 238, 238, 238, 238, 238, 238, 238,
+    238, 238, 238, 238, 238, 238, 238, 238, 238, 238,
+    238, 238, 238, 238, 238, 238, 238, 238, 238, 238,
+    238, 238, 238, 238, 238, 238, 238, 0, 238
 };
 
-static yyconst flex_int16_t yy_nxt[245] = { 0,
-    4, 5, 6, 7, 8, 9, 10, 30, 11, 12,
-    32, 33, 31, 47, 29, 48, 31, 13, 14, 32,
-    33, 93, 17, 94, 179, 177, 54, 55, 105, 97,
-    40, 98, 41, 94, 118, 119, 176, 175, 15, 16,
-    5, 6, 7, 8, 9, 10, 28, 11, 12, 178,
-    180, 179, 174, 173, 172, 179, 13, 14, 171, 170,
-    169, 168, 167, 166, 165, 164, 163, 162, 161, 160,
-    159, 158, 157, 156, 155, 154, 153, 15, 16, 17,
-    18, 19, 20, 21, 152, 151, 150, 149, 22, 23,
-    148, 147, 146, 24, 145, 144, 143, 25, 142, 26,
+static yyconst flex_int16_t yy_nxt[344] = { 0,
+    4, 5, 6, 7, 8, 9, 10, 11, 12, 13,
+    30, 31, 36, 37, 236, 32, 38, 14, 15, 33,
+    34, 53, 31, 234, 233, 54, 18, 60, 38, 61,
+    45, 62, 46, 67, 68, 175, 176, 54, 16, 17,
+    5, 6, 7, 8, 9, 10, 11, 12, 13, 162,
+    29, 56, 34, 232, 147, 57, 14, 15, 35, 36,
+    37, 58, 79, 38, 80, 231, 81, 57, 146, 52,
+    147, 55, 77, 58, 82, 38, 230, 16, 17, 18,
+    19, 20, 21, 22, 77, 150, 82, 151, 23, 24,
+    84, 229, 85, 25, 86, 228, 87, 26, 88, 27,
 
-    141, 140, 27, 28, 139, 138, 137, 136, 135, 134,
-    133, 132, 131, 130, 129, 128, 127, 126, 125, 124,
-    123, 122, 121, 120, 117, 116, 115, 114, 113, 112,
-    111, 110, 109, 108, 107, 106, 94, 104, 103, 102,
-    101, 100, 99, 96, 95, 92, 91, 90, 89, 88,
-    87, 86, 85, 84, 83, 82, 81, 80, 65, 64,
-    79, 78, 77, 76, 75, 74, 73, 72, 71, 70,
-    69, 68, 67, 66, 49, 65, 64, 63, 62, 61,
-    60, 59, 58, 57, 56, 53, 52, 51, 50, 49,
-    46, 45, 44, 43, 42, 39, 38, 37, 36, 35,
+    89, 59, 28, 29, 90, 106, 227, 107, 78, 108,
+    111, 109, 112, 226, 113, 83, 90, 118, 114, 119,
+    136, 120, 137, 109, 138, 141, 235, 142, 236, 143,
+    114, 237, 225, 224, 223, 222, 236, 221, 220, 219,
+    218, 217, 216, 215, 214, 213, 212, 211, 210, 209,
+    208, 207, 206, 205, 204, 203, 202, 201, 200, 199,
+    198, 197, 196, 195, 194, 193, 192, 191, 190, 189,
+    188, 187, 186, 185, 184, 183, 182, 181, 180, 179,
+    178, 177, 174, 173, 172, 161, 160, 159, 158, 171,
+    170, 169, 168, 167, 166, 165, 164, 163, 147, 145,
 
-    34, 29, 181, 3, 181, 181, 181, 181, 181, 181,
-    181, 181, 181, 181, 181, 181, 181, 181, 181, 181,
-    181, 181, 181, 181, 181, 181, 181, 181, 181, 181,
-    181, 181, 181, 181, 181, 181, 181, 181, 181, 181,
-    181, 181, 181, 181
+    144, 143, 161, 160, 140, 139, 138, 159, 158, 135,
+    134, 157, 156, 155, 154, 153, 152, 149, 148, 120,
+    145, 144, 117, 116, 115, 113, 140, 139, 110, 108,
+    135, 134, 133, 132, 131, 130, 129, 128, 127, 126,
+    125, 124, 123, 122, 121, 91, 89, 117, 116, 86,
+    86, 115, 81, 81, 110, 105, 104, 103, 102, 101,
+    100, 99, 98, 97, 96, 95, 94, 93, 92, 62,
+    62, 91, 83, 78, 76, 75, 74, 73, 72, 71,
+    70, 69, 66, 65, 64, 63, 59, 55, 52, 51,
+    50, 49, 48, 47, 44, 43, 42, 41, 40, 39,
+
+    35, 238, 3, 238, 238, 238, 238, 238, 238, 238,
+    238, 238, 238, 238, 238, 238, 238, 238, 238, 238,
+    238, 238, 238, 238, 238, 238, 238, 238, 238, 238,
+    238, 238, 238, 238, 238, 238, 238, 238, 238, 238,
+    238, 238, 238
 };
 
-static yyconst flex_int16_t yy_chk[245] = { 0,
-    182, 1, 1, 1, 1, 1, 1, 10, 1, 1,
-    11, 11, 10, 29, 29, 31, 31, 1, 1, 33,
-    33, 80, 30, 80, 178, 176, 38, 38, 94, 83,
-    23, 83, 23, 94, 109, 109, 175, 173, 1, 1,
-    2, 2, 2, 2, 2, 2, 30, 2, 2, 177,
-    179, 177, 172, 171, 170, 179, 2, 2, 169, 167,
-    166, 165, 164, 163, 162, 161, 160, 158, 157, 156,
-    154, 153, 152, 151, 148, 147, 145, 2, 2, 7,
-    7, 7, 7, 7, 143, 142, 141, 140, 7, 7,
-    139, 138, 137, 7, 136, 135, 134, 7, 133, 7,
+static yyconst flex_int16_t yy_chk[344] = { 0,
+    239, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    8, 8, 12, 12, 235, 10, 12, 1, 1, 10,
+    10, 31, 31, 233, 232, 31, 32, 38, 12, 38,
+    24, 38, 24, 43, 43, 166, 166, 31, 1, 1,
+    2, 2, 2, 2, 2, 2, 2, 2, 2, 147,
+    32, 34, 34, 230, 147, 34, 2, 2, 35, 37,
+    37, 35, 54, 37, 54, 229, 54, 34, 121, 52,
+    121, 55, 52, 35, 55, 37, 228, 2, 2, 7,
+    7, 7, 7, 7, 52, 124, 55, 124, 7, 7,
+    57, 227, 57, 7, 57, 226, 58, 7, 58, 7,
 
-    132, 131, 7, 7, 130, 129, 128, 127, 126, 125,
-    124, 123, 122, 121, 119, 118, 117, 116, 115, 114,
-    113, 112, 111, 110, 108, 107, 106, 104, 103, 102,
-    101, 100, 98, 97, 96, 95, 93, 92, 90, 88,
-    87, 85, 84, 82, 81, 79, 78, 77, 76, 75,
-    73, 72, 71, 70, 69, 68, 67, 66, 65, 64,
-    63, 62, 61, 60, 59, 58, 57, 56, 55, 54,
-    53, 52, 51, 50, 49, 48, 47, 46, 45, 44,
-    43, 42, 41, 40, 39, 37, 36, 35, 34, 32,
-    28, 27, 26, 25, 24, 22, 21, 20, 19, 18,
+    58, 59, 7, 7, 59, 77, 224, 77, 78, 77,
+    82, 78, 82, 223, 82, 83, 59, 90, 83, 90,
+    109, 90, 109, 78, 109, 114, 234, 114, 234, 114,
+    83, 236, 222, 221, 220, 219, 236, 218, 217, 215,
+    214, 213, 211, 210, 209, 208, 205, 204, 202, 200,
+    199, 198, 197, 196, 195, 194, 193, 192, 191, 190,
+    189, 188, 187, 186, 185, 184, 183, 182, 181, 180,
+    179, 178, 176, 175, 174, 173, 172, 171, 170, 169,
+    168, 167, 165, 164, 163, 161, 160, 159, 158, 157,
+    156, 155, 154, 153, 151, 150, 149, 148, 146, 145,
 
-    17, 8, 3, 181, 181, 181, 181, 181, 181, 181,
-    181, 181, 181, 181, 181, 181, 181, 181, 181, 181,
-    181, 181, 181, 181, 181, 181, 181, 181, 181, 181,
-    181, 181, 181, 181, 181, 181, 181, 181, 181, 181,
-    181, 181, 181, 181
+    144, 143, 142, 141, 140, 139, 138, 137, 136, 135,
+    134, 133, 131, 129, 128, 126, 125, 123, 122, 120,
+    119, 118, 117, 116, 115, 113, 112, 111, 110, 108,
+    107, 106, 105, 104, 103, 102, 101, 99, 98, 97,
+    96, 95, 94, 93, 92, 91, 89, 88, 87, 86,
+    85, 84, 81, 80, 79, 76, 75, 74, 73, 72,
+    71, 70, 69, 68, 67, 66, 65, 64, 63, 62,
+    61, 60, 56, 53, 51, 50, 49, 48, 47, 46,
+    45, 44, 42, 41, 40, 39, 36, 33, 30, 29,
+    28, 27, 26, 25, 23, 22, 21, 20, 19, 18,
+
+    11, 3, 238, 238, 238, 238, 238, 238, 238, 238,
+    238, 238, 238, 238, 238, 238, 238, 238, 238, 238,
+    238, 238, 238, 238, 238, 238, 238, 238, 238, 238,
+    238, 238, 238, 238, 238, 238, 238, 238, 238, 238,
+    238, 238, 238
 };
 
 /* The intent behind this definition is that it'll catch
@@ -533,6 +575,7 @@ static yyconst flex_int16_t yy_chk[245] = { 0,
 #define yymore() yymore_used_but_not_detected
 #define YY_MORE_ADJ 0
 #define YY_RESTORE_YY_MORE_OFFSET
+#line 1 "geoJsonLexer.l"
 /* 
  geoJsonLexer.l -- GeoJSON parser - FLEX config
   
@@ -585,6 +628,7 @@ the terms of any one of the MPL, the GPL or the LGPL.
 *  Flex would match both POINT and POINTM, but since POINTM is the longer
 *  of the two tokens, FLEX will match POINTM.
 */
+#line 634 "lex.GeoJson.c"
 
 #define INITIAL 0
 
@@ -611,8 +655,8 @@ struct yyguts_t
     size_t yy_buffer_stack_max;	/**< capacity of stack. */
     YY_BUFFER_STATE *yy_buffer_stack;  /**< Stack as an array. */
     char yy_hold_char;
-    int yy_n_chars;
-    int yyleng_r;
+    yy_size_t yy_n_chars;
+    yy_size_t yyleng_r;
     char *yy_c_buf_p;
     int yy_init;
     int yy_start;
@@ -659,7 +703,7 @@ FILE *GeoJsonget_out (yyscan_t yyscanner);
 
 void GeoJsonset_out (FILE * out_str, yyscan_t yyscanner);
 
-int GeoJsonget_leng (yyscan_t yyscanner);
+yy_size_t GeoJsonget_leng (yyscan_t yyscanner);
 
 char *GeoJsonget_text (yyscan_t yyscanner);
 
@@ -722,7 +766,7 @@ static int input (yyscan_t yyscanner);
 	if ( YY_CURRENT_BUFFER_LVALUE->yy_is_interactive ) \
 		{ \
 		int c = '*'; \
-		unsigned n; \
+		size_t n; \
 		for ( n = 0; n < max_size && \
 			     (c = getc( yyin )) != EOF && c != '\n'; ++n ) \
 			buf[n] = (char) c; \
@@ -832,347 +876,388 @@ YY_DECL
 	  GeoJson_load_buffer_state (yyscanner);
       }
 
-    while (1)			/* loops until end-of-file is reached */
-      {
-	  yy_cp = yyg->yy_c_buf_p;
+    {
+#line 59 "geoJsonLexer.l"
 
-	  /* Support of yytext. */
-	  *yy_cp = yyg->yy_hold_char;
+#line 884 "lex.GeoJson.c"
 
-	  /* yy_bp points to the position in yy_ch_buf of the start of
-	   * the current run.
-	   */
-	  yy_bp = yy_cp;
+	while (1)		/* loops until end-of-file is reached */
+	  {
+	      yy_cp = yyg->yy_c_buf_p;
 
-	  yy_current_state = yyg->yy_start;
-	yy_match:
-	  do
-	    {
-		register YY_CHAR yy_c = yy_ec[YY_SC_TO_UI (*yy_cp)];
-		if (yy_accept[yy_current_state])
-		  {
-		      yyg->yy_last_accepting_state = yy_current_state;
-		      yyg->yy_last_accepting_cpos = yy_cp;
-		  }
-		while (yy_chk[yy_base[yy_current_state] + yy_c] !=
-		       yy_current_state)
-		  {
-		      yy_current_state = (int) yy_def[yy_current_state];
-		      if (yy_current_state >= 182)
-			  yy_c = yy_meta[(unsigned int) yy_c];
-		  }
-		yy_current_state =
-		    yy_nxt[yy_base[yy_current_state] + (unsigned int) yy_c];
-		++yy_cp;
-	    }
-	  while (yy_base[yy_current_state] != 204);
+	      /* Support of yytext. */
+	      *yy_cp = yyg->yy_hold_char;
 
-	yy_find_action:
-	  yy_act = yy_accept[yy_current_state];
-	  if (yy_act == 0)
-	    {			/* have to back up */
-		yy_cp = yyg->yy_last_accepting_cpos;
-		yy_current_state = yyg->yy_last_accepting_state;
-		yy_act = yy_accept[yy_current_state];
-	    }
+	      /* yy_bp points to the position in yy_ch_buf of the start of
+	       * the current run.
+	       */
+	      yy_bp = yy_cp;
 
-	  YY_DO_BEFORE_ACTION;
-
-	do_action:		/* This label is used only to access EOF actions. */
-
-	  switch (yy_act)
-	    {			/* beginning of action switch */
-	    case 0:		/* must back up */
-		/* undo the effects of YY_DO_BEFORE_ACTION */
-		*yy_cp = yyg->yy_hold_char;
-		yy_cp = yyg->yy_last_accepting_cpos;
-		yy_current_state = yyg->yy_last_accepting_state;
-		goto yy_find_action;
-
-	    case 1:
-		YY_RULE_SETUP
+	      yy_current_state = yyg->yy_start;
+	    yy_match:
+	      do
 		{
-		    GeoJsonget_extra (yyscanner)->geoJson_col +=
-			(int) strlen (yytext);
-		    GeoJsonget_extra (yyscanner)->GeoJsonLval.dval =
-			atof (yytext);
-		    return GEOJSON_NUM;
-		}
-		YY_BREAK case 2:YY_RULE_SETUP
-		{
-		    GeoJsonget_extra (yyscanner)->geoJson_col +=
-			(int) strlen (yytext);
-		    GeoJsonget_extra (yyscanner)->GeoJsonLval.ival =
-			atoi (yytext + 6);
-		    return GEOJSON_SHORT_SRID;
-		}
-		YY_BREAK case 3:YY_RULE_SETUP
-		{
-		    GeoJsonget_extra (yyscanner)->geoJson_col +=
-			(int) strlen (yytext);
-		    GeoJsonget_extra (yyscanner)->GeoJsonLval.ival =
-			atoi (yytext + 22);
-		    return GEOJSON_LONG_SRID;
-		}
-		YY_BREAK case 4:YY_RULE_SETUP
-		{
-		    GeoJsonget_extra (yyscanner)->GeoJsonLval.dval = 0;
-		    return GEOJSON_COMMA;
-		}
-		YY_BREAK case 5:YY_RULE_SETUP
-		{
-		    GeoJsonget_extra (yyscanner)->GeoJsonLval.dval = 0;
-		    return GEOJSON_COLON;
-		}
-		YY_BREAK case 6:YY_RULE_SETUP
-		{
-		    GeoJsonget_extra (yyscanner)->GeoJsonLval.dval = 0;
-		    return GEOJSON_OPEN_BRACE;
-		}
-		YY_BREAK case 7:YY_RULE_SETUP
-		{
-		    GeoJsonget_extra (yyscanner)->GeoJsonLval.dval = 0;
-		    return GEOJSON_CLOSE_BRACE;
-		}
-		YY_BREAK case 8:YY_RULE_SETUP
-		{
-		    GeoJsonget_extra (yyscanner)->GeoJsonLval.dval = 0;
-		    return GEOJSON_OPEN_BRACKET;
-		}
-		YY_BREAK case 9:YY_RULE_SETUP
-		{
-		    GeoJsonget_extra (yyscanner)->GeoJsonLval.dval = 0;
-		    return GEOJSON_CLOSE_BRACKET;
-		}
-		YY_BREAK case 10:YY_RULE_SETUP
-		{
-		    GeoJsonget_extra (yyscanner)->GeoJsonLval.dval = 0;
-		    return GEOJSON_TYPE;
-		}
-		YY_BREAK case 11:YY_RULE_SETUP
-		{
-		    GeoJsonget_extra (yyscanner)->GeoJsonLval.dval = 0;
-		    return GEOJSON_COORDS;
-		}
-		YY_BREAK case 12:YY_RULE_SETUP
-		{
-		    GeoJsonget_extra (yyscanner)->GeoJsonLval.dval = 0;
-		    return GEOJSON_GEOMS;
-		}
-		YY_BREAK case 13:YY_RULE_SETUP
-		{
-		    GeoJsonget_extra (yyscanner)->GeoJsonLval.dval = 0;
-		    return GEOJSON_BBOX;
-		}
-		YY_BREAK case 14:YY_RULE_SETUP
-		{
-		    GeoJsonget_extra (yyscanner)->GeoJsonLval.dval = 0;
-		    return GEOJSON_NAME;
-		}
-		YY_BREAK case 15:YY_RULE_SETUP
-		{
-		    GeoJsonget_extra (yyscanner)->GeoJsonLval.dval = 0;
-		    return GEOJSON_PROPS;
-		}
-		YY_BREAK case 16:YY_RULE_SETUP
-		{
-		    GeoJsonget_extra (yyscanner)->GeoJsonLval.dval = 0;
-		    return GEOJSON_CRS;
-		}
-		YY_BREAK case 17:YY_RULE_SETUP
-		{
-		    GeoJsonget_extra (yyscanner)->GeoJsonLval.dval = 0;
-		    return GEOJSON_POINT;
-		}
-		YY_BREAK case 18:YY_RULE_SETUP
-		{
-		    GeoJsonget_extra (yyscanner)->GeoJsonLval.dval = 0;
-		    return GEOJSON_LINESTRING;
-		}
-		YY_BREAK case 19:YY_RULE_SETUP
-		{
-		    GeoJsonget_extra (yyscanner)->GeoJsonLval.dval = 0;
-		    return GEOJSON_POLYGON;
-		}
-		YY_BREAK case 20:YY_RULE_SETUP
-		{
-		    GeoJsonget_extra (yyscanner)->GeoJsonLval.dval = 0;
-		    return GEOJSON_MULTIPOINT;
-		}
-		YY_BREAK case 21:YY_RULE_SETUP
-		{
-		    GeoJsonget_extra (yyscanner)->GeoJsonLval.dval = 0;
-		    return GEOJSON_MULTILINESTRING;
-		}
-		YY_BREAK case 22:YY_RULE_SETUP
-		{
-		    GeoJsonget_extra (yyscanner)->GeoJsonLval.dval = 0;
-		    return GEOJSON_MULTIPOLYGON;
-		}
-		YY_BREAK case 23:YY_RULE_SETUP
-		{
-		    GeoJsonget_extra (yyscanner)->GeoJsonLval.dval = 0;
-		    return GEOJSON_GEOMETRYCOLLECTION;
-		}
-		YY_BREAK case 24:YY_RULE_SETUP
-		{
-		    GeoJsonget_extra (yyscanner)->geoJson_col +=
-			(int) strlen (yytext);
-		}		/* ignore but count white space */
-		YY_BREAK case 25:
-/* rule 25 can match eol */
-		  YY_RULE_SETUP
-		{
-		    GeoJsonget_extra (yyscanner)->geoJson_col = 0;
-		    GeoJsonget_extra (yyscanner)->geoJson_line++;
-		}
-		YY_BREAK case 26:YY_RULE_SETUP
-		{
-		    GeoJsonget_extra (yyscanner)->geoJson_col +=
-			(int) strlen (yytext);
-		    return -1;
-		}
-		YY_BREAK case 27:YY_RULE_SETUP ECHO;
-		YY_BREAK case YY_STATE_EOF (INITIAL):yyterminate ();
-
-	    case YY_END_OF_BUFFER:
-		{
-		    /* Amount of text matched not including the EOB char. */
-		    int yy_amount_of_matched_text =
-			(int) (yy_cp - yyg->yytext_ptr) - 1;
-
-		    /* Undo the effects of YY_DO_BEFORE_ACTION. */
-		    *yy_cp = yyg->yy_hold_char;
-		    YY_RESTORE_YY_MORE_OFFSET
-			if (YY_CURRENT_BUFFER_LVALUE->yy_buffer_status ==
-			    YY_BUFFER_NEW)
+		    register YY_CHAR yy_c = yy_ec[YY_SC_TO_UI (*yy_cp)];
+		    if (yy_accept[yy_current_state])
 		      {
-			  /* We're scanning a new file or input source.  It's
-			   * possible that this happened because the user
-			   * just pointed yyin at a new source and called
-			   * GeoJsonlex().  If so, then we have to assure
-			   * consistency between YY_CURRENT_BUFFER and our
-			   * globals.  Here is the right place to do so, because
-			   * this is the first action (other than possibly a
-			   * back-up) that will match for the new input source.
-			   */
-			  yyg->yy_n_chars =
-			      YY_CURRENT_BUFFER_LVALUE->yy_n_chars;
-			  YY_CURRENT_BUFFER_LVALUE->yy_input_file = yyin;
-			  YY_CURRENT_BUFFER_LVALUE->yy_buffer_status =
-			      YY_BUFFER_NORMAL;
+			  yyg->yy_last_accepting_state = yy_current_state;
+			  yyg->yy_last_accepting_cpos = yy_cp;
 		      }
-
-		    /* Note that here we test for yy_c_buf_p "<=" to the position
-		     * of the first EOB in the buffer, since yy_c_buf_p will
-		     * already have been incremented past the NUL character
-		     * (since all states make transitions on EOB to the
-		     * end-of-buffer state).  Contrast this with the test
-		     * in input().
-		     */
-		    if (yyg->yy_c_buf_p <=
-			&YY_CURRENT_BUFFER_LVALUE->yy_ch_buf[yyg->yy_n_chars])
-		      {		/* This was really a NUL. */
-			  yy_state_type yy_next_state;
-
-			  yyg->yy_c_buf_p =
-			      yyg->yytext_ptr + yy_amount_of_matched_text;
-
-			  yy_current_state = yy_get_previous_state (yyscanner);
-
-			  /* Okay, we're now positioned to make the NUL
-			   * transition.  We couldn't have
-			   * yy_get_previous_state() go ahead and do it
-			   * for us because it doesn't know how to deal
-			   * with the possibility of jamming (and we don't
-			   * want to build jamming into it because then it
-			   * will run more slowly).
-			   */
-
-			  yy_next_state =
-			      yy_try_NUL_trans (yy_current_state, yyscanner);
-
-			  yy_bp = yyg->yytext_ptr + YY_MORE_ADJ;
-
-			  if (yy_next_state)
-			    {
-				/* Consume the NUL. */
-				yy_cp = ++yyg->yy_c_buf_p;
-				yy_current_state = yy_next_state;
-				goto yy_match;
-			    }
-
-			  else
-			    {
-				yy_cp = yyg->yy_c_buf_p;
-				goto yy_find_action;
-			    }
+		    while (yy_chk[yy_base[yy_current_state] + yy_c] !=
+			   yy_current_state)
+		      {
+			  yy_current_state = (int) yy_def[yy_current_state];
+			  if (yy_current_state >= 239)
+			      yy_c = yy_meta[(unsigned int) yy_c];
 		      }
+		    yy_current_state =
+			yy_nxt[yy_base[yy_current_state] + (unsigned int) yy_c];
+		    ++yy_cp;
+		}
+	      while (yy_base[yy_current_state] != 303);
 
-		    else
-			switch (yy_get_next_buffer (yyscanner))
+	    yy_find_action:
+	      yy_act = yy_accept[yy_current_state];
+	      if (yy_act == 0)
+		{		/* have to back up */
+		    yy_cp = yyg->yy_last_accepting_cpos;
+		    yy_current_state = yyg->yy_last_accepting_state;
+		    yy_act = yy_accept[yy_current_state];
+		}
+
+	      YY_DO_BEFORE_ACTION;
+
+	    do_action:		/* This label is used only to access EOF actions. */
+
+	      switch (yy_act)
+		{		/* beginning of action switch */
+		case 0:	/* must back up */
+		    /* undo the effects of YY_DO_BEFORE_ACTION */
+		    *yy_cp = yyg->yy_hold_char;
+		    yy_cp = yyg->yy_last_accepting_cpos;
+		    yy_current_state = yyg->yy_last_accepting_state;
+		    goto yy_find_action;
+
+		case 1:
+		    YY_RULE_SETUP
+#line 60 "geoJsonLexer.l"
+		    {
+			GeoJsonget_extra (yyscanner)->geoJson_col +=
+			    (int) strlen (yytext);
+			GeoJsonget_extra (yyscanner)->GeoJsonLval.dval =
+			    atof (yytext);
+			return GEOJSON_NUM;
+		    }
+		    YY_BREAK case 2:YY_RULE_SETUP
+#line 61 "geoJsonLexer.l"
+		    {
+			GeoJsonget_extra (yyscanner)->geoJson_col +=
+			    (int) strlen (yytext);
+			GeoJsonget_extra (yyscanner)->GeoJsonLval.ival =
+			    atoi (yytext + 6);
+			return GEOJSON_SHORT_SRID;
+		    }
+		    YY_BREAK case 3:YY_RULE_SETUP
+#line 62 "geoJsonLexer.l"
+		    {
+			GeoJsonget_extra (yyscanner)->geoJson_col +=
+			    (int) strlen (yytext);
+			GeoJsonget_extra (yyscanner)->GeoJsonLval.ival =
+			    atoi (yytext + 22);
+			return GEOJSON_LONG_SRID;
+		    }
+		    YY_BREAK case 4:YY_RULE_SETUP
+#line 63 "geoJsonLexer.l"
+		    {
+			GeoJsonget_extra (yyscanner)->GeoJsonLval.dval = 0;
+			return GEOJSON_COMMA;
+		    }
+		    YY_BREAK case 5:YY_RULE_SETUP
+#line 64 "geoJsonLexer.l"
+		    {
+			GeoJsonget_extra (yyscanner)->GeoJsonLval.dval = 0;
+			return GEOJSON_COLON;
+		    }
+		    YY_BREAK case 6:YY_RULE_SETUP
+#line 65 "geoJsonLexer.l"
+		    {
+			GeoJsonget_extra (yyscanner)->GeoJsonLval.dval = 0;
+			return GEOJSON_OPEN_BRACE;
+		    }
+		    YY_BREAK case 7:YY_RULE_SETUP
+#line 66 "geoJsonLexer.l"
+		    {
+			GeoJsonget_extra (yyscanner)->GeoJsonLval.dval = 0;
+			return GEOJSON_CLOSE_BRACE;
+		    }
+		    YY_BREAK case 8:YY_RULE_SETUP
+#line 67 "geoJsonLexer.l"
+		    {
+			GeoJsonget_extra (yyscanner)->GeoJsonLval.dval = 0;
+			return GEOJSON_OPEN_BRACKET;
+		    }
+		    YY_BREAK case 9:YY_RULE_SETUP
+#line 68 "geoJsonLexer.l"
+		    {
+			GeoJsonget_extra (yyscanner)->GeoJsonLval.dval = 0;
+			return GEOJSON_CLOSE_BRACKET;
+		    }
+		    YY_BREAK case 10:YY_RULE_SETUP
+#line 69 "geoJsonLexer.l"
+		    {
+			GeoJsonget_extra (yyscanner)->GeoJsonLval.dval = 0;
+			return GEOJSON_TYPE;
+		    }
+		    YY_BREAK case 11:YY_RULE_SETUP
+#line 70 "geoJsonLexer.l"
+		    {
+			GeoJsonget_extra (yyscanner)->GeoJsonLval.dval = 0;
+			return GEOJSON_COORDS;
+		    }
+		    YY_BREAK case 12:YY_RULE_SETUP
+#line 71 "geoJsonLexer.l"
+		    {
+			GeoJsonget_extra (yyscanner)->GeoJsonLval.dval = 0;
+			return GEOJSON_GEOMS;
+		    }
+		    YY_BREAK case 13:YY_RULE_SETUP
+#line 72 "geoJsonLexer.l"
+		    {
+			GeoJsonget_extra (yyscanner)->GeoJsonLval.dval = 0;
+			return GEOJSON_BBOX;
+		    }
+		    YY_BREAK case 14:YY_RULE_SETUP
+#line 73 "geoJsonLexer.l"
+		    {
+			GeoJsonget_extra (yyscanner)->GeoJsonLval.dval = 0;
+			return GEOJSON_NAME;
+		    }
+		    YY_BREAK case 15:YY_RULE_SETUP
+#line 74 "geoJsonLexer.l"
+		    {
+			GeoJsonget_extra (yyscanner)->GeoJsonLval.dval = 0;
+			return GEOJSON_PROPS;
+		    }
+		    YY_BREAK case 16:YY_RULE_SETUP
+#line 75 "geoJsonLexer.l"
+		    {
+			GeoJsonget_extra (yyscanner)->GeoJsonLval.dval = 0;
+			return GEOJSON_CRS;
+		    }
+		    YY_BREAK case 17:YY_RULE_SETUP
+#line 76 "geoJsonLexer.l"
+		    {
+			GeoJsonget_extra (yyscanner)->GeoJsonLval.dval = 0;
+			return GEOJSON_POINT;
+		    }
+		    YY_BREAK case 18:YY_RULE_SETUP
+#line 77 "geoJsonLexer.l"
+		    {
+			GeoJsonget_extra (yyscanner)->GeoJsonLval.dval = 0;
+			return GEOJSON_LINESTRING;
+		    }
+		    YY_BREAK case 19:YY_RULE_SETUP
+#line 78 "geoJsonLexer.l"
+		    {
+			GeoJsonget_extra (yyscanner)->GeoJsonLval.dval = 0;
+			return GEOJSON_POLYGON;
+		    }
+		    YY_BREAK case 20:YY_RULE_SETUP
+#line 79 "geoJsonLexer.l"
+		    {
+			GeoJsonget_extra (yyscanner)->GeoJsonLval.dval = 0;
+			return GEOJSON_MULTIPOINT;
+		    }
+		    YY_BREAK case 21:YY_RULE_SETUP
+#line 80 "geoJsonLexer.l"
+		    {
+			GeoJsonget_extra (yyscanner)->GeoJsonLval.dval = 0;
+			return GEOJSON_MULTILINESTRING;
+		    }
+		    YY_BREAK case 22:YY_RULE_SETUP
+#line 81 "geoJsonLexer.l"
+		    {
+			GeoJsonget_extra (yyscanner)->GeoJsonLval.dval = 0;
+			return GEOJSON_MULTIPOLYGON;
+		    }
+		    YY_BREAK case 23:YY_RULE_SETUP
+#line 82 "geoJsonLexer.l"
+		    {
+			GeoJsonget_extra (yyscanner)->GeoJsonLval.dval = 0;
+			return GEOJSON_GEOMETRYCOLLECTION;
+		    }
+		    YY_BREAK case 24:YY_RULE_SETUP
+#line 84 "geoJsonLexer.l"
+		    {
+			GeoJsonget_extra (yyscanner)->geoJson_col +=
+			    (int) strlen (yytext);
+		    }		/* ignore but count white space */
+		    YY_BREAK case 25:
+/* rule 25 can match eol */
+		      YY_RULE_SETUP
+#line 86 "geoJsonLexer.l"
+		    {
+			GeoJsonget_extra (yyscanner)->geoJson_col = 0;
+			GeoJsonget_extra (yyscanner)->geoJson_line++;
+		    }
+		    YY_BREAK case 26:YY_RULE_SETUP
+#line 88 "geoJsonLexer.l"
+		    {
+			GeoJsonget_extra (yyscanner)->geoJson_col +=
+			    (int) strlen (yytext);
+			return -1;
+		    }
+		    YY_BREAK case 27:YY_RULE_SETUP
+#line 89 "geoJsonLexer.l"
+		      ECHO;
+		    YY_BREAK
+#line 1077 "lex.GeoJson.c"
+		case YY_STATE_EOF (INITIAL):
+		    yyterminate ();
+
+		case YY_END_OF_BUFFER:
+		    {
+			/* Amount of text matched not including the EOB char. */
+			int yy_amount_of_matched_text =
+			    (int) (yy_cp - yyg->yytext_ptr) - 1;
+
+			/* Undo the effects of YY_DO_BEFORE_ACTION. */
+			*yy_cp = yyg->yy_hold_char;
+			YY_RESTORE_YY_MORE_OFFSET
+			    if (YY_CURRENT_BUFFER_LVALUE->yy_buffer_status ==
+				YY_BUFFER_NEW)
 			  {
-			  case EOB_ACT_END_OF_FILE:
-			      {
-				  yyg->yy_did_buffer_switch_on_eof = 0;
+			      /* We're scanning a new file or input source.  It's
+			       * possible that this happened because the user
+			       * just pointed yyin at a new source and called
+			       * GeoJsonlex().  If so, then we have to assure
+			       * consistency between YY_CURRENT_BUFFER and our
+			       * globals.  Here is the right place to do so, because
+			       * this is the first action (other than possibly a
+			       * back-up) that will match for the new input source.
+			       */
+			      yyg->yy_n_chars =
+				  YY_CURRENT_BUFFER_LVALUE->yy_n_chars;
+			      YY_CURRENT_BUFFER_LVALUE->yy_input_file = yyin;
+			      YY_CURRENT_BUFFER_LVALUE->yy_buffer_status =
+				  YY_BUFFER_NORMAL;
+			  }
 
-				  if (GeoJsonwrap (yyscanner))
-				    {
-					/* Note: because we've taken care in
-					 * yy_get_next_buffer() to have set up
-					 * yytext, we can now set up
-					 * yy_c_buf_p so that if some total
-					 * hoser (like flex itself) wants to
-					 * call the scanner after we return the
-					 * YY_NULL, it'll still work - another
-					 * YY_NULL will get returned.
-					 */
-					yyg->yy_c_buf_p =
-					    yyg->yytext_ptr + YY_MORE_ADJ;
+			/* Note that here we test for yy_c_buf_p "<=" to the position
+			 * of the first EOB in the buffer, since yy_c_buf_p will
+			 * already have been incremented past the NUL character
+			 * (since all states make transitions on EOB to the
+			 * end-of-buffer state).  Contrast this with the test
+			 * in input().
+			 */
+			if (yyg->yy_c_buf_p <=
+			    &YY_CURRENT_BUFFER_LVALUE->
+			    yy_ch_buf[yyg->yy_n_chars])
+			  {	/* This was really a NUL. */
+			      yy_state_type yy_next_state;
 
-					yy_act = YY_STATE_EOF (YY_START);
-					goto do_action;
-				    }
-
-				  else
-				    {
-					if (!yyg->yy_did_buffer_switch_on_eof)
-					    YY_NEW_FILE;
-				    }
-				  break;
-			      }
-
-			  case EOB_ACT_CONTINUE_SCAN:
 			      yyg->yy_c_buf_p =
 				  yyg->yytext_ptr + yy_amount_of_matched_text;
 
 			      yy_current_state =
 				  yy_get_previous_state (yyscanner);
 
-			      yy_cp = yyg->yy_c_buf_p;
+			      /* Okay, we're now positioned to make the NUL
+			       * transition.  We couldn't have
+			       * yy_get_previous_state() go ahead and do it
+			       * for us because it doesn't know how to deal
+			       * with the possibility of jamming (and we don't
+			       * want to build jamming into it because then it
+			       * will run more slowly).
+			       */
+
+			      yy_next_state =
+				  yy_try_NUL_trans (yy_current_state,
+						    yyscanner);
+
 			      yy_bp = yyg->yytext_ptr + YY_MORE_ADJ;
-			      goto yy_match;
 
-			  case EOB_ACT_LAST_MATCH:
-			      yyg->yy_c_buf_p =
-				  &YY_CURRENT_BUFFER_LVALUE->yy_ch_buf[yyg->
-								       yy_n_chars];
+			      if (yy_next_state)
+				{
+				    /* Consume the NUL. */
+				    yy_cp = ++yyg->yy_c_buf_p;
+				    yy_current_state = yy_next_state;
+				    goto yy_match;
+				}
 
-			      yy_current_state =
-				  yy_get_previous_state (yyscanner);
-
-			      yy_cp = yyg->yy_c_buf_p;
-			      yy_bp = yyg->yytext_ptr + YY_MORE_ADJ;
-			      goto yy_find_action;
+			      else
+				{
+				    yy_cp = yyg->yy_c_buf_p;
+				    goto yy_find_action;
+				}
 			  }
-		    break;
-		}
 
-	    default:
-		YY_FATAL_ERROR
-		    ("fatal flex scanner internal error--no action found");
-	    }			/* end of action switch */
-      }				/* end of scanning one token */
+			else
+			    switch (yy_get_next_buffer (yyscanner))
+			      {
+			      case EOB_ACT_END_OF_FILE:
+				  {
+				      yyg->yy_did_buffer_switch_on_eof = 0;
+
+				      if (GeoJsonwrap (yyscanner))
+					{
+					    /* Note: because we've taken care in
+					     * yy_get_next_buffer() to have set up
+					     * yytext, we can now set up
+					     * yy_c_buf_p so that if some total
+					     * hoser (like flex itself) wants to
+					     * call the scanner after we return the
+					     * YY_NULL, it'll still work - another
+					     * YY_NULL will get returned.
+					     */
+					    yyg->yy_c_buf_p =
+						yyg->yytext_ptr + YY_MORE_ADJ;
+
+					    yy_act = YY_STATE_EOF (YY_START);
+					    goto do_action;
+					}
+
+				      else
+					{
+					    if (!yyg->yy_did_buffer_switch_on_eof)
+						YY_NEW_FILE;
+					}
+				      break;
+				  }
+
+			      case EOB_ACT_CONTINUE_SCAN:
+				  yyg->yy_c_buf_p =
+				      yyg->yytext_ptr +
+				      yy_amount_of_matched_text;
+
+				  yy_current_state =
+				      yy_get_previous_state (yyscanner);
+
+				  yy_cp = yyg->yy_c_buf_p;
+				  yy_bp = yyg->yytext_ptr + YY_MORE_ADJ;
+				  goto yy_match;
+
+			      case EOB_ACT_LAST_MATCH:
+				  yyg->yy_c_buf_p =
+				      &YY_CURRENT_BUFFER_LVALUE->
+				      yy_ch_buf[yyg->yy_n_chars];
+
+				  yy_current_state =
+				      yy_get_previous_state (yyscanner);
+
+				  yy_cp = yyg->yy_c_buf_p;
+				  yy_bp = yyg->yytext_ptr + YY_MORE_ADJ;
+				  goto yy_find_action;
+			      }
+			break;
+		    }
+
+		default:
+		    YY_FATAL_ERROR
+			("fatal flex scanner internal error--no action found");
+		}		/* end of action switch */
+	  }			/* end of scanning one token */
+    }				/* end of user's declarations */
 }				/* end of GeoJsonlex */
 
 /* yy_get_next_buffer - try to read in a new buffer
@@ -1231,20 +1316,20 @@ yy_get_next_buffer (yyscan_t yyscanner)
 
     else
       {
-	  int num_to_read =
+	  yy_size_t num_to_read =
 	      YY_CURRENT_BUFFER_LVALUE->yy_buf_size - number_to_move - 1;
 
 	  while (num_to_read <= 0)
 	    {			/* Not enough room in the buffer - grow it. */
 
 		/* just a shorter name for the current buffer */
-		YY_BUFFER_STATE b = YY_CURRENT_BUFFER;
+		YY_BUFFER_STATE b = YY_CURRENT_BUFFER_LVALUE;
 
 		int yy_c_buf_p_offset = (int) (yyg->yy_c_buf_p - b->yy_ch_buf);
 
 		if (b->yy_is_our_buffer)
 		  {
-		      int new_size = b->yy_buf_size * 2;
+		      yy_size_t new_size = b->yy_buf_size * 2;
 
 		      if (new_size <= 0)
 			  b->yy_buf_size += b->yy_buf_size / 8;
@@ -1276,7 +1361,7 @@ yy_get_next_buffer (yyscan_t yyscanner)
 
 	  /* Read in more data. */
 	  YY_INPUT ((&YY_CURRENT_BUFFER_LVALUE->yy_ch_buf[number_to_move]),
-		    yyg->yy_n_chars, (size_t) num_to_read);
+		    yyg->yy_n_chars, num_to_read);
 
 	  YY_CURRENT_BUFFER_LVALUE->yy_n_chars = yyg->yy_n_chars;
       }
@@ -1348,7 +1433,7 @@ yy_get_previous_state (yyscan_t yyscanner)
 	  while (yy_chk[yy_base[yy_current_state] + yy_c] != yy_current_state)
 	    {
 		yy_current_state = (int) yy_def[yy_current_state];
-		if (yy_current_state >= 182)
+		if (yy_current_state >= 239)
 		    yy_c = yy_meta[(unsigned int) yy_c];
 	    }
 	  yy_current_state =
@@ -1379,12 +1464,13 @@ yy_try_NUL_trans (yy_state_type yy_current_state, yyscan_t yyscanner)
     while (yy_chk[yy_base[yy_current_state] + yy_c] != yy_current_state)
       {
 	  yy_current_state = (int) yy_def[yy_current_state];
-	  if (yy_current_state >= 182)
+	  if (yy_current_state >= 239)
 	      yy_c = yy_meta[(unsigned int) yy_c];
       }
     yy_current_state = yy_nxt[yy_base[yy_current_state] + (unsigned int) yy_c];
-    yy_is_jam = (yy_current_state == 181);
+    yy_is_jam = (yy_current_state == 238);
 
+    (void) yyg;
     return yy_is_jam ? 0 : yy_current_state;
 }
 
@@ -1415,7 +1501,7 @@ input (yyscan_t yyscanner)
 
 	  else
 	    {			/* need more input */
-		int offset = yyg->yy_c_buf_p - yyg->yytext_ptr;
+		yy_size_t offset = yyg->yy_c_buf_p - yyg->yytext_ptr;
 		++yyg->yy_c_buf_p;
 
 		switch (yy_get_next_buffer (yyscanner))
@@ -1584,10 +1670,6 @@ GeoJson_delete_buffer (YY_BUFFER_STATE b, yyscan_t yyscanner)
     GeoJsonfree ((void *) b, yyscanner);
 }
 
-#ifndef __cplusplus
-extern int isatty (int);
-#endif /* __cplusplus */
-
 /* Initializes or reinitializes a buffer.
  * This function is sometimes called more than once on the same buffer,
  * such as during a GeoJsonrestart() or at EOF.
@@ -1710,7 +1792,7 @@ GeoJsonpop_buffer_state (yyscan_t yyscanner)
 static void
 GeoJsonensure_buffer_stack (yyscan_t yyscanner)
 {
-    int num_to_alloc;
+    yy_size_t num_to_alloc;
     struct yyguts_t *yyg = (struct yyguts_t *) yyscanner;
 
     if (!yyg->yy_buffer_stack)
@@ -1810,18 +1892,19 @@ GeoJson_scan_string (yyconst char *yystr, yyscan_t yyscanner)
 
 /** Setup the input buffer state to scan the given bytes. The next call to GeoJsonlex() will
  * scan from a @e copy of @a bytes.
- * @param bytes the byte buffer to scan
- * @param len the number of bytes in the buffer pointed to by @a bytes.
+ * @param yybytes the byte buffer to scan
+ * @param _yybytes_len the number of bytes in the buffer pointed to by @a bytes.
  * @param yyscanner The scanner object.
  * @return the newly allocated buffer state object.
  */
 YY_BUFFER_STATE
-GeoJson_scan_bytes (yyconst char *yybytes, int _yybytes_len, yyscan_t yyscanner)
+GeoJson_scan_bytes (yyconst char *yybytes, yy_size_t _yybytes_len,
+		    yyscan_t yyscanner)
 {
     YY_BUFFER_STATE b;
     char *buf;
     yy_size_t n;
-    int i;
+    yy_size_t i;
 
     /* Get memory for full buffer, including space for trailing EOB's. */
     n = _yybytes_len + 2;
@@ -1853,7 +1936,7 @@ GeoJson_scan_bytes (yyconst char *yybytes, int _yybytes_len, yyscan_t yyscanner)
 static void
 yy_fatal_error (yyconst char *msg, yyscan_t yyscanner)
 {
-    (void) fprintf (stderr, "%s\n", msg);
+    (void) spatialite_e ("%s\n", msg);
     exit (YY_EXIT_FAILURE);
 }
 
@@ -1937,7 +2020,7 @@ GeoJsonget_out (yyscan_t yyscanner)
 /** Get the length of the current token.
  * @param yyscanner The scanner object.
  */
-int
+yy_size_t
 GeoJsonget_leng (yyscan_t yyscanner)
 {
     struct yyguts_t *yyg = (struct yyguts_t *) yyscanner;
@@ -1977,7 +2060,7 @@ GeoJsonset_lineno (int line_number, yyscan_t yyscanner)
 
     /* lineno is only valid if an input buffer exists. */
     if (!YY_CURRENT_BUFFER)
-	yy_fatal_error ("GeoJsonset_lineno called with no buffer", yyscanner);
+	YY_FATAL_ERROR ("GeoJsonset_lineno called with no buffer");
 
     yylineno = line_number;
 }
@@ -1993,7 +2076,7 @@ GeoJsonset_column (int column_no, yyscan_t yyscanner)
 
     /* column is only valid if an input buffer exists. */
     if (!YY_CURRENT_BUFFER)
-	yy_fatal_error ("GeoJsonset_column called with no buffer", yyscanner);
+	YY_FATAL_ERROR ("GeoJsonset_column called with no buffer");
 
     yycolumn = column_no;
 }
@@ -2221,6 +2304,10 @@ GeoJsonfree (void *ptr, yyscan_t yyscanner)
 }
 
 #define YYTABLES_NAME "yytables"
+
+#line 89 "geoJsonLexer.l"
+
+
 
 int
 GeoJsonwrap (yyscan_t yyscanner)

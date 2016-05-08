@@ -68,11 +68,18 @@ CIG: 644544015A
 #include "config.h"
 #endif
 
+#ifndef OMIT_KNN		/* only if KNN is enabled */
+
 #include <spatialite/sqlite.h>
 
 #include <spatialite/spatialite.h>
 #include <spatialite/gaiaaux.h>
 #include <spatialite/gaiageo.h>
+
+#if defined(_WIN32) && !defined(__MINGW32__)
+#define strcasecmp    _stricmp
+#define strncasecmp    _strnicmp
+#endif
 
 static struct sqlite3_module my_knn_module;
 
@@ -1585,3 +1592,5 @@ virtual_knn_extension_init (void *xdb)
     sqlite3 *db = (sqlite3 *) xdb;
     return spliteKnnInit (db);
 }
+
+#endif /* end KNN conditional */

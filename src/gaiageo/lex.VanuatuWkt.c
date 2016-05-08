@@ -8,7 +8,7 @@
 #define FLEX_SCANNER
 #define YY_FLEX_MAJOR_VERSION 2
 #define YY_FLEX_MINOR_VERSION 5
-#define YY_FLEX_SUBMINOR_VERSION 35
+#define YY_FLEX_SUBMINOR_VERSION 39
 #if YY_FLEX_SUBMINOR_VERSION > 0
 #define FLEX_BETA
 #endif
@@ -53,7 +53,6 @@ typedef int flex_int32_t;
 typedef unsigned char flex_uint8_t;
 typedef unsigned short int flex_uint16_t;
 typedef unsigned int flex_uint32_t;
-#endif /* ! C99 */
 
 /* Limits of integral types. */
 #ifndef INT8_MIN
@@ -83,6 +82,8 @@ typedef unsigned int flex_uint32_t;
 #ifndef UINT32_MAX
 #define UINT32_MAX             (4294967295U)
 #endif
+
+#endif /* ! C99 */
 
 #endif /* ! FLEXINT_H */
 
@@ -169,11 +170,17 @@ typedef void *yyscan_t;
 typedef struct yy_buffer_state *YY_BUFFER_STATE;
 #endif
 
+#ifndef YY_TYPEDEF_YY_SIZE_T
+#define YY_TYPEDEF_YY_SIZE_T
+typedef size_t yy_size_t;
+#endif
+
 #define EOB_ACT_CONTINUE_SCAN 0
 #define EOB_ACT_END_OF_FILE 1
 #define EOB_ACT_LAST_MATCH 2
 
 #define YY_LESS_LINENO(n)
+#define YY_LINENO_REWIND_TO(ptr)
 
 /* Return all but the first "n" matched characters back to the input stream. */
 #define yyless(n) \
@@ -190,11 +197,6 @@ typedef struct yy_buffer_state *YY_BUFFER_STATE;
 	while ( 0 )
 
 #define unput(c) yyunput( c, yyg->yytext_ptr , yyscanner )
-
-#ifndef YY_TYPEDEF_YY_SIZE_T
-#define YY_TYPEDEF_YY_SIZE_T
-typedef size_t yy_size_t;
-#endif
 
 #ifndef YY_STRUCT_YY_BUFFER_STATE
 #define YY_STRUCT_YY_BUFFER_STATE
@@ -213,7 +215,7 @@ struct yy_buffer_state
     /* Number of characters read into yy_ch_buf, not including EOB
      * characters.
      */
-    int yy_n_chars;
+    yy_size_t yy_n_chars;
 
     /* Whether we "own" the buffer - i.e., we know we created it,
      * and can realloc() it to grow it, and should free() it to
@@ -298,7 +300,7 @@ YY_BUFFER_STATE VanuatuWkt_scan_buffer (char *base, yy_size_t size,
 					yyscan_t yyscanner);
 YY_BUFFER_STATE VanuatuWkt_scan_string (yyconst char *yy_str,
 					yyscan_t yyscanner);
-YY_BUFFER_STATE VanuatuWkt_scan_bytes (yyconst char *bytes, int len,
+YY_BUFFER_STATE VanuatuWkt_scan_bytes (yyconst char *bytes, yy_size_t len,
 				       yyscan_t yyscanner);
 
 void *VanuatuWktalloc (yy_size_t, yyscan_t yyscanner);
@@ -362,20 +364,25 @@ struct yy_trans_info
     flex_int32_t yy_verify;
     flex_int32_t yy_nxt;
 };
-static yyconst flex_int16_t yy_accept[114] = { 0,
+static yyconst flex_int16_t yy_accept[171] = { 0,
     0, 0, 37, 35, 33, 34, 3, 4, 35, 2,
-    35, 1, 35, 35, 35, 35, 1, 1, 1, 1,
-    0, 0, 0, 0, 1, 1, 1, 0, 0, 0,
-    0, 0, 1, 1, 0, 0, 0, 0, 0, 0,
-    0, 0, 5, 0, 0, 0, 0, 0, 0, 7,
-    6, 0, 0, 0, 0, 0, 8, 13, 0, 0,
-    0, 0, 0, 0, 15, 14, 0, 0, 0, 0,
-    0, 16, 0, 9, 0, 17, 0, 0, 0, 11,
-    10, 0, 0, 19, 18, 0, 0, 12, 0, 20,
-    25, 0, 0, 0, 27, 26, 0, 0, 28, 0,
+    35, 1, 1, 35, 35, 35, 35, 1, 1, 1,
+    1, 1, 1, 1, 1, 0, 0, 0, 0, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    0, 0, 0, 0, 0, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    0, 0, 0, 0, 0, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    0, 0, 0, 5, 0, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 0, 0, 0,
 
-    21, 0, 0, 23, 22, 0, 24, 29, 0, 31,
-    30, 32, 0
+    0, 0, 7, 6, 0, 1, 1, 1, 1, 0,
+    0, 0, 0, 8, 13, 0, 0, 0, 0, 0,
+    0, 15, 14, 0, 0, 0, 0, 0, 16, 0,
+    9, 0, 17, 0, 0, 0, 11, 10, 0, 0,
+    19, 18, 0, 0, 12, 0, 20, 25, 0, 0,
+    0, 27, 26, 0, 0, 28, 0, 21, 0, 0,
+    23, 22, 0, 24, 29, 0, 31, 30, 32, 0
 };
 
 static yyconst flex_int32_t yy_ec[256] = { 0,
@@ -416,106 +423,132 @@ static yyconst flex_int32_t yy_meta[41] = { 0,
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1
 };
 
-static yyconst flex_int16_t yy_base[115] = { 0,
-    0, 33, 211, 255, 255, 255, 255, 255, 192, 255,
-    191, 2, 2, 3, 4, 0, 11, 13, 185, 15,
-    26, 28, 32, 36, 162, 161, 154, 37, 42, 33,
-    39, 33, 71, 16, 46, 53, 61, 54, 64, 56,
-    57, 65, 80, 67, 66, 67, 74, 79, 0, 255,
-    82, 87, 82, 93, 91, 95, 255, 112, 105, 100,
-    106, 109, 103, 0, 255, 113, 112, 121, 114, 114,
-    125, 255, 124, 144, 118, 154, 130, 143, 0, 255,
-    143, 141, 0, 255, 146, 148, 154, 255, 153, 255,
-    184, 157, 161, 0, 255, 172, 167, 177, 255, 177,
+static yyconst flex_int16_t yy_base[171] = { 0,
+    0, 0, 328, 329, 329, 329, 329, 329, 32, 329,
+    34, 317, 36, 35, 35, 27, 33, 316, 43, 315,
+    47, 48, 314, 59, 70, 49, 55, 58, 69, 67,
+    313, 83, 80, 312, 94, 95, 85, 310, 309, 308,
+    65, 94, 86, 92, 86, 105, 104, 307, 306, 305,
+    112, 107, 304, 303, 301, 300, 299, 298, 120, 297,
+    115, 108, 118, 111, 122, 295, 294, 292, 130, 291,
+    290, 289, 288, 131, 286, 285, 283, 282, 281, 279,
+    121, 123, 134, 149, 128, 276, 275, 271, 270, 267,
+    259, 258, 254, 247, 225, 224, 220, 134, 135, 142,
 
-    194, 174, 0, 255, 182, 182, 255, 214, 0, 255,
-    192, 255, 255, 0
+    139, 0, 329, 146, 146, 149, 75, 51, 44, 142,
+    153, 156, 161, 329, 181, 168, 168, 174, 170, 168,
+    0, 329, 177, 177, 183, 177, 177, 190, 329, 189,
+    213, 183, 220, 191, 202, 0, 329, 209, 206, 0,
+    329, 211, 211, 219, 329, 219, 329, 247, 226, 222,
+    0, 329, 231, 233, 243, 329, 244, 263, 241, 0,
+    329, 245, 250, 329, 281, 0, 329, 259, 329, 329
 };
 
-static yyconst flex_int16_t yy_def[115] = { 0,
-    114, 114, 113, 113, 113, 113, 113, 113, 113, 113,
-    113, 113, 113, 113, 113, 113, 113, 113, 113, 113,
-    113, 113, 113, 113, 113, 113, 113, 113, 113, 113,
-    113, 113, 113, 113, 113, 113, 113, 113, 113, 113,
-    113, 113, 113, 113, 113, 113, 113, 113, 43, 113,
-    113, 113, 113, 113, 113, 113, 113, 113, 113, 113,
-    113, 113, 113, 58, 113, 113, 113, 113, 113, 113,
-    113, 113, 113, 113, 113, 113, 113, 113, 74, 113,
-    113, 113, 76, 113, 113, 113, 113, 113, 113, 113,
-    113, 113, 113, 91, 113, 113, 113, 113, 113, 113,
+static yyconst flex_int16_t yy_def[171] = { 0,
+    170, 1, 170, 170, 170, 170, 170, 170, 170, 170,
+    170, 170, 170, 170, 170, 170, 170, 170, 170, 170,
+    170, 170, 170, 170, 170, 170, 170, 170, 170, 170,
+    170, 170, 170, 170, 170, 170, 170, 170, 170, 170,
+    170, 170, 170, 170, 170, 170, 170, 170, 170, 170,
+    170, 170, 170, 170, 170, 170, 170, 170, 170, 170,
+    170, 170, 170, 170, 170, 170, 170, 170, 170, 170,
+    170, 170, 170, 170, 170, 170, 170, 170, 170, 170,
+    170, 170, 170, 170, 170, 170, 170, 170, 170, 170,
+    170, 170, 170, 170, 170, 170, 170, 170, 170, 170,
 
-    113, 113, 101, 113, 113, 113, 113, 113, 108, 113,
-    113, 113, 0, 113
+    170, 84, 170, 170, 170, 170, 170, 170, 170, 170,
+    170, 170, 170, 170, 170, 170, 170, 170, 170, 170,
+    115, 170, 170, 170, 170, 170, 170, 170, 170, 170,
+    170, 170, 170, 170, 170, 131, 170, 170, 170, 133,
+    170, 170, 170, 170, 170, 170, 170, 170, 170, 170,
+    148, 170, 170, 170, 170, 170, 170, 170, 170, 158,
+    170, 170, 170, 170, 170, 165, 170, 170, 170, 0
 };
 
-static yyconst flex_int16_t yy_nxt[296] = { 0,
-    4, 5, 6, 7, 8, 9, 10, 11, 113, 12,
-    19, 20, 13, 21, 14, 15, 22, 24, 16, 25,
-    17, 26, 18, 19, 20, 34, 23, 13, 21, 14,
-    15, 22, 24, 16, 5, 6, 7, 8, 9, 10,
-    11, 23, 12, 28, 29, 13, 30, 14, 15, 31,
-    32, 16, 35, 36, 37, 38, 39, 40, 28, 29,
-    13, 30, 14, 15, 31, 32, 16, 35, 36, 37,
-    38, 39, 40, 41, 42, 43, 44, 45, 46, 47,
-    33, 49, 49, 48, 52, 53, 54, 55, 41, 42,
-    43, 44, 45, 46, 47, 50, 56, 57, 48, 52,
+static yyconst flex_int16_t yy_nxt[370] = { 0,
+    4, 5, 6, 7, 8, 9, 10, 11, 12, 13,
+    4, 4, 14, 4, 15, 16, 4, 4, 17, 4,
+    4, 4, 4, 4, 4, 4, 4, 14, 4, 15,
+    16, 4, 4, 17, 4, 4, 4, 4, 4, 4,
+    18, 19, 20, 21, 23, 24, 26, 25, 27, 28,
+    29, 31, 19, 109, 32, 34, 21, 22, 35, 36,
+    108, 26, 25, 27, 28, 29, 41, 23, 24, 32,
+    25, 42, 43, 35, 36, 38, 30, 39, 46, 40,
+    61, 41, 44, 45, 107, 25, 42, 43, 48, 33,
+    49, 51, 50, 46, 37, 61, 59, 44, 45, 53,
 
-    53, 54, 55, 58, 51, 59, 60, 61, 62, 63,
-    50, 56, 57, 64, 64, 67, 68, 69, 58, 51,
-    59, 60, 61, 62, 63, 70, 71, 65, 72, 73,
-    67, 68, 69, 74, 75, 76, 66, 77, 78, 82,
-    70, 71, 65, 72, 73, 79, 79, 86, 74, 75,
-    76, 66, 77, 78, 82, 83, 83, 87, 88, 80,
-    89, 90, 86, 27, 91, 92, 93, 97, 81, 84,
-    34, 33, 87, 88, 80, 89, 90, 98, 85, 91,
-    92, 93, 97, 81, 84, 94, 94, 99, 100, 101,
-    102, 106, 98, 85, 27, 103, 103, 107, 108, 95,
+    56, 54, 57, 55, 58, 62, 51, 63, 64, 65,
+    66, 59, 67, 47, 68, 69, 52, 71, 74, 72,
+    62, 73, 63, 64, 65, 78, 81, 79, 82, 80,
+    69, 83, 84, 74, 85, 88, 93, 89, 94, 90,
+    95, 81, 98, 82, 99, 105, 83, 84, 100, 85,
+    102, 102, 101, 110, 111, 112, 113, 98, 106, 99,
+    105, 114, 115, 100, 103, 116, 117, 101, 110, 111,
+    112, 113, 118, 104, 119, 120, 114, 115, 124, 103,
+    116, 117, 121, 121, 125, 126, 127, 118, 104, 119,
+    120, 128, 129, 124, 130, 131, 122, 132, 133, 125,
 
-    18, 17, 99, 100, 101, 102, 106, 112, 96, 104,
-    113, 113, 107, 108, 95, 109, 109, 113, 105, 113,
-    113, 113, 112, 96, 104, 113, 113, 113, 113, 110,
-    113, 113, 113, 105, 113, 113, 113, 113, 111, 113,
-    113, 113, 113, 113, 110, 113, 113, 113, 113, 113,
-    113, 113, 113, 111, 3, 113, 113, 113, 113, 113,
-    113, 113, 113, 113, 113, 113, 113, 113, 113, 113,
-    113, 113, 113, 113, 113, 113, 113, 113, 113, 113,
-    113, 113, 113, 113, 113, 113, 113, 113, 113, 113,
-    113, 113, 113, 113, 113
+    126, 127, 134, 135, 139, 123, 128, 129, 143, 130,
+    131, 122, 132, 133, 136, 136, 144, 134, 135, 139,
+    123, 140, 140, 143, 145, 146, 147, 148, 137, 97,
+    149, 144, 150, 96, 95, 141, 154, 138, 155, 145,
+    146, 147, 148, 137, 142, 149, 156, 150, 151, 151,
+    141, 154, 138, 155, 157, 158, 109, 159, 163, 142,
+    164, 156, 152, 108, 160, 160, 165, 92, 91, 157,
+    158, 153, 159, 163, 169, 164, 90, 152, 161, 107,
+    106, 165, 166, 166, 87, 86, 153, 162, 80, 169,
+    97, 96, 77, 161, 76, 75, 167, 73, 92, 91,
+
+    70, 68, 162, 87, 86, 168, 60, 58, 77, 76,
+    55, 167, 55, 75, 50, 50, 70, 40, 40, 60,
+    168, 52, 47, 37, 33, 30, 22, 170, 3, 170,
+    170, 170, 170, 170, 170, 170, 170, 170, 170, 170,
+    170, 170, 170, 170, 170, 170, 170, 170, 170, 170,
+    170, 170, 170, 170, 170, 170, 170, 170, 170, 170,
+    170, 170, 170, 170, 170, 170, 170, 170, 170
 };
 
-static yyconst flex_int16_t yy_chk[296] = { 0,
-    114, 1, 1, 1, 1, 1, 1, 1, 0, 1,
-    12, 12, 1, 13, 1, 1, 14, 16, 1, 17,
-    17, 18, 18, 20, 20, 34, 15, 1, 13, 1,
-    1, 14, 16, 1, 2, 2, 2, 2, 2, 2,
-    2, 15, 2, 21, 22, 2, 23, 2, 2, 24,
-    24, 2, 28, 29, 30, 31, 32, 35, 21, 22,
-    2, 23, 2, 2, 24, 24, 2, 28, 29, 30,
-    31, 32, 35, 36, 37, 38, 39, 40, 41, 42,
-    33, 43, 43, 42, 44, 45, 46, 47, 36, 37,
-    38, 39, 40, 41, 42, 43, 48, 51, 42, 44,
+static yyconst flex_int16_t yy_chk[370] = { 0,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    9, 9, 11, 11, 13, 13, 14, 13, 15, 16,
+    17, 19, 19, 109, 19, 21, 21, 22, 21, 22,
+    108, 14, 13, 15, 16, 17, 26, 24, 24, 19,
+    24, 27, 28, 21, 22, 25, 30, 25, 30, 25,
+    41, 26, 29, 29, 107, 24, 27, 28, 32, 33,
+    32, 33, 32, 30, 37, 41, 37, 29, 29, 35,
 
-    45, 46, 47, 52, 43, 53, 54, 55, 56, 56,
-    43, 48, 51, 58, 58, 59, 60, 61, 52, 43,
-    53, 54, 55, 56, 56, 62, 63, 58, 66, 67,
-    59, 60, 61, 68, 69, 70, 58, 71, 73, 75,
-    62, 63, 58, 66, 67, 74, 74, 77, 68, 69,
-    70, 58, 71, 73, 75, 76, 76, 78, 81, 74,
-    82, 85, 77, 27, 86, 87, 89, 92, 74, 76,
-    26, 25, 78, 81, 74, 82, 85, 93, 76, 86,
-    87, 89, 92, 74, 76, 91, 91, 96, 97, 98,
-    100, 102, 93, 76, 19, 101, 101, 105, 106, 91,
+    36, 35, 36, 35, 36, 42, 33, 43, 44, 45,
+    46, 37, 46, 47, 46, 47, 52, 51, 52, 51,
+    42, 51, 43, 44, 45, 59, 61, 59, 62, 59,
+    47, 63, 64, 52, 65, 69, 74, 69, 74, 69,
+    74, 61, 81, 62, 82, 85, 63, 64, 83, 65,
+    84, 84, 83, 98, 99, 100, 101, 81, 106, 82,
+    85, 104, 105, 83, 84, 110, 111, 83, 98, 99,
+    100, 101, 112, 84, 113, 113, 104, 105, 116, 84,
+    110, 111, 115, 115, 117, 118, 119, 112, 84, 113,
+    113, 120, 123, 116, 124, 125, 115, 126, 127, 117,
 
-    11, 9, 96, 97, 98, 100, 102, 111, 91, 101,
-    3, 0, 105, 106, 91, 108, 108, 0, 101, 0,
-    0, 0, 111, 91, 101, 0, 0, 0, 0, 108,
-    0, 0, 0, 101, 0, 0, 0, 0, 108, 0,
-    0, 0, 0, 0, 108, 0, 0, 0, 0, 0,
-    0, 0, 0, 108, 113, 113, 113, 113, 113, 113,
-    113, 113, 113, 113, 113, 113, 113, 113, 113, 113,
-    113, 113, 113, 113, 113, 113, 113, 113, 113, 113,
-    113, 113, 113, 113, 113, 113, 113, 113, 113, 113,
-    113, 113, 113, 113, 113
+    118, 119, 128, 130, 132, 115, 120, 123, 134, 124,
+    125, 115, 126, 127, 131, 131, 135, 128, 130, 132,
+    115, 133, 133, 134, 138, 139, 142, 143, 131, 97,
+    144, 135, 146, 96, 95, 133, 149, 131, 150, 138,
+    139, 142, 143, 131, 133, 144, 153, 146, 148, 148,
+    133, 149, 131, 150, 154, 155, 94, 157, 159, 133,
+    162, 153, 148, 93, 158, 158, 163, 92, 91, 154,
+    155, 148, 157, 159, 168, 162, 90, 148, 158, 89,
+    88, 163, 165, 165, 87, 86, 148, 158, 80, 168,
+    79, 78, 77, 158, 76, 75, 165, 73, 72, 71,
+
+    70, 68, 158, 67, 66, 165, 60, 58, 57, 56,
+    55, 165, 54, 53, 50, 49, 48, 40, 39, 38,
+    165, 34, 31, 23, 20, 18, 12, 3, 170, 170,
+    170, 170, 170, 170, 170, 170, 170, 170, 170, 170,
+    170, 170, 170, 170, 170, 170, 170, 170, 170, 170,
+    170, 170, 170, 170, 170, 170, 170, 170, 170, 170,
+    170, 170, 170, 170, 170, 170, 170, 170, 170
 };
 
 /* The intent behind this definition is that it'll catch
@@ -525,6 +558,7 @@ static yyconst flex_int16_t yy_chk[296] = { 0,
 #define yymore() yymore_used_but_not_detected
 #define YY_MORE_ADJ 0
 #define YY_RESTORE_YY_MORE_OFFSET
+#line 1 "vanuatuLexer.l"
 /* 
  vanuatuLexer.l -- Vanuatu WKT parser - FLEX config
   
@@ -598,6 +632,7 @@ Greg Wilson			gvwilson@cs.toronto.ca
 *  Flex would match both POINT Z and POINT ZM, but since POINT ZM is the longer
 *  of the two tokens, FLEX will match POINT ZM.
 */
+#line 635 "lex.VanuatuWkt.c"
 
 #define INITIAL 0
 
@@ -624,8 +659,8 @@ struct yyguts_t
     size_t yy_buffer_stack_max;	/**< capacity of stack. */
     YY_BUFFER_STATE *yy_buffer_stack;  /**< Stack as an array. */
     char yy_hold_char;
-    int yy_n_chars;
-    int yyleng_r;
+    yy_size_t yy_n_chars;
+    yy_size_t yyleng_r;
     char *yy_c_buf_p;
     int yy_init;
     int yy_start;
@@ -672,7 +707,7 @@ FILE *VanuatuWktget_out (yyscan_t yyscanner);
 
 void VanuatuWktset_out (FILE * out_str, yyscan_t yyscanner);
 
-int VanuatuWktget_leng (yyscan_t yyscanner);
+yy_size_t VanuatuWktget_leng (yyscan_t yyscanner);
 
 char *VanuatuWktget_text (yyscan_t yyscanner);
 
@@ -735,7 +770,7 @@ static int input (yyscan_t yyscanner);
 	if ( YY_CURRENT_BUFFER_LVALUE->yy_is_interactive ) \
 		{ \
 		int c = '*'; \
-		unsigned n; \
+		size_t n; \
 		for ( n = 0; n < max_size && \
 			     (c = getc( yyin )) != EOF && c != '\n'; ++n ) \
 			buf[n] = (char) c; \
@@ -845,428 +880,509 @@ YY_DECL
 	  VanuatuWkt_load_buffer_state (yyscanner);
       }
 
-    while (1)			/* loops until end-of-file is reached */
-      {
-	  yy_cp = yyg->yy_c_buf_p;
+    {
+#line 81 "vanuatuLexer.l"
 
-	  /* Support of yytext. */
-	  *yy_cp = yyg->yy_hold_char;
+#line 885 "lex.VanuatuWkt.c"
 
-	  /* yy_bp points to the position in yy_ch_buf of the start of
-	   * the current run.
-	   */
-	  yy_bp = yy_cp;
+	while (1)		/* loops until end-of-file is reached */
+	  {
+	      yy_cp = yyg->yy_c_buf_p;
 
-	  yy_current_state = yyg->yy_start;
-	yy_match:
-	  do
-	    {
-		register YY_CHAR yy_c = yy_ec[YY_SC_TO_UI (*yy_cp)];
-		if (yy_accept[yy_current_state])
-		  {
-		      yyg->yy_last_accepting_state = yy_current_state;
-		      yyg->yy_last_accepting_cpos = yy_cp;
-		  }
-		while (yy_chk[yy_base[yy_current_state] + yy_c] !=
-		       yy_current_state)
-		  {
-		      yy_current_state = (int) yy_def[yy_current_state];
-		      if (yy_current_state >= 114)
-			  yy_c = yy_meta[(unsigned int) yy_c];
-		  }
-		yy_current_state =
-		    yy_nxt[yy_base[yy_current_state] + (unsigned int) yy_c];
-		++yy_cp;
-	    }
-	  while (yy_base[yy_current_state] != 255);
+	      /* Support of yytext. */
+	      *yy_cp = yyg->yy_hold_char;
 
-	yy_find_action:
-	  yy_act = yy_accept[yy_current_state];
-	  if (yy_act == 0)
-	    {			/* have to back up */
-		yy_cp = yyg->yy_last_accepting_cpos;
-		yy_current_state = yyg->yy_last_accepting_state;
-		yy_act = yy_accept[yy_current_state];
-	    }
+	      /* yy_bp points to the position in yy_ch_buf of the start of
+	       * the current run.
+	       */
+	      yy_bp = yy_cp;
 
-	  YY_DO_BEFORE_ACTION;
-
-	do_action:		/* This label is used only to access EOF actions. */
-
-	  switch (yy_act)
-	    {			/* beginning of action switch */
-	    case 0:		/* must back up */
-		/* undo the effects of YY_DO_BEFORE_ACTION */
-		*yy_cp = yyg->yy_hold_char;
-		yy_cp = yyg->yy_last_accepting_cpos;
-		yy_current_state = yyg->yy_last_accepting_state;
-		goto yy_find_action;
-
-	    case 1:
-		YY_RULE_SETUP
+	      yy_current_state = yyg->yy_start;
+	    yy_match:
+	      do
 		{
-		    VanuatuWktget_extra (yyscanner)->vanuatu_col +=
-			(int) strlen (yytext);
-		    VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval =
-			atof (yytext);
-		    return VANUATU_NUM;
-		}
-		YY_BREAK case 2:YY_RULE_SETUP
-		{
-		    VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval = 0;
-		    return VANUATU_COMMA;
-		}
-		YY_BREAK case 3:YY_RULE_SETUP
-		{
-		    VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval = 0;
-		    return VANUATU_OPEN_BRACKET;
-		}
-		YY_BREAK case 4:YY_RULE_SETUP
-		{
-		    VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval = 0;
-		    return VANUATU_CLOSE_BRACKET;
-		}
-		YY_BREAK case 5:YY_RULE_SETUP
-		{
-		    VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval = 0;
-		    return VANUATU_POINT;
-		}
-		YY_BREAK case 6:
-/* rule 6 can match eol */
-		  YY_RULE_SETUP
-		{
-		    VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval = 0;
-		    return VANUATU_POINT_Z;
-		}
-		YY_BREAK case 7:
-/* rule 7 can match eol */
-		  YY_RULE_SETUP
-		{
-		    VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval = 0;
-		    return VANUATU_POINT_M;
-		}
-		YY_BREAK case 8:
-/* rule 8 can match eol */
-		  YY_RULE_SETUP
-		{
-		    VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval = 0;
-		    return VANUATU_POINT_ZM;
-		}
-		YY_BREAK case 9:YY_RULE_SETUP
-		{
-		    VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval = 0;
-		    return VANUATU_LINESTRING;
-		}
-		YY_BREAK case 10:
-/* rule 10 can match eol */
-		  YY_RULE_SETUP
-		{
-		    VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval = 0;
-		    return VANUATU_LINESTRING_Z;
-		}
-		YY_BREAK case 11:
-/* rule 11 can match eol */
-		  YY_RULE_SETUP
-		{
-		    VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval = 0;
-		    return VANUATU_LINESTRING_M;
-		}
-		YY_BREAK case 12:
-/* rule 12 can match eol */
-		  YY_RULE_SETUP
-		{
-		    VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval = 0;
-		    return VANUATU_LINESTRING_ZM;
-		}
-		YY_BREAK case 13:YY_RULE_SETUP
-		{
-		    VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval = 0;
-		    return VANUATU_POLYGON;
-		}
-		YY_BREAK case 14:
-/* rule 14 can match eol */
-		  YY_RULE_SETUP
-		{
-		    VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval = 0;
-		    return VANUATU_POLYGON_Z;
-		}
-		YY_BREAK case 15:
-/* rule 15 can match eol */
-		  YY_RULE_SETUP
-		{
-		    VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval = 0;
-		    return VANUATU_POLYGON_M;
-		}
-		YY_BREAK case 16:
-/* rule 16 can match eol */
-		  YY_RULE_SETUP
-		{
-		    VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval = 0;
-		    return VANUATU_POLYGON_ZM;
-		}
-		YY_BREAK case 17:YY_RULE_SETUP
-		{
-		    VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval = 0;
-		    return VANUATU_MULTIPOINT;
-		}
-		YY_BREAK case 18:
-/* rule 18 can match eol */
-		  YY_RULE_SETUP
-		{
-		    VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval = 0;
-		    return VANUATU_MULTIPOINT_Z;
-		}
-		YY_BREAK case 19:
-/* rule 19 can match eol */
-		  YY_RULE_SETUP
-		{
-		    VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval = 0;
-		    return VANUATU_MULTIPOINT_M;
-		}
-		YY_BREAK case 20:
-/* rule 20 can match eol */
-		  YY_RULE_SETUP
-		{
-		    VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval = 0;
-		    return VANUATU_MULTIPOINT_ZM;
-		}
-		YY_BREAK case 21:YY_RULE_SETUP
-		{
-		    VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval = 0;
-		    return VANUATU_MULTILINESTRING;
-		}
-		YY_BREAK case 22:
-/* rule 22 can match eol */
-		  YY_RULE_SETUP
-		{
-		    VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval = 0;
-		    return VANUATU_MULTILINESTRING_Z;
-		}
-		YY_BREAK case 23:
-/* rule 23 can match eol */
-		  YY_RULE_SETUP
-		{
-		    VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval = 0;
-		    return VANUATU_MULTILINESTRING_M;
-		}
-		YY_BREAK case 24:
-/* rule 24 can match eol */
-		  YY_RULE_SETUP
-		{
-		    VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval = 0;
-		    return VANUATU_MULTILINESTRING_ZM;
-		}
-		YY_BREAK case 25:YY_RULE_SETUP
-		{
-		    VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval = 0;
-		    return VANUATU_MULTIPOLYGON;
-		}
-		YY_BREAK case 26:
-/* rule 26 can match eol */
-		  YY_RULE_SETUP
-		{
-		    VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval = 0;
-		    return VANUATU_MULTIPOLYGON_Z;
-		}
-		YY_BREAK case 27:
-/* rule 27 can match eol */
-		  YY_RULE_SETUP
-		{
-		    VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval = 0;
-		    return VANUATU_MULTIPOLYGON_M;
-		}
-		YY_BREAK case 28:
-/* rule 28 can match eol */
-		  YY_RULE_SETUP
-		{
-		    VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval = 0;
-		    return VANUATU_MULTIPOLYGON_ZM;
-		}
-		YY_BREAK case 29:YY_RULE_SETUP
-		{
-		    VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval = 0;
-		    return VANUATU_GEOMETRYCOLLECTION;
-		}
-		YY_BREAK case 30:
-/* rule 30 can match eol */
-		  YY_RULE_SETUP
-		{
-		    VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval = 0;
-		    return VANUATU_GEOMETRYCOLLECTION_Z;
-		}
-		YY_BREAK case 31:
-/* rule 31 can match eol */
-		  YY_RULE_SETUP
-		{
-		    VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval = 0;
-		    return VANUATU_GEOMETRYCOLLECTION_M;
-		}
-		YY_BREAK case 32:
-/* rule 32 can match eol */
-		  YY_RULE_SETUP
-		{
-		    VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval = 0;
-		    return VANUATU_GEOMETRYCOLLECTION_ZM;
-		}
-		YY_BREAK case 33:YY_RULE_SETUP
-		{
-		    VanuatuWktget_extra (yyscanner)->vanuatu_col +=
-			(int) strlen (yytext);
-		}		/* ignore but count white space */
-		YY_BREAK case 34:
-/* rule 34 can match eol */
-		  YY_RULE_SETUP
-		{
-		    VanuatuWktget_extra (yyscanner)->vanuatu_col = 0;
-		    VanuatuWktget_extra (yyscanner)->vanuatu_line++;
-		}
-		YY_BREAK case 35:YY_RULE_SETUP
-		{
-		    VanuatuWktget_extra (yyscanner)->vanuatu_col +=
-			(int) strlen (yytext);
-		    return -1;
-		}
-		YY_BREAK case 36:YY_RULE_SETUP ECHO;
-		YY_BREAK case YY_STATE_EOF (INITIAL):yyterminate ();
-
-	    case YY_END_OF_BUFFER:
-		{
-		    /* Amount of text matched not including the EOB char. */
-		    int yy_amount_of_matched_text =
-			(int) (yy_cp - yyg->yytext_ptr) - 1;
-
-		    /* Undo the effects of YY_DO_BEFORE_ACTION. */
-		    *yy_cp = yyg->yy_hold_char;
-		    YY_RESTORE_YY_MORE_OFFSET
-			if (YY_CURRENT_BUFFER_LVALUE->yy_buffer_status ==
-			    YY_BUFFER_NEW)
+		    register YY_CHAR yy_c = yy_ec[YY_SC_TO_UI (*yy_cp)];
+		    if (yy_accept[yy_current_state])
 		      {
-			  /* We're scanning a new file or input source.  It's
-			   * possible that this happened because the user
-			   * just pointed yyin at a new source and called
-			   * VanuatuWktlex().  If so, then we have to assure
-			   * consistency between YY_CURRENT_BUFFER and our
-			   * globals.  Here is the right place to do so, because
-			   * this is the first action (other than possibly a
-			   * back-up) that will match for the new input source.
-			   */
-			  yyg->yy_n_chars =
-			      YY_CURRENT_BUFFER_LVALUE->yy_n_chars;
-			  YY_CURRENT_BUFFER_LVALUE->yy_input_file = yyin;
-			  YY_CURRENT_BUFFER_LVALUE->yy_buffer_status =
-			      YY_BUFFER_NORMAL;
+			  yyg->yy_last_accepting_state = yy_current_state;
+			  yyg->yy_last_accepting_cpos = yy_cp;
 		      }
-
-		    /* Note that here we test for yy_c_buf_p "<=" to the position
-		     * of the first EOB in the buffer, since yy_c_buf_p will
-		     * already have been incremented past the NUL character
-		     * (since all states make transitions on EOB to the
-		     * end-of-buffer state).  Contrast this with the test
-		     * in input().
-		     */
-		    if (yyg->yy_c_buf_p <=
-			&YY_CURRENT_BUFFER_LVALUE->yy_ch_buf[yyg->yy_n_chars])
-		      {		/* This was really a NUL. */
-			  yy_state_type yy_next_state;
-
-			  yyg->yy_c_buf_p =
-			      yyg->yytext_ptr + yy_amount_of_matched_text;
-
-			  yy_current_state = yy_get_previous_state (yyscanner);
-
-			  /* Okay, we're now positioned to make the NUL
-			   * transition.  We couldn't have
-			   * yy_get_previous_state() go ahead and do it
-			   * for us because it doesn't know how to deal
-			   * with the possibility of jamming (and we don't
-			   * want to build jamming into it because then it
-			   * will run more slowly).
-			   */
-
-			  yy_next_state =
-			      yy_try_NUL_trans (yy_current_state, yyscanner);
-
-			  yy_bp = yyg->yytext_ptr + YY_MORE_ADJ;
-
-			  if (yy_next_state)
-			    {
-				/* Consume the NUL. */
-				yy_cp = ++yyg->yy_c_buf_p;
-				yy_current_state = yy_next_state;
-				goto yy_match;
-			    }
-
-			  else
-			    {
-				yy_cp = yyg->yy_c_buf_p;
-				goto yy_find_action;
-			    }
+		    while (yy_chk[yy_base[yy_current_state] + yy_c] !=
+			   yy_current_state)
+		      {
+			  yy_current_state = (int) yy_def[yy_current_state];
+			  if (yy_current_state >= 171)
+			      yy_c = yy_meta[(unsigned int) yy_c];
 		      }
+		    yy_current_state =
+			yy_nxt[yy_base[yy_current_state] + (unsigned int) yy_c];
+		    ++yy_cp;
+		}
+	      while (yy_base[yy_current_state] != 329);
 
-		    else
-			switch (yy_get_next_buffer (yyscanner))
+	    yy_find_action:
+	      yy_act = yy_accept[yy_current_state];
+	      if (yy_act == 0)
+		{		/* have to back up */
+		    yy_cp = yyg->yy_last_accepting_cpos;
+		    yy_current_state = yyg->yy_last_accepting_state;
+		    yy_act = yy_accept[yy_current_state];
+		}
+
+	      YY_DO_BEFORE_ACTION;
+
+	    do_action:		/* This label is used only to access EOF actions. */
+
+	      switch (yy_act)
+		{		/* beginning of action switch */
+		case 0:	/* must back up */
+		    /* undo the effects of YY_DO_BEFORE_ACTION */
+		    *yy_cp = yyg->yy_hold_char;
+		    yy_cp = yyg->yy_last_accepting_cpos;
+		    yy_current_state = yyg->yy_last_accepting_state;
+		    goto yy_find_action;
+
+		case 1:
+		    YY_RULE_SETUP
+#line 82 "vanuatuLexer.l"
+		    {
+			VanuatuWktget_extra (yyscanner)->vanuatu_col +=
+			    (int) strlen (yytext);
+			VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval =
+			    atof (yytext);
+			return VANUATU_NUM;
+		    }
+		    YY_BREAK case 2:YY_RULE_SETUP
+#line 83 "vanuatuLexer.l"
+		    {
+			VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval =
+			    0;
+			return VANUATU_COMMA;
+		    }
+		    YY_BREAK case 3:YY_RULE_SETUP
+#line 84 "vanuatuLexer.l"
+		    {
+			VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval =
+			    0;
+			return VANUATU_OPEN_BRACKET;
+		    }
+		    YY_BREAK case 4:YY_RULE_SETUP
+#line 85 "vanuatuLexer.l"
+		    {
+			VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval =
+			    0;
+			return VANUATU_CLOSE_BRACKET;
+		    }
+		    YY_BREAK case 5:YY_RULE_SETUP
+#line 86 "vanuatuLexer.l"
+		    {
+			VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval =
+			    0;
+			return VANUATU_POINT;
+		    }
+		    YY_BREAK case 6:
+/* rule 6 can match eol */
+		      YY_RULE_SETUP
+#line 87 "vanuatuLexer.l"
+		    {
+			VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval =
+			    0;
+			return VANUATU_POINT_Z;
+		    }
+		    YY_BREAK case 7:
+/* rule 7 can match eol */
+		      YY_RULE_SETUP
+#line 88 "vanuatuLexer.l"
+		    {
+			VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval =
+			    0;
+			return VANUATU_POINT_M;
+		    }
+		    YY_BREAK case 8:
+/* rule 8 can match eol */
+		      YY_RULE_SETUP
+#line 89 "vanuatuLexer.l"
+		    {
+			VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval =
+			    0;
+			return VANUATU_POINT_ZM;
+		    }
+		    YY_BREAK case 9:YY_RULE_SETUP
+#line 90 "vanuatuLexer.l"
+		    {
+			VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval =
+			    0;
+			return VANUATU_LINESTRING;
+		    }
+		    YY_BREAK case 10:
+/* rule 10 can match eol */
+		      YY_RULE_SETUP
+#line 91 "vanuatuLexer.l"
+		    {
+			VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval =
+			    0;
+			return VANUATU_LINESTRING_Z;
+		    }
+		    YY_BREAK case 11:
+/* rule 11 can match eol */
+		      YY_RULE_SETUP
+#line 92 "vanuatuLexer.l"
+		    {
+			VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval =
+			    0;
+			return VANUATU_LINESTRING_M;
+		    }
+		    YY_BREAK case 12:
+/* rule 12 can match eol */
+		      YY_RULE_SETUP
+#line 93 "vanuatuLexer.l"
+		    {
+			VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval =
+			    0;
+			return VANUATU_LINESTRING_ZM;
+		    }
+		    YY_BREAK case 13:YY_RULE_SETUP
+#line 94 "vanuatuLexer.l"
+		    {
+			VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval =
+			    0;
+			return VANUATU_POLYGON;
+		    }
+		    YY_BREAK case 14:
+/* rule 14 can match eol */
+		      YY_RULE_SETUP
+#line 95 "vanuatuLexer.l"
+		    {
+			VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval =
+			    0;
+			return VANUATU_POLYGON_Z;
+		    }
+		    YY_BREAK case 15:
+/* rule 15 can match eol */
+		      YY_RULE_SETUP
+#line 96 "vanuatuLexer.l"
+		    {
+			VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval =
+			    0;
+			return VANUATU_POLYGON_M;
+		    }
+		    YY_BREAK case 16:
+/* rule 16 can match eol */
+		      YY_RULE_SETUP
+#line 97 "vanuatuLexer.l"
+		    {
+			VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval =
+			    0;
+			return VANUATU_POLYGON_ZM;
+		    }
+		    YY_BREAK case 17:YY_RULE_SETUP
+#line 98 "vanuatuLexer.l"
+		    {
+			VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval =
+			    0;
+			return VANUATU_MULTIPOINT;
+		    }
+		    YY_BREAK case 18:
+/* rule 18 can match eol */
+		      YY_RULE_SETUP
+#line 99 "vanuatuLexer.l"
+		    {
+			VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval =
+			    0;
+			return VANUATU_MULTIPOINT_Z;
+		    }
+		    YY_BREAK case 19:
+/* rule 19 can match eol */
+		      YY_RULE_SETUP
+#line 100 "vanuatuLexer.l"
+		    {
+			VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval =
+			    0;
+			return VANUATU_MULTIPOINT_M;
+		    }
+		    YY_BREAK case 20:
+/* rule 20 can match eol */
+		      YY_RULE_SETUP
+#line 101 "vanuatuLexer.l"
+		    {
+			VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval =
+			    0;
+			return VANUATU_MULTIPOINT_ZM;
+		    }
+		    YY_BREAK case 21:YY_RULE_SETUP
+#line 102 "vanuatuLexer.l"
+		    {
+			VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval =
+			    0;
+			return VANUATU_MULTILINESTRING;
+		    }
+		    YY_BREAK case 22:
+/* rule 22 can match eol */
+		      YY_RULE_SETUP
+#line 103 "vanuatuLexer.l"
+		    {
+			VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval =
+			    0;
+			return VANUATU_MULTILINESTRING_Z;
+		    }
+		    YY_BREAK case 23:
+/* rule 23 can match eol */
+		      YY_RULE_SETUP
+#line 104 "vanuatuLexer.l"
+		    {
+			VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval =
+			    0;
+			return VANUATU_MULTILINESTRING_M;
+		    }
+		    YY_BREAK case 24:
+/* rule 24 can match eol */
+		      YY_RULE_SETUP
+#line 105 "vanuatuLexer.l"
+		    {
+			VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval =
+			    0;
+			return VANUATU_MULTILINESTRING_ZM;
+		    }
+		    YY_BREAK case 25:YY_RULE_SETUP
+#line 106 "vanuatuLexer.l"
+		    {
+			VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval =
+			    0;
+			return VANUATU_MULTIPOLYGON;
+		    }
+		    YY_BREAK case 26:
+/* rule 26 can match eol */
+		      YY_RULE_SETUP
+#line 107 "vanuatuLexer.l"
+		    {
+			VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval =
+			    0;
+			return VANUATU_MULTIPOLYGON_Z;
+		    }
+		    YY_BREAK case 27:
+/* rule 27 can match eol */
+		      YY_RULE_SETUP
+#line 108 "vanuatuLexer.l"
+		    {
+			VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval =
+			    0;
+			return VANUATU_MULTIPOLYGON_M;
+		    }
+		    YY_BREAK case 28:
+/* rule 28 can match eol */
+		      YY_RULE_SETUP
+#line 109 "vanuatuLexer.l"
+		    {
+			VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval =
+			    0;
+			return VANUATU_MULTIPOLYGON_ZM;
+		    }
+		    YY_BREAK case 29:YY_RULE_SETUP
+#line 110 "vanuatuLexer.l"
+		    {
+			VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval =
+			    0;
+			return VANUATU_GEOMETRYCOLLECTION;
+		    }
+		    YY_BREAK case 30:
+/* rule 30 can match eol */
+		      YY_RULE_SETUP
+#line 111 "vanuatuLexer.l"
+		    {
+			VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval =
+			    0;
+			return VANUATU_GEOMETRYCOLLECTION_Z;
+		    }
+		    YY_BREAK case 31:
+/* rule 31 can match eol */
+		      YY_RULE_SETUP
+#line 112 "vanuatuLexer.l"
+		    {
+			VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval =
+			    0;
+			return VANUATU_GEOMETRYCOLLECTION_M;
+		    }
+		    YY_BREAK case 32:
+/* rule 32 can match eol */
+		      YY_RULE_SETUP
+#line 113 "vanuatuLexer.l"
+		    {
+			VanuatuWktget_extra (yyscanner)->VanuatuWktlval.dval =
+			    0;
+			return VANUATU_GEOMETRYCOLLECTION_ZM;
+		    }
+		    YY_BREAK case 33:YY_RULE_SETUP
+#line 115 "vanuatuLexer.l"
+		    {
+			VanuatuWktget_extra (yyscanner)->vanuatu_col +=
+			    (int) strlen (yytext);
+		    }		/* ignore but count white space */
+		    YY_BREAK case 34:
+/* rule 34 can match eol */
+		      YY_RULE_SETUP
+#line 117 "vanuatuLexer.l"
+		    {
+			VanuatuWktget_extra (yyscanner)->vanuatu_col = 0;
+			VanuatuWktget_extra (yyscanner)->vanuatu_line++;
+		    }
+		    YY_BREAK case 35:YY_RULE_SETUP
+#line 119 "vanuatuLexer.l"
+		    {
+			VanuatuWktget_extra (yyscanner)->vanuatu_col +=
+			    (int) strlen (yytext);
+			return -1;
+		    }
+		    YY_BREAK case 36:YY_RULE_SETUP
+#line 120 "vanuatuLexer.l"
+		      ECHO;
+		    YY_BREAK
+#line 1144 "lex.VanuatuWkt.c"
+		case YY_STATE_EOF (INITIAL):
+		    yyterminate ();
+
+		case YY_END_OF_BUFFER:
+		    {
+			/* Amount of text matched not including the EOB char. */
+			int yy_amount_of_matched_text =
+			    (int) (yy_cp - yyg->yytext_ptr) - 1;
+
+			/* Undo the effects of YY_DO_BEFORE_ACTION. */
+			*yy_cp = yyg->yy_hold_char;
+			YY_RESTORE_YY_MORE_OFFSET
+			    if (YY_CURRENT_BUFFER_LVALUE->yy_buffer_status ==
+				YY_BUFFER_NEW)
 			  {
-			  case EOB_ACT_END_OF_FILE:
-			      {
-				  yyg->yy_did_buffer_switch_on_eof = 0;
+			      /* We're scanning a new file or input source.  It's
+			       * possible that this happened because the user
+			       * just pointed yyin at a new source and called
+			       * VanuatuWktlex().  If so, then we have to assure
+			       * consistency between YY_CURRENT_BUFFER and our
+			       * globals.  Here is the right place to do so, because
+			       * this is the first action (other than possibly a
+			       * back-up) that will match for the new input source.
+			       */
+			      yyg->yy_n_chars =
+				  YY_CURRENT_BUFFER_LVALUE->yy_n_chars;
+			      YY_CURRENT_BUFFER_LVALUE->yy_input_file = yyin;
+			      YY_CURRENT_BUFFER_LVALUE->yy_buffer_status =
+				  YY_BUFFER_NORMAL;
+			  }
 
-				  if (VanuatuWktwrap (yyscanner))
-				    {
-					/* Note: because we've taken care in
-					 * yy_get_next_buffer() to have set up
-					 * yytext, we can now set up
-					 * yy_c_buf_p so that if some total
-					 * hoser (like flex itself) wants to
-					 * call the scanner after we return the
-					 * YY_NULL, it'll still work - another
-					 * YY_NULL will get returned.
-					 */
-					yyg->yy_c_buf_p =
-					    yyg->yytext_ptr + YY_MORE_ADJ;
+			/* Note that here we test for yy_c_buf_p "<=" to the position
+			 * of the first EOB in the buffer, since yy_c_buf_p will
+			 * already have been incremented past the NUL character
+			 * (since all states make transitions on EOB to the
+			 * end-of-buffer state).  Contrast this with the test
+			 * in input().
+			 */
+			if (yyg->yy_c_buf_p <=
+			    &YY_CURRENT_BUFFER_LVALUE->
+			    yy_ch_buf[yyg->yy_n_chars])
+			  {	/* This was really a NUL. */
+			      yy_state_type yy_next_state;
 
-					yy_act = YY_STATE_EOF (YY_START);
-					goto do_action;
-				    }
-
-				  else
-				    {
-					if (!yyg->yy_did_buffer_switch_on_eof)
-					    YY_NEW_FILE;
-				    }
-				  break;
-			      }
-
-			  case EOB_ACT_CONTINUE_SCAN:
 			      yyg->yy_c_buf_p =
 				  yyg->yytext_ptr + yy_amount_of_matched_text;
 
 			      yy_current_state =
 				  yy_get_previous_state (yyscanner);
 
-			      yy_cp = yyg->yy_c_buf_p;
+			      /* Okay, we're now positioned to make the NUL
+			       * transition.  We couldn't have
+			       * yy_get_previous_state() go ahead and do it
+			       * for us because it doesn't know how to deal
+			       * with the possibility of jamming (and we don't
+			       * want to build jamming into it because then it
+			       * will run more slowly).
+			       */
+
+			      yy_next_state =
+				  yy_try_NUL_trans (yy_current_state,
+						    yyscanner);
+
 			      yy_bp = yyg->yytext_ptr + YY_MORE_ADJ;
-			      goto yy_match;
 
-			  case EOB_ACT_LAST_MATCH:
-			      yyg->yy_c_buf_p =
-				  &YY_CURRENT_BUFFER_LVALUE->yy_ch_buf[yyg->
-								       yy_n_chars];
+			      if (yy_next_state)
+				{
+				    /* Consume the NUL. */
+				    yy_cp = ++yyg->yy_c_buf_p;
+				    yy_current_state = yy_next_state;
+				    goto yy_match;
+				}
 
-			      yy_current_state =
-				  yy_get_previous_state (yyscanner);
-
-			      yy_cp = yyg->yy_c_buf_p;
-			      yy_bp = yyg->yytext_ptr + YY_MORE_ADJ;
-			      goto yy_find_action;
+			      else
+				{
+				    yy_cp = yyg->yy_c_buf_p;
+				    goto yy_find_action;
+				}
 			  }
-		    break;
-		}
 
-	    default:
-		YY_FATAL_ERROR
-		    ("fatal flex scanner internal error--no action found");
-	    }			/* end of action switch */
-      }				/* end of scanning one token */
+			else
+			    switch (yy_get_next_buffer (yyscanner))
+			      {
+			      case EOB_ACT_END_OF_FILE:
+				  {
+				      yyg->yy_did_buffer_switch_on_eof = 0;
+
+				      if (VanuatuWktwrap (yyscanner))
+					{
+					    /* Note: because we've taken care in
+					     * yy_get_next_buffer() to have set up
+					     * yytext, we can now set up
+					     * yy_c_buf_p so that if some total
+					     * hoser (like flex itself) wants to
+					     * call the scanner after we return the
+					     * YY_NULL, it'll still work - another
+					     * YY_NULL will get returned.
+					     */
+					    yyg->yy_c_buf_p =
+						yyg->yytext_ptr + YY_MORE_ADJ;
+
+					    yy_act = YY_STATE_EOF (YY_START);
+					    goto do_action;
+					}
+
+				      else
+					{
+					    if (!yyg->yy_did_buffer_switch_on_eof)
+						YY_NEW_FILE;
+					}
+				      break;
+				  }
+
+			      case EOB_ACT_CONTINUE_SCAN:
+				  yyg->yy_c_buf_p =
+				      yyg->yytext_ptr +
+				      yy_amount_of_matched_text;
+
+				  yy_current_state =
+				      yy_get_previous_state (yyscanner);
+
+				  yy_cp = yyg->yy_c_buf_p;
+				  yy_bp = yyg->yytext_ptr + YY_MORE_ADJ;
+				  goto yy_match;
+
+			      case EOB_ACT_LAST_MATCH:
+				  yyg->yy_c_buf_p =
+				      &YY_CURRENT_BUFFER_LVALUE->
+				      yy_ch_buf[yyg->yy_n_chars];
+
+				  yy_current_state =
+				      yy_get_previous_state (yyscanner);
+
+				  yy_cp = yyg->yy_c_buf_p;
+				  yy_bp = yyg->yytext_ptr + YY_MORE_ADJ;
+				  goto yy_find_action;
+			      }
+			break;
+		    }
+
+		default:
+		    YY_FATAL_ERROR
+			("fatal flex scanner internal error--no action found");
+		}		/* end of action switch */
+	  }			/* end of scanning one token */
+    }				/* end of user's declarations */
 }				/* end of VanuatuWktlex */
 
 /* yy_get_next_buffer - try to read in a new buffer
@@ -1325,20 +1441,20 @@ yy_get_next_buffer (yyscan_t yyscanner)
 
     else
       {
-	  int num_to_read =
+	  yy_size_t num_to_read =
 	      YY_CURRENT_BUFFER_LVALUE->yy_buf_size - number_to_move - 1;
 
 	  while (num_to_read <= 0)
 	    {			/* Not enough room in the buffer - grow it. */
 
 		/* just a shorter name for the current buffer */
-		YY_BUFFER_STATE b = YY_CURRENT_BUFFER;
+		YY_BUFFER_STATE b = YY_CURRENT_BUFFER_LVALUE;
 
 		int yy_c_buf_p_offset = (int) (yyg->yy_c_buf_p - b->yy_ch_buf);
 
 		if (b->yy_is_our_buffer)
 		  {
-		      int new_size = b->yy_buf_size * 2;
+		      yy_size_t new_size = b->yy_buf_size * 2;
 
 		      if (new_size <= 0)
 			  b->yy_buf_size += b->yy_buf_size / 8;
@@ -1370,7 +1486,7 @@ yy_get_next_buffer (yyscan_t yyscanner)
 
 	  /* Read in more data. */
 	  YY_INPUT ((&YY_CURRENT_BUFFER_LVALUE->yy_ch_buf[number_to_move]),
-		    yyg->yy_n_chars, (size_t) num_to_read);
+		    yyg->yy_n_chars, num_to_read);
 
 	  YY_CURRENT_BUFFER_LVALUE->yy_n_chars = yyg->yy_n_chars;
       }
@@ -1442,7 +1558,7 @@ yy_get_previous_state (yyscan_t yyscanner)
 	  while (yy_chk[yy_base[yy_current_state] + yy_c] != yy_current_state)
 	    {
 		yy_current_state = (int) yy_def[yy_current_state];
-		if (yy_current_state >= 114)
+		if (yy_current_state >= 171)
 		    yy_c = yy_meta[(unsigned int) yy_c];
 	    }
 	  yy_current_state =
@@ -1473,12 +1589,13 @@ yy_try_NUL_trans (yy_state_type yy_current_state, yyscan_t yyscanner)
     while (yy_chk[yy_base[yy_current_state] + yy_c] != yy_current_state)
       {
 	  yy_current_state = (int) yy_def[yy_current_state];
-	  if (yy_current_state >= 114)
+	  if (yy_current_state >= 171)
 	      yy_c = yy_meta[(unsigned int) yy_c];
       }
     yy_current_state = yy_nxt[yy_base[yy_current_state] + (unsigned int) yy_c];
-    yy_is_jam = (yy_current_state == 113);
+    yy_is_jam = (yy_current_state == 170);
 
+    (void) yyg;
     return yy_is_jam ? 0 : yy_current_state;
 }
 
@@ -1509,7 +1626,7 @@ input (yyscan_t yyscanner)
 
 	  else
 	    {			/* need more input */
-		int offset = yyg->yy_c_buf_p - yyg->yytext_ptr;
+		yy_size_t offset = yyg->yy_c_buf_p - yyg->yytext_ptr;
 		++yyg->yy_c_buf_p;
 
 		switch (yy_get_next_buffer (yyscanner))
@@ -1678,10 +1795,6 @@ VanuatuWkt_delete_buffer (YY_BUFFER_STATE b, yyscan_t yyscanner)
     VanuatuWktfree ((void *) b, yyscanner);
 }
 
-#ifndef __cplusplus
-extern int isatty (int);
-#endif /* __cplusplus */
-
 /* Initializes or reinitializes a buffer.
  * This function is sometimes called more than once on the same buffer,
  * such as during a VanuatuWktrestart() or at EOF.
@@ -1804,7 +1917,7 @@ VanuatuWktpop_buffer_state (yyscan_t yyscanner)
 static void
 VanuatuWktensure_buffer_stack (yyscan_t yyscanner)
 {
-    int num_to_alloc;
+    yy_size_t num_to_alloc;
     struct yyguts_t *yyg = (struct yyguts_t *) yyscanner;
 
     if (!yyg->yy_buffer_stack)
@@ -1904,19 +2017,19 @@ VanuatuWkt_scan_string (yyconst char *yystr, yyscan_t yyscanner)
 
 /** Setup the input buffer state to scan the given bytes. The next call to VanuatuWktlex() will
  * scan from a @e copy of @a bytes.
- * @param bytes the byte buffer to scan
- * @param len the number of bytes in the buffer pointed to by @a bytes.
+ * @param yybytes the byte buffer to scan
+ * @param _yybytes_len the number of bytes in the buffer pointed to by @a bytes.
  * @param yyscanner The scanner object.
  * @return the newly allocated buffer state object.
  */
 YY_BUFFER_STATE
-VanuatuWkt_scan_bytes (yyconst char *yybytes, int _yybytes_len,
+VanuatuWkt_scan_bytes (yyconst char *yybytes, yy_size_t _yybytes_len,
 		       yyscan_t yyscanner)
 {
     YY_BUFFER_STATE b;
     char *buf;
     yy_size_t n;
-    int i;
+    yy_size_t i;
 
     /* Get memory for full buffer, including space for trailing EOB's. */
     n = _yybytes_len + 2;
@@ -1948,7 +2061,7 @@ VanuatuWkt_scan_bytes (yyconst char *yybytes, int _yybytes_len,
 static void
 yy_fatal_error (yyconst char *msg, yyscan_t yyscanner)
 {
-    (void) fprintf (stderr, "%s\n", msg);
+    (void) spatialite_e ("%s\n", msg);
     exit (YY_EXIT_FAILURE);
 }
 
@@ -2032,7 +2145,7 @@ VanuatuWktget_out (yyscan_t yyscanner)
 /** Get the length of the current token.
  * @param yyscanner The scanner object.
  */
-int
+yy_size_t
 VanuatuWktget_leng (yyscan_t yyscanner)
 {
     struct yyguts_t *yyg = (struct yyguts_t *) yyscanner;
@@ -2072,8 +2185,7 @@ VanuatuWktset_lineno (int line_number, yyscan_t yyscanner)
 
     /* lineno is only valid if an input buffer exists. */
     if (!YY_CURRENT_BUFFER)
-	yy_fatal_error ("VanuatuWktset_lineno called with no buffer",
-			yyscanner);
+	YY_FATAL_ERROR ("VanuatuWktset_lineno called with no buffer");
 
     yylineno = line_number;
 }
@@ -2089,8 +2201,7 @@ VanuatuWktset_column (int column_no, yyscan_t yyscanner)
 
     /* column is only valid if an input buffer exists. */
     if (!YY_CURRENT_BUFFER)
-	yy_fatal_error ("VanuatuWktset_column called with no buffer",
-			yyscanner);
+	YY_FATAL_ERROR ("VanuatuWktset_column called with no buffer");
 
     yycolumn = column_no;
 }
@@ -2320,6 +2431,10 @@ VanuatuWktfree (void *ptr, yyscan_t yyscanner)
 }
 
 #define YYTABLES_NAME "yytables"
+
+#line 120 "vanuatuLexer.l"
+
+
 
 int
 VanuatuWktwrap (yyscan_t yyscanner)

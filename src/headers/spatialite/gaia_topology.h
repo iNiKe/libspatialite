@@ -464,7 +464,7 @@ extern "C"
  \param ptr pointer to the Topology Accessor Object.
  \param face the unique identifier of the face.
 
- \return pointer to Geomtry (polygon); NULL on failure.
+ \return pointer to Geometry (polygon); NULL on failure.
 
  \sa gaiaTopologyFromDBMS
  */
@@ -636,6 +636,40 @@ extern "C"
 				  int line_max_points, double max_length);
 
 /**
+ Populates a Topology by importing a whole GeoTable - Extended mode
+
+ \param ptr pointer to the Topology Accessor Object.
+ \param sql_in an SQL statement (SELECT) returning input features
+ \param sql_out a second SQL statement (INSERT INTO) intended to
+ store failing features references into the "dustbin" table.
+ \param sql_in2 an SQL statement (SELECT) returning a single input 
+ feature (used for retrying to insert a failing feature)
+ \param tolerance approximation factor.
+ \param line_max_points if set to a positive number all input Linestrings
+ and/or Polygon Rings will be split into simpler Linestrings having no more 
+ than this maximum number of points. 
+ \param max_length if set to a positive value all input Linestrings 
+ and/or Polygon Rings will be split into simpler Lines having a length
+ not exceeding this threshold. If both line_max_points and max_legth
+ are set as the same time the first condition occurring will cause
+ a new Line to be started. 
+
+ \return 0 if all input features were succesfully importer, or a
+ positive number (total count of failing features raising an exception
+ and referenced by the "dustbin" table); -1 if some unexpected
+ error occurred.
+
+ \sa gaiaTopologyFromDBMS
+ */
+    GAIATOPO_DECLARE int
+	gaiaTopoGeo_FromGeoTableExtended (GaiaTopologyAccessorPtr ptr,
+					  const char *sql_in,
+					  const char *sql_out,
+					  const char *sql_in2, double tolerance,
+					  int line_max_points,
+					  double max_length);
+
+/**
  Creates a temporary table containing a validation report for a given TopoGeo.
 
  \param ptr pointer to the Topology Accessor Object.
@@ -652,7 +686,7 @@ extern "C"
  \param ptr pointer to the Topology Accessor Object.
  \param edge the unique identifier of the edge.
 
- \return pointer to Geomtry (point); NULL on failure.
+ \return pointer to Geometry (point); NULL on failure.
 
  \sa gaiaTopologyFromDBMS
  */
@@ -665,7 +699,7 @@ extern "C"
  \param ptr pointer to the Topology Accessor Object.
  \param face the unique identifier of the face.
 
- \return pointer to Geomtry (point); NULL on failure.
+ \return pointer to Geometry (point); NULL on failure.
 
  \sa gaiaTopologyFromDBMS
  */
@@ -685,6 +719,36 @@ extern "C"
  */
     GAIATOPO_DECLARE int
 	gaiaTopoGeoUpdateSeeds (GaiaTopologyAccessorPtr ptr, int mode);
+
+/**
+ Will snap a Point geometry to TopoSeeds
+
+ \param ptr pointer to the Topology Accessor Object.
+ \param pt pointer to the Point Geometry.
+ \param distance tolerance approximation factor.
+
+ \return pointer to Geometry (point); NULL on failure.
+
+ \sa gaiaTopologyFromDBMS
+ */
+    GAIATOPO_DECLARE gaiaGeomCollPtr
+	gaiaTopoGeoSnapPointToSeed (GaiaTopologyAccessorPtr ptr,
+				    gaiaGeomCollPtr pt, double distance);
+
+/**
+ Will snap a Linestring geometry to TopoSeeds
+
+ \param ptr pointer to the Topology Accessor Object.
+ \param ln pointer to the Linestring Geometry.
+ \param distance tolerance approximation factor.
+
+ \return pointer to Geometry (linestring); NULL on failure.
+
+ \sa gaiaTopologyFromDBMS
+ */
+    GAIATOPO_DECLARE gaiaGeomCollPtr
+	gaiaTopoGeoSnapLinestringToSeed (GaiaTopologyAccessorPtr ptr,
+					 gaiaGeomCollPtr ln, double distance);
 
 /**
  Extracts a Simple Features Table out from a Topology by matching
@@ -738,6 +802,46 @@ extern "C"
 					  const char *out_table,
 					  double tolerance,
 					  int with_spatial_index);
+
+/**
+ Removeas all small Faces from a Topology
+
+ \param ptr pointer to the Topology Accessor Object.
+ \param min_area threshold area to identify small Faces.
+
+ \return 1 on success; -1 on failure (will raise an exception).
+
+ \sa gaiaTopologyFromDBMS
+ */
+    GAIATOPO_DECLARE int
+	gaiaTopoGeo_RemoveSmallFaces (GaiaTopologyAccessorPtr ptr,
+				      double min_area);
+
+/**
+ Removeas all dangling Edges from a Topology
+
+ \param ptr pointer to the Topology Accessor Object.
+
+ \return 1 on success; -1 on failure (will raise an exception).
+
+ \sa gaiaTopologyFromDBMS
+ */
+    GAIATOPO_DECLARE int
+	gaiaTopoGeo_RemoveDanglingEdges (GaiaTopologyAccessorPtr ptr);
+
+/**
+ Removeas all dangling Nodes from a Topology
+
+ \param ptr pointer to the Topology Accessor Object.
+
+ \return 1 on success; -1 on failure (will raise an exception).
+
+ \sa gaiaTopologyFromDBMS
+ */
+    GAIATOPO_DECLARE int
+	gaiaTopoGeo_RemoveDanglingNodes (GaiaTopologyAccessorPtr ptr);
+
+
 
 /**
  creates a TopoLayer and its corresponding Feature relations for a given 

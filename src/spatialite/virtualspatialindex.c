@@ -173,7 +173,7 @@ vspidx_check_view_rtree (sqlite3 * sqlite, const char *table_name,
     sqlite3_finalize (stmt);
     if (count != 1)
 	return 0;
-    if (!validateRowid (sqlite, table_name))
+    if (validateRowid (sqlite, table_name))
       {
 	  free (rt);
 	  free (rg);
@@ -637,7 +637,7 @@ vspidx_filter (sqlite3_vtab_cursor * pCursor, int idxNum, const char *idxStr,
 /* setting up a cursor filter */
     char *db_prefix = NULL;
     char *table_name = NULL;
-    char *geom_column;
+    char *geom_column = NULL;
     char *xtable = NULL;
     char *xgeom = NULL;
     char *idx_name;

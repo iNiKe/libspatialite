@@ -374,6 +374,123 @@ getDbfField (struct auxdbf_list *aux, char *name)
 
 #ifndef OMIT_ICONV		/* ICONV enabled: supporting SHP */
 
+static int
+do_check_shp_unique_pk_values (sqlite3 * sqlite, gaiaShapefilePtr shp, int srid,
+			       int text_dates, const char *pk_name, int pk_type)
+{
+/* checking for duplicate PK values */
+    char *sql;
+    sqlite3_stmt *stmt = NULL;
+    gaiaDbfFieldPtr dbf_field;
+    int ret;
+    int duplicates = 0;
+    int current_row = 0;
+
+    sql = "CREATE TABLE TEMP.check_unique_pk (pkey ANYVALUE)";
+    ret = sqlite3_exec (sqlite, sql, NULL, NULL, NULL);
+    if (ret != SQLITE_OK)
+	return 0;
+
+    sql = "INSERT INTO TEMP.check_unique_pk (pkey) VALUES (?)";
+    ret = sqlite3_prepare_v2 (sqlite, sql, strlen (sql), &stmt, NULL);
+    if (ret != SQLITE_OK)
+	goto error;
+
+    sqlite3_exec (sqlite, "BEGIN", NULL, NULL, NULL);
+
+    while (1)
+      {
+	  /* reading rows from shapefile */
+	  int ok_insert = 0;
+	  ret = gaiaReadShpEntity_ex (shp, current_row, srid, text_dates);
+	  if (ret < 0)
+	    {
+		/* found a DBF deleted record */
+		current_row++;
+		continue;
+	    }
+	  if (!ret)
+	      break;
+	  current_row++;
+	  /* binding query params */
+	  sqlite3_reset (stmt);
+	  sqlite3_clear_bindings (stmt);
+	  dbf_field = shp->Dbf->First;
+	  while (dbf_field)
+	    {
+		/* Primary Key value */
+		if (strcasecmp (pk_name, dbf_field->Name) == 0)
+		  {
+		      if (pk_type == SQLITE_TEXT)
+			{
+			    ok_insert = 1;
+			    sqlite3_bind_text (stmt, 1,
+					       dbf_field->Value->TxtValue,
+					       strlen (dbf_field->
+						       Value->TxtValue),
+					       SQLITE_STATIC);
+			}
+		      else if (pk_type == SQLITE_FLOAT)
+			{
+			    ok_insert = 1;
+			    sqlite3_bind_double (stmt, 1,
+						 dbf_field->Value->DblValue);
+			}
+		      else
+			{
+			    ok_insert = 1;
+			    sqlite3_bind_int64 (stmt, 1,
+						dbf_field->Value->IntValue);
+			}
+		  }
+		dbf_field = dbf_field->Next;
+	    }
+	  if (ok_insert)
+	    {
+		ret = sqlite3_step (stmt);
+		if (ret == SQLITE_DONE || ret == SQLITE_ROW)
+		    ;
+		else
+		    goto error;
+	    }
+      }
+    sqlite3_finalize (stmt);
+    stmt = NULL;
+    sqlite3_exec (sqlite, "COMMIT", NULL, NULL, NULL);
+
+    sql = "SELECT Count(*) FROM TEMP.check_unique_pk GROUP BY pkey";
+    ret = sqlite3_prepare_v2 (sqlite, sql, strlen (sql), &stmt, NULL);
+    if (ret != SQLITE_OK)
+	goto error;
+
+    while (1)
+      {
+	  /* scrolling the result set rows */
+	  ret = sqlite3_step (stmt);
+	  if (ret == SQLITE_DONE)
+	      break;		/* end of result set */
+	  if (ret == SQLITE_ROW)
+	    {
+		if (sqlite3_column_int (stmt, 0) > 1)
+		    duplicates = 1;
+	    }
+      }
+    sqlite3_finalize (stmt);
+
+    sqlite3_exec (sqlite, "DROP TABLE TEMP.check_unique_pk", NULL, NULL, NULL);
+    if (duplicates)
+	return 0;
+    else
+	return 1;
+
+  error:
+    if (stmt != NULL)
+	sqlite3_finalize (stmt);
+    sqlite3_exec (sqlite, "COMMIT", NULL, NULL, NULL);
+    sqlite3_exec (sqlite, "DROP TABLE TEMP.check_unique_pk", NULL, NULL, NULL);
+    return 0;
+}
+
 SPATIALITE_DECLARE int
 load_shapefile (sqlite3 * sqlite, char *shp_path, char *table, char *charset,
 		int srid, char *column, int coerce2d, int compressed,
@@ -413,27 +530,31 @@ load_shapefile_ex2 (sqlite3 * sqlite, char *shp_path, char *table,
     gaiaShapefilePtr shp = NULL;
     gaiaDbfFieldPtr dbf_field;
     int cnt;
-    int col_cnt;
+    int col_cnt = 0;
     int seed;
     int len;
     int dup;
     int idup;
-    int current_row;
+    int current_row = 0;
     int deleted = 0;
     char **col_name = NULL;
     unsigned char *blob;
     int blob_size;
-    char *geom_type;
+    char *geom_type = NULL;
     char *txt_dims;
     char *geo_column = g_column;
     char *xgtype = gtype;
     char *qtable = NULL;
     char *qpk_name = NULL;
-    char *pk_name = NULL;
+    const char *pk_name = NULL;
     int pk_autoincr = 1;
     char *xname;
     int pk_type = SQLITE_INTEGER;
     int pk_set;
+    const char *alt_pk[10] =
+	{ "PK_ALT0", "PK_ALT1", "PK_ALT2", "PK_ALT3", "PK_ALT4", "PK_ALT5",
+	"PK_ALT6", "PK_ALT7", "PK_ALT8", "PK_ALT9"
+    };
     gaiaOutBuffer sql_statement;
     if (!geo_column)
 	geo_column = "Geometry";
@@ -652,6 +773,32 @@ load_shapefile_ex2 (sqlite3 * sqlite, char *shp_path, char *table,
 	  else
 	      pk_name = "PK_UID";
       }
+    if (!do_check_shp_unique_pk_values
+	(sqlite, shp, srid, text_dates, pk_name, pk_type))
+      {
+	  const char *old_pk = pk_name;
+	  int antialias;
+	  for (antialias = 0; antialias < 10; antialias++)
+	    {
+		/* searching an alternative Primary Key column name */
+		int found = 0;
+		pk_name = alt_pk[antialias];
+		dbf_field = shp->Dbf->First;
+		while (dbf_field)
+		  {
+		      if (strcasecmp (pk_name, dbf_field->Name) == 0)
+			  found = 1;
+		      dbf_field = dbf_field->Next;
+		  }
+		if (!found)
+		  {
+		      pk_autoincr = 1;
+		      goto ok_pk;
+		  }
+	    }
+	  pk_name = old_pk;
+      }
+  ok_pk:
     qpk_name = gaiaDoubleQuotedSql (pk_name);
     dbf_field = shp->Dbf->First;
     while (dbf_field)
@@ -1506,7 +1653,8 @@ get_default_dbf_fields (sqlite3 * sqlite, const char *xtable,
 		  }
 		else
 		  {
-		      gaiaAddDbfField (list, name, 'C', offset, length, 0);
+		      gaiaAddDbfField (list, name, 'C', offset, (char) length,
+				       0);
 		      offset += length;
 		  }
 		row++;
@@ -1759,11 +1907,11 @@ get_attached_layer_v4 (sqlite3 * handle, const char *db_prefix,
 		    (const char *) sqlite3_column_text (stmt, 0);
 		const char *geometry_column =
 		    (const char *) sqlite3_column_text (stmt, 1);
-		int count;
-		double min_x;
-		double min_y;
-		double max_x;
-		double max_y;
+		int count = 0;
+		double min_x = 0.0;
+		double min_y = 0.0;
+		double max_x = 0.0;
+		double max_y = 0.0;
 		if (sqlite3_column_type (stmt, 2) == SQLITE_NULL)
 		    is_null = 1;
 		else
@@ -1823,11 +1971,11 @@ get_attached_layer_v4 (sqlite3 * handle, const char *db_prefix,
 		int null_max_size = 0;
 		int null_int_range = 0;
 		int null_double_range = 0;
-		int max_size;
+		int max_size = 0;
 		sqlite3_int64 integer_min;
 		sqlite3_int64 integer_max;
-		double double_min;
-		double double_max;
+		double double_min = DBL_MAX;
+		double double_max = 0.0 - DBL_MAX;
 		const char *table_name =
 		    (const char *) sqlite3_column_text (stmt, 0);
 		const char *geometry_column =
@@ -2400,11 +2548,11 @@ get_attached_table_extent_legacy (sqlite3 * handle, const char *db_prefix,
 		    (const char *) sqlite3_column_text (stmt, 0);
 		const char *geometry_column =
 		    (const char *) sqlite3_column_text (stmt, 1);
-		int count;
-		double min_x;
-		double min_y;
-		double max_x;
-		double max_y;
+		int count = 0;
+		double min_x = 0.0;
+		double min_y = 0.0;
+		double max_x = 0.0;
+		double max_y = 0.0;
 		if (sqlite3_column_type (stmt, 2) == SQLITE_NULL)
 		    is_null = 1;
 		else
@@ -2637,7 +2785,7 @@ dump_shapefile (sqlite3 * sqlite, char *table, char *column, char *shp_path,
     char *xcolumn;
     const void *blob_value;
     gaiaShapefilePtr shp = NULL;
-    gaiaDbfListPtr dbf_list;
+    gaiaDbfListPtr dbf_list = NULL;
     gaiaDbfListPtr dbf_write;
     gaiaDbfFieldPtr dbf_field;
     gaiaVectorLayerPtr lyr = NULL;
@@ -2935,7 +3083,7 @@ dump_shapefile (sqlite3 * sqlite, char *table, char *column, char *shp_path,
     while (fld)
       {
 	  int sql_type = SQLITE_NULL;
-	  int max_len;
+	  int max_len = 0;
 	  if (strcasecmp (fld->AttributeFieldName, column) == 0)
 	    {
 		/* ignoring the Geometry itself */
@@ -2985,7 +3133,7 @@ dump_shapefile (sqlite3 * sqlite, char *table, char *column, char *shp_path,
 		      max_len = 254;
 		  }
 		gaiaAddDbfField (dbf_list, fld->AttributeFieldName, 'C', offset,
-				 max_len, 0);
+				 (unsigned char) max_len, 0);
 		offset += max_len;
 	    }
 	  if (sql_type == SQLITE_FLOAT)
@@ -2995,7 +3143,7 @@ dump_shapefile (sqlite3 * sqlite, char *table, char *column, char *shp_path,
 		if (max_len < 8)
 		    max_len = 8;
 		gaiaAddDbfField (dbf_list, fld->AttributeFieldName, 'N', offset,
-				 max_len, 6);
+				 (unsigned char) max_len, 6);
 		offset += max_len;
 	    }
 	  if (sql_type == SQLITE_INTEGER)
@@ -3003,7 +3151,7 @@ dump_shapefile (sqlite3 * sqlite, char *table, char *column, char *shp_path,
 		if (max_len > 18)
 		    max_len = 18;
 		gaiaAddDbfField (dbf_list, fld->AttributeFieldName, 'N', offset,
-				 max_len, 0);
+				 (unsigned char) max_len, 0);
 		offset += max_len;
 	    }
 	  fld = fld->Next;
@@ -3185,6 +3333,122 @@ dump_shapefile (sqlite3 * sqlite, char *table, char *column, char *shp_path,
     return 0;
 }
 
+static int
+do_check_dbf_unique_pk_values (sqlite3 * sqlite, gaiaDbfPtr dbf, int text_dates, const char *pk_name, int pk_type)
+{
+/* checking for duplicate PK values */
+    char *sql;
+    sqlite3_stmt *stmt = NULL;
+    gaiaDbfFieldPtr dbf_field;
+    int ret;
+    int deleted;
+    int duplicates = 0;
+    int current_row = 0;
+
+    sql = "CREATE TABLE TEMP.check_unique_pk (pkey ANYVALUE)";
+    ret = sqlite3_exec (sqlite, sql, NULL, NULL, NULL);
+    if (ret != SQLITE_OK)
+	return 0;
+
+    sql = "INSERT INTO TEMP.check_unique_pk (pkey) VALUES (?)";
+    ret = sqlite3_prepare_v2 (sqlite, sql, strlen (sql), &stmt, NULL);
+    if (ret != SQLITE_OK)
+	goto error;
+
+    sqlite3_exec (sqlite, "BEGIN", NULL, NULL, NULL);
+
+    while (1)
+      {
+	  /* reading rows from shapefile */
+	  int ok_insert = 0;
+	  ret = gaiaReadDbfEntity_ex (dbf, current_row, &deleted, text_dates);
+	  if (!ret)
+	      break;
+	  current_row++;
+	  if (deleted)
+	    {
+		/* skipping DBF deleted row */
+		continue;
+	    }
+	  /* binding query params */
+	  sqlite3_reset (stmt);
+	  sqlite3_clear_bindings (stmt);
+	  dbf_field = dbf->Dbf->First;
+	  while (dbf_field)
+	    {
+		/* Primary Key value */
+		if (strcasecmp (pk_name, dbf_field->Name) == 0)
+		  {
+		      if (pk_type == SQLITE_TEXT)
+			{
+			    ok_insert = 1;
+			    sqlite3_bind_text (stmt, 1,
+					       dbf_field->Value->TxtValue,
+					       strlen (dbf_field->
+						       Value->TxtValue),
+					       SQLITE_STATIC);
+			}
+		      else if (pk_type == SQLITE_FLOAT)
+			{
+			    ok_insert = 1;
+			    sqlite3_bind_double (stmt, 1,
+						 dbf_field->Value->DblValue);
+			}
+		      else
+			{
+			    ok_insert = 1;
+			    sqlite3_bind_int64 (stmt, 1,
+						dbf_field->Value->IntValue);
+			}
+		  }
+		dbf_field = dbf_field->Next;
+	    }
+	  if (ok_insert)
+	    {
+		ret = sqlite3_step (stmt);
+		if (ret == SQLITE_DONE || ret == SQLITE_ROW)
+		    ;
+		else
+		    goto error;
+	    }
+      }
+    sqlite3_finalize (stmt);
+    stmt = NULL;
+    sqlite3_exec (sqlite, "COMMIT", NULL, NULL, NULL);
+
+    sql = "SELECT Count(*) FROM TEMP.check_unique_pk GROUP BY pkey";
+    ret = sqlite3_prepare_v2 (sqlite, sql, strlen (sql), &stmt, NULL);
+    if (ret != SQLITE_OK)
+	goto error;
+
+    while (1)
+      {
+	  /* scrolling the result set rows */
+	  ret = sqlite3_step (stmt);
+	  if (ret == SQLITE_DONE)
+	      break;		/* end of result set */
+	  if (ret == SQLITE_ROW)
+	    {
+		if (sqlite3_column_int (stmt, 0) > 1)
+		    duplicates = 1;
+	    }
+      }
+    sqlite3_finalize (stmt);
+
+    sqlite3_exec (sqlite, "DROP TABLE TEMP.check_unique_pk", NULL, NULL, NULL);
+    if (duplicates)
+	return 0;
+    else
+	return 1;
+
+  error:
+    if (stmt != NULL)
+	sqlite3_finalize (stmt);
+    sqlite3_exec (sqlite, "COMMIT", NULL, NULL, NULL);
+    sqlite3_exec (sqlite, "DROP TABLE TEMP.check_unique_pk", NULL, NULL, NULL);
+    return 0;
+}
+
 SPATIALITE_DECLARE int
 load_dbf (sqlite3 * sqlite, char *dbf_path, char *table, char *charset,
 	  int verbose, int *rows, char *err_msg)
@@ -3222,16 +3486,20 @@ load_dbf_ex2 (sqlite3 * sqlite, char *dbf_path, char *table, char *pk_column,
     int len;
     int dup;
     int idup;
-    int current_row;
+    int current_row = 0;
     char **col_name = NULL;
     int deleted;
     char *qtable = NULL;
     char *qpk_name = NULL;
-    char *pk_name = NULL;
+    const char *pk_name = NULL;
     int pk_autoincr = 1;
     gaiaOutBuffer sql_statement;
     int pk_type = SQLITE_INTEGER;
     int pk_set;
+    const char *alt_pk[10] =
+	{ "PK_ALT0", "PK_ALT1", "PK_ALT2", "PK_ALT3", "PK_ALT4", "PK_ALT5",
+	"PK_ALT6", "PK_ALT7", "PK_ALT8", "PK_ALT9"
+    };
     qtable = gaiaDoubleQuotedSql (table);
     if (rows)
 	*rows = -1;
@@ -3372,6 +3640,32 @@ load_dbf_ex2 (sqlite3 * sqlite, char *dbf_path, char *table, char *pk_column,
 	  else
 	      pk_name = "PK_UID";
       }
+    if (!do_check_dbf_unique_pk_values
+	(sqlite, dbf, text_dates, pk_name, pk_type))
+      {
+	  const char *old_pk = pk_name;
+	  int antialias;
+	  for (antialias = 0; antialias < 10; antialias++)
+	    {
+		/* searching an alternative Primary Key column name */
+		int found = 0;
+		pk_name = alt_pk[antialias];
+		dbf_field = dbf->Dbf->First;
+		while (dbf_field)
+		  {
+		      if (strcasecmp (pk_name, dbf_field->Name) == 0)
+			  found = 1;
+		      dbf_field = dbf_field->Next;
+		  }
+		if (!found)
+		  {
+		      pk_autoincr = 1;
+		      goto ok_pk;
+		  }
+	    }
+	  pk_name = old_pk;
+      }
+  ok_pk:
     qpk_name = gaiaDoubleQuotedSql (pk_name);
     dbf_field = dbf->Dbf->First;
     while (dbf_field)
@@ -3686,8 +3980,10 @@ load_dbf_ex2 (sqlite3 * sqlite, char *dbf_path, char *table, char *pk_column,
   clean_up:
     if (qtable)
 	free (qtable);
+    qtable = NULL;
     if (qpk_name)
 	free (qpk_name);
+    qpk_name = NULL;
     gaiaFreeDbf (dbf);
     if (col_name)
       {
@@ -3753,7 +4049,7 @@ dump_dbf_ex (sqlite3 * sqlite, char *table, char *dbf_path, char *charset,
     int rows;
     int i;
     char *sql;
-    char *xtable;
+    char *xtable = NULL;
     sqlite3_stmt *stmt;
     int row1 = 0;
     int n_cols = 0;
@@ -3881,7 +4177,7 @@ dump_dbf_ex (sqlite3 * sqlite, char *table, char *dbf_path, char *charset,
 	  if (sql_type[i] == SQLITE_TEXT)
 	    {
 		gaiaAddDbfField (dbf_list, dbf_field->Name, 'C', offset,
-				 max_length[i], 0);
+				 (unsigned char) (max_length[i]), 0);
 		offset += max_length[i];
 	    }
 	  if (sql_type[i] == SQLITE_FLOAT)
@@ -5821,7 +6117,9 @@ load_XL (sqlite3 * sqlite, const char *path, const char *table,
 	;
     else
 	goto error;
-    ret = freexl_select_active_worksheet (xl_handle, worksheetIndex);
+    ret =
+	freexl_select_active_worksheet (xl_handle,
+					(unsigned short) worksheetIndex);
     if (ret != FREEXL_OK)
 	goto error;
     ret = freexl_worksheet_dimensions (xl_handle, rows, &columns);

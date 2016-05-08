@@ -113,16 +113,18 @@ text_clean_integer (char *value)
 {
 /* cleaning an integer value */
     char last;
-    char buffer[35536];
+    char *buffer;
     int len = strlen (value);
     last = value[len - 1];
     if (last == '-' || last == '+')
       {
 	  /* trailing sign; transforming into a leading sign */
+	  buffer = malloc (len + 1);
 	  *buffer = last;
 	  strcpy (buffer + 1, value);
 	  buffer[len - 1] = '\0';
 	  strcpy (value, buffer);
+	  free (buffer);
       }
 }
 
@@ -132,16 +134,18 @@ text_clean_double (char *value)
 /* cleaning an integer value */
     char *p;
     char last;
-    char buffer[35536];
+    char *buffer;
     int len = strlen (value);
     last = value[len - 1];
     if (last == '-' || last == '+')
       {
 	  /* trailing sign; transforming into a leading sign */
+	  buffer = malloc (len + 1);
 	  *buffer = last;
 	  strcpy (buffer + 1, value);
 	  buffer[len - 1] = '\0';
 	  strcpy (value, buffer);
+	  free (buffer);
       }
     p = value;
     while (*p != '\0')
@@ -504,8 +508,8 @@ vtxt_eval_constraints (VirtualTextCursorPtr cursor)
     char buf[4096];
     int type;
     const char *value = NULL;
-    sqlite3_int64 int_value;
-    double dbl_value;
+    sqlite3_int64 int_value = 0;
+    double dbl_value = 0.0;
     char *txt_value = NULL;
     int is_int = 0;
     int is_dbl = 0;
@@ -1164,9 +1168,55 @@ vrttxt_is_integer (const char *value)
 }
 
 static int
-vrttxt_is_double (const char *value, char decimal_separator)
+vrttxt_is_scientific_double (const char *value, char decimal_separator)
 {
-/* checking if this value can be a DOUBLE */
+/* checking if this value can be a DOUBLE (scientific notation: -1.567E-16) */
+    int points = 0;
+    int exp = 0;
+    int sign = 0;
+    int invalid = 0;
+    int digit2 = 0;
+    int digit3 = 0;
+    const char *p = value;
+    if (*p == '-' || *p == '+')
+	p++;			/* skipping the first sign */
+    while (*p != '\0')
+      {
+	  if (*p == decimal_separator)
+	    {
+		if (digit2 == 0)
+		    points++;
+		else
+		    invalid++;
+	    }
+	  else if (*p == 'E' || *p == 'e')
+	      exp++;
+	  else if (*p == '-' || *p == '+')
+	    {
+		if (exp && !digit3)
+		    sign++;
+		else
+		    invalid++;
+	    }
+	  else if (*p >= '0' && *p <= '9')
+	    {
+		if (exp)
+		    digit3++;
+		else if (points)
+		    digit2++;
+	    }
+	  p++;
+      }
+    if (digit2 >= 0 && exp == 1 && (sign == 0 || sign == 1) && digit3
+	&& !invalid)
+	return 1;
+    return 0;
+}
+
+static int
+vrttxt_is_plain_double (const char *value, char decimal_separator)
+{
+/* checking if this value can be a DOUBLE (normal case: -123.567 */
     int invalids = 0;
     int digits = 0;
     int signs = 0;
@@ -1213,6 +1263,17 @@ vrttxt_is_double (const char *value, char decimal_separator)
 	      return 0;		/* sign is not the first/last string char */
       }
     return 1;			/* ok, can be a valid DOUBLE value */
+}
+
+static int
+vrttxt_is_double (const char *value, char decimal_separator)
+{
+/* checking if this value can be a DOUBLE */
+    if (vrttxt_is_plain_double (value, decimal_separator))
+	return 1;
+    if (vrttxt_is_scientific_double (value, decimal_separator))
+	return 1;
+    return 0;
 }
 
 static int
@@ -1539,7 +1600,7 @@ gaiaTextReaderParse (gaiaTextReaderPtr txt)
 		      if (token_start)
 			  masked = 1;
 		  }
-		vrttxt_line_push (txt, c);
+		vrttxt_line_push (txt, (char) c);
 		if (txt->error)
 		    return 0;
 		row_offset++;
@@ -1551,7 +1612,7 @@ gaiaTextReaderParse (gaiaTextReaderPtr txt)
 	    {
 		if (masked)
 		  {
-		      vrttxt_line_push (txt, c);
+		      vrttxt_line_push (txt, (char) c);
 		      if (txt->error)
 			  return 0;
 		      row_offset++;
@@ -1563,7 +1624,7 @@ gaiaTextReaderParse (gaiaTextReaderPtr txt)
 	    {
 		if (masked)
 		  {
-		      vrttxt_line_push (txt, c);
+		      vrttxt_line_push (txt, (char) c);
 		      if (txt->error)
 			  return 0;
 		      row_offset++;
@@ -1586,14 +1647,14 @@ gaiaTextReaderParse (gaiaTextReaderPtr txt)
 	    {
 		if (masked)
 		  {
-		      vrttxt_line_push (txt, c);
+		      vrttxt_line_push (txt, (char) c);
 		      if (txt->error)
 			  return 0;
 		      row_offset++;
 		      offset++;
 		      continue;
 		  }
-		vrttxt_line_push (txt, c);
+		vrttxt_line_push (txt, (char) c);
 		if (txt->error)
 		    return 0;
 		row_offset++;
@@ -1602,7 +1663,7 @@ gaiaTextReaderParse (gaiaTextReaderPtr txt)
 		offset++;
 		continue;
 	    }
-	  vrttxt_line_push (txt, c);
+	  vrttxt_line_push (txt, (char) c);
 	  if (txt->error)
 	      return 0;
 	  row_offset++;

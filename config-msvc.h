@@ -14,14 +14,17 @@
 /* Should be defined in order to enable LIBXML2 support. */
 #define ENABLE_LIBXML2 1
 
-/* Should be defined in order to enable LWGEOM support. */
-/* #undef ENABLE_LWGEOM */
+/* Should be defined in order to enable RTTOPO support. */
+#define ENABLE_RTTOPO 1
 
 /* Should be defined in order to enable GEOS_ADVANCED support. */
 #define GEOS_ADVANCED 1
 
-/* Should be defined in order to enable GEOS_TRUNK experimental support. */
-/* #undef GEOS_TRUNK */
+/* Should be defined in order to fully disable GEOS non-thread-safe API. */
+/* #undef GEOS_ONLY_REENTRANT */
+
+/* Should be defined in order to enable GEOS_REENTRANT (fully thread-safe). */
+#define GEOS_REENTRANT 1
 
 /* Define to 1 if you have the <dlfcn.h> header file. */
 #define HAVE_DLFCN_H 1
@@ -190,7 +193,7 @@
 #define PACKAGE_NAME "libspatialite"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "libspatialite 4.3.0-RC1"
+#define PACKAGE_STRING "libspatialite 4.4.0-RC1"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "libspatialite"
@@ -199,7 +202,7 @@
 #define PACKAGE_URL ""
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "4.3.0"
+#define PACKAGE_VERSION "4.4.0-RC1"
 
 /* Should be defined when linking liblwgeom from PostGIS 2.1 (or later). */
 /* #undefine POSTGIS_2_1 */
@@ -217,7 +220,7 @@
 /* #undef TM_IN_SYS_TIME */
 
 /* Version number of package */
-#define VERSION "4.3.0-RC1"
+#define VERSION "4.4.0-RC1"
 
 /* Must be =64 in order to enable huge-file support. */
 #define _FILE_OFFSET_BITS 64

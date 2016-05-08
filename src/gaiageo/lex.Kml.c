@@ -8,7 +8,7 @@
 #define FLEX_SCANNER
 #define YY_FLEX_MAJOR_VERSION 2
 #define YY_FLEX_MINOR_VERSION 5
-#define YY_FLEX_SUBMINOR_VERSION 35
+#define YY_FLEX_SUBMINOR_VERSION 39
 #if YY_FLEX_SUBMINOR_VERSION > 0
 #define FLEX_BETA
 #endif
@@ -53,7 +53,6 @@ typedef int flex_int32_t;
 typedef unsigned char flex_uint8_t;
 typedef unsigned short int flex_uint16_t;
 typedef unsigned int flex_uint32_t;
-#endif /* ! C99 */
 
 /* Limits of integral types. */
 #ifndef INT8_MIN
@@ -83,6 +82,8 @@ typedef unsigned int flex_uint32_t;
 #ifndef UINT32_MAX
 #define UINT32_MAX             (4294967295U)
 #endif
+
+#endif /* ! C99 */
 
 #endif /* ! FLEXINT_H */
 
@@ -169,11 +170,17 @@ typedef void *yyscan_t;
 typedef struct yy_buffer_state *YY_BUFFER_STATE;
 #endif
 
+#ifndef YY_TYPEDEF_YY_SIZE_T
+#define YY_TYPEDEF_YY_SIZE_T
+typedef size_t yy_size_t;
+#endif
+
 #define EOB_ACT_CONTINUE_SCAN 0
 #define EOB_ACT_END_OF_FILE 1
 #define EOB_ACT_LAST_MATCH 2
 
 #define YY_LESS_LINENO(n)
+#define YY_LINENO_REWIND_TO(ptr)
 
 /* Return all but the first "n" matched characters back to the input stream. */
 #define yyless(n) \
@@ -190,11 +197,6 @@ typedef struct yy_buffer_state *YY_BUFFER_STATE;
 	while ( 0 )
 
 #define unput(c) yyunput( c, yyg->yytext_ptr , yyscanner )
-
-#ifndef YY_TYPEDEF_YY_SIZE_T
-#define YY_TYPEDEF_YY_SIZE_T
-typedef size_t yy_size_t;
-#endif
 
 #ifndef YY_STRUCT_YY_BUFFER_STATE
 #define YY_STRUCT_YY_BUFFER_STATE
@@ -213,7 +215,7 @@ struct yy_buffer_state
     /* Number of characters read into yy_ch_buf, not including EOB
      * characters.
      */
-    int yy_n_chars;
+    yy_size_t yy_n_chars;
 
     /* Whether we "own" the buffer - i.e., we know we created it,
      * and can realloc() it to grow it, and should free() it to
@@ -294,7 +296,7 @@ static void Kml_init_buffer (YY_BUFFER_STATE b, FILE * file,
 YY_BUFFER_STATE Kml_scan_buffer (char *base, yy_size_t size,
 				 yyscan_t yyscanner);
 YY_BUFFER_STATE Kml_scan_string (yyconst char *yy_str, yyscan_t yyscanner);
-YY_BUFFER_STATE Kml_scan_bytes (yyconst char *bytes, int len,
+YY_BUFFER_STATE Kml_scan_bytes (yyconst char *bytes, yy_size_t len,
 				yyscan_t yyscanner);
 
 void *Kmlalloc (yy_size_t, yyscan_t yyscanner);
@@ -358,9 +360,9 @@ struct yy_trans_info
     flex_int32_t yy_verify;
     flex_int32_t yy_nxt;
 };
-static yyconst flex_int16_t yy_accept[19] = { 0,
+static yyconst flex_int16_t yy_accept[21] = { 0,
     5, 5, 12, 10, 8, 9, 10, 5, 1, 3,
-    2, 4, 7, 0, 6, 5, 7, 0
+    2, 4, 7, 5, 0, 6, 5, 7, 5, 0
 };
 
 static yyconst flex_int32_t yy_ec[256] = { 0,
@@ -370,12 +372,12 @@ static yyconst flex_int32_t yy_ec[256] = { 0,
     1, 2, 1, 4, 1, 1, 1, 1, 1, 1,
     1, 1, 5, 5, 5, 5, 6, 7, 7, 7,
     7, 7, 7, 7, 7, 7, 7, 8, 1, 9,
-    10, 11, 1, 1, 12, 12, 12, 12, 12, 12,
+    10, 11, 1, 1, 12, 12, 12, 12, 13, 12,
     12, 12, 12, 12, 12, 12, 12, 12, 12, 12,
     12, 12, 12, 12, 12, 12, 12, 12, 12, 12,
     1, 1, 1, 1, 12, 1, 12, 12, 12, 12,
 
-    12, 12, 12, 12, 12, 12, 12, 12, 12, 12,
+    13, 12, 12, 12, 12, 12, 12, 12, 12, 12,
     12, 12, 12, 12, 12, 12, 12, 12, 12, 12,
     12, 12, 1, 1, 1, 1, 1, 1, 1, 1,
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
@@ -394,35 +396,37 @@ static yyconst flex_int32_t yy_ec[256] = { 0,
     1, 1, 1, 1, 1
 };
 
-static yyconst flex_int32_t yy_meta[13] = { 0,
+static yyconst flex_int32_t yy_meta[14] = { 0,
     1, 1, 1, 1, 2, 1, 3, 4, 5, 1,
-    5, 4
+    5, 4, 3
 };
 
-static yyconst flex_int16_t yy_base[22] = { 0,
-    0, 0, 23, 24, 24, 24, 18, 0, 24, 24,
-    24, 24, 0, 17, 24, 0, 0, 24, 12, 15,
-    16
+static yyconst flex_int16_t yy_base[24] = { 0,
+    0, 0, 19, 31, 31, 31, 14, 0, 31, 31,
+    31, 31, 0, 9, 11, 31, 0, 0, 0, 31,
+    22, 25, 26
 };
 
-static yyconst flex_int16_t yy_def[22] = { 0,
-    18, 1, 18, 18, 18, 18, 19, 20, 18, 18,
-    18, 18, 21, 19, 18, 20, 21, 0, 18, 18,
-    18
+static yyconst flex_int16_t yy_def[24] = { 0,
+    20, 1, 20, 20, 20, 20, 21, 22, 20, 20,
+    20, 20, 23, 20, 21, 20, 22, 23, 14, 0,
+    20, 20, 20
 };
 
-static yyconst flex_int16_t yy_nxt[37] = { 0,
+static yyconst flex_int16_t yy_nxt[45] = { 0,
     4, 5, 6, 7, 8, 9, 8, 4, 10, 11,
-    12, 13, 14, 14, 14, 14, 16, 16, 17, 17,
-    15, 15, 18, 3, 18, 18, 18, 18, 18, 18,
-    18, 18, 18, 18, 18, 18
+    12, 13, 14, 17, 16, 19, 18, 16, 20, 20,
+    18, 19, 15, 15, 15, 15, 17, 17, 18, 18,
+    3, 20, 20, 20, 20, 20, 20, 20, 20, 20,
+    20, 20, 20, 20
 };
 
-static yyconst flex_int16_t yy_chk[37] = { 0,
+static yyconst flex_int16_t yy_chk[45] = { 0,
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-    1, 1, 19, 19, 19, 19, 20, 20, 21, 21,
-    14, 7, 3, 18, 18, 18, 18, 18, 18, 18,
-    18, 18, 18, 18, 18, 18
+    1, 1, 1, 14, 15, 14, 14, 7, 3, 0,
+    14, 14, 21, 21, 21, 21, 22, 22, 23, 23,
+    20, 20, 20, 20, 20, 20, 20, 20, 20, 20,
+    20, 20, 20, 20
 };
 
 /* The intent behind this definition is that it'll catch
@@ -432,6 +436,7 @@ static yyconst flex_int16_t yy_chk[37] = { 0,
 #define yymore() yymore_used_but_not_detected
 #define YY_MORE_ADJ 0
 #define YY_RESTORE_YY_MORE_OFFSET
+#line 1 "kmlLexer.l"
 /* 
  kmlLexer.l -- KML parser - FLEX config
   
@@ -484,6 +489,7 @@ the terms of any one of the MPL, the GPL or the LGPL.
 *  Flex would match both POINT and POINTM, but since POINTM is the longer
 *  of the two tokens, FLEX will match POINTM.
 */
+#line 496 "lex.Kml.c"
 
 #define INITIAL 0
 
@@ -510,8 +516,8 @@ struct yyguts_t
     size_t yy_buffer_stack_max;	/**< capacity of stack. */
     YY_BUFFER_STATE *yy_buffer_stack;  /**< Stack as an array. */
     char yy_hold_char;
-    int yy_n_chars;
-    int yyleng_r;
+    yy_size_t yy_n_chars;
+    yy_size_t yyleng_r;
     char *yy_c_buf_p;
     int yy_init;
     int yy_start;
@@ -558,7 +564,7 @@ FILE *Kmlget_out (yyscan_t yyscanner);
 
 void Kmlset_out (FILE * out_str, yyscan_t yyscanner);
 
-int Kmlget_leng (yyscan_t yyscanner);
+yy_size_t Kmlget_leng (yyscan_t yyscanner);
 
 char *Kmlget_text (yyscan_t yyscanner);
 
@@ -621,7 +627,7 @@ static int input (yyscan_t yyscanner);
 	if ( YY_CURRENT_BUFFER_LVALUE->yy_is_interactive ) \
 		{ \
 		int c = '*'; \
-		unsigned n; \
+		size_t n; \
 		for ( n = 0; n < max_size && \
 			     (c = getc( yyin )) != EOF && c != '\n'; ++n ) \
 			buf[n] = (char) c; \
@@ -731,264 +737,308 @@ YY_DECL
 	  Kml_load_buffer_state (yyscanner);
       }
 
-    while (1)			/* loops until end-of-file is reached */
-      {
-	  yy_cp = yyg->yy_c_buf_p;
+    {
+#line 59 "kmlLexer.l"
 
-	  /* Support of yytext. */
-	  *yy_cp = yyg->yy_hold_char;
+#line 746 "lex.Kml.c"
 
-	  /* yy_bp points to the position in yy_ch_buf of the start of
-	   * the current run.
-	   */
-	  yy_bp = yy_cp;
+	while (1)		/* loops until end-of-file is reached */
+	  {
+	      yy_cp = yyg->yy_c_buf_p;
 
-	  yy_current_state = yyg->yy_start;
-	yy_match:
-	  do
-	    {
-		register YY_CHAR yy_c = yy_ec[YY_SC_TO_UI (*yy_cp)];
-		if (yy_accept[yy_current_state])
-		  {
-		      yyg->yy_last_accepting_state = yy_current_state;
-		      yyg->yy_last_accepting_cpos = yy_cp;
-		  }
-		while (yy_chk[yy_base[yy_current_state] + yy_c] !=
-		       yy_current_state)
-		  {
-		      yy_current_state = (int) yy_def[yy_current_state];
-		      if (yy_current_state >= 19)
-			  yy_c = yy_meta[(unsigned int) yy_c];
-		  }
-		yy_current_state =
-		    yy_nxt[yy_base[yy_current_state] + (unsigned int) yy_c];
-		++yy_cp;
-	    }
-	  while (yy_base[yy_current_state] != 24);
+	      /* Support of yytext. */
+	      *yy_cp = yyg->yy_hold_char;
 
-	yy_find_action:
-	  yy_act = yy_accept[yy_current_state];
-	  if (yy_act == 0)
-	    {			/* have to back up */
-		yy_cp = yyg->yy_last_accepting_cpos;
-		yy_current_state = yyg->yy_last_accepting_state;
-		yy_act = yy_accept[yy_current_state];
-	    }
+	      /* yy_bp points to the position in yy_ch_buf of the start of
+	       * the current run.
+	       */
+	      yy_bp = yy_cp;
 
-	  YY_DO_BEFORE_ACTION;
-
-	do_action:		/* This label is used only to access EOF actions. */
-
-	  switch (yy_act)
-	    {			/* beginning of action switch */
-	    case 0:		/* must back up */
-		/* undo the effects of YY_DO_BEFORE_ACTION */
-		*yy_cp = yyg->yy_hold_char;
-		yy_cp = yyg->yy_last_accepting_cpos;
-		yy_current_state = yyg->yy_last_accepting_state;
-		goto yy_find_action;
-
-	    case 1:
-		YY_RULE_SETUP
+	      yy_current_state = yyg->yy_start;
+	    yy_match:
+	      do
 		{
-		    kml_freeString (&(Kmlget_extra (yyscanner)->KmlLval.pval));
-		    return KML_END;
-		}
-		YY_BREAK case 2:YY_RULE_SETUP
-		{
-		    kml_freeString (&(Kmlget_extra (yyscanner)->KmlLval.pval));
-		    return KML_EQ;
-		}
-		YY_BREAK case 3:YY_RULE_SETUP
-		{
-		    kml_freeString (&(Kmlget_extra (yyscanner)->KmlLval.pval));
-		    return KML_OPEN;
-		}
-		YY_BREAK case 4:YY_RULE_SETUP
-		{
-		    kml_freeString (&(Kmlget_extra (yyscanner)->KmlLval.pval));
-		    return KML_CLOSE;
-		}
-		YY_BREAK case 5:YY_RULE_SETUP
-		{
-		    kml_saveString (&(Kmlget_extra (yyscanner)->KmlLval.pval),
-				    yytext);
-		    return KML_COORD;
-		}
-		YY_BREAK case 6:
-/* rule 6 can match eol */
-		  YY_RULE_SETUP
-		{
-		    kml_saveString (&(Kmlget_extra (yyscanner)->KmlLval.pval),
-				    yytext);
-		    return KML_VALUE;
-		}
-		YY_BREAK case 7:YY_RULE_SETUP
-		{
-		    kml_saveString (&(Kmlget_extra (yyscanner)->KmlLval.pval),
-				    yytext);
-		    return KML_KEYWORD;
-		}
-		YY_BREAK case 8:YY_RULE_SETUP
-		{
-		    kml_freeString (&(Kmlget_extra (yyscanner)->KmlLval.pval));
-		    Kmlget_extra (yyscanner)->kml_col += (int) strlen (yytext);
-		}		/* ignore but count white space */
-		YY_BREAK case 9:
-/* rule 9 can match eol */
-		  YY_RULE_SETUP
-		{
-		    kml_freeString (&(Kmlget_extra (yyscanner)->KmlLval.pval));
-		    Kmlget_extra (yyscanner)->kml_col = 0;
-		    Kmlget_extra (yyscanner)->kml_line++;
-		}
-		YY_BREAK case 10:YY_RULE_SETUP
-		{
-		    kml_freeString (&(Kmlget_extra (yyscanner)->KmlLval.pval));
-		    Kmlget_extra (yyscanner)->kml_col += (int) strlen (yytext);
-		    return -1;
-		}
-		YY_BREAK case 11:YY_RULE_SETUP ECHO;
-		YY_BREAK case YY_STATE_EOF (INITIAL):yyterminate ();
-
-	    case YY_END_OF_BUFFER:
-		{
-		    /* Amount of text matched not including the EOB char. */
-		    int yy_amount_of_matched_text =
-			(int) (yy_cp - yyg->yytext_ptr) - 1;
-
-		    /* Undo the effects of YY_DO_BEFORE_ACTION. */
-		    *yy_cp = yyg->yy_hold_char;
-		    YY_RESTORE_YY_MORE_OFFSET
-			if (YY_CURRENT_BUFFER_LVALUE->yy_buffer_status ==
-			    YY_BUFFER_NEW)
+		    register YY_CHAR yy_c = yy_ec[YY_SC_TO_UI (*yy_cp)];
+		    if (yy_accept[yy_current_state])
 		      {
-			  /* We're scanning a new file or input source.  It's
-			   * possible that this happened because the user
-			   * just pointed yyin at a new source and called
-			   * Kmllex().  If so, then we have to assure
-			   * consistency between YY_CURRENT_BUFFER and our
-			   * globals.  Here is the right place to do so, because
-			   * this is the first action (other than possibly a
-			   * back-up) that will match for the new input source.
-			   */
-			  yyg->yy_n_chars =
-			      YY_CURRENT_BUFFER_LVALUE->yy_n_chars;
-			  YY_CURRENT_BUFFER_LVALUE->yy_input_file = yyin;
-			  YY_CURRENT_BUFFER_LVALUE->yy_buffer_status =
-			      YY_BUFFER_NORMAL;
+			  yyg->yy_last_accepting_state = yy_current_state;
+			  yyg->yy_last_accepting_cpos = yy_cp;
 		      }
-
-		    /* Note that here we test for yy_c_buf_p "<=" to the position
-		     * of the first EOB in the buffer, since yy_c_buf_p will
-		     * already have been incremented past the NUL character
-		     * (since all states make transitions on EOB to the
-		     * end-of-buffer state).  Contrast this with the test
-		     * in input().
-		     */
-		    if (yyg->yy_c_buf_p <=
-			&YY_CURRENT_BUFFER_LVALUE->yy_ch_buf[yyg->yy_n_chars])
-		      {		/* This was really a NUL. */
-			  yy_state_type yy_next_state;
-
-			  yyg->yy_c_buf_p =
-			      yyg->yytext_ptr + yy_amount_of_matched_text;
-
-			  yy_current_state = yy_get_previous_state (yyscanner);
-
-			  /* Okay, we're now positioned to make the NUL
-			   * transition.  We couldn't have
-			   * yy_get_previous_state() go ahead and do it
-			   * for us because it doesn't know how to deal
-			   * with the possibility of jamming (and we don't
-			   * want to build jamming into it because then it
-			   * will run more slowly).
-			   */
-
-			  yy_next_state =
-			      yy_try_NUL_trans (yy_current_state, yyscanner);
-
-			  yy_bp = yyg->yytext_ptr + YY_MORE_ADJ;
-
-			  if (yy_next_state)
-			    {
-				/* Consume the NUL. */
-				yy_cp = ++yyg->yy_c_buf_p;
-				yy_current_state = yy_next_state;
-				goto yy_match;
-			    }
-
-			  else
-			    {
-				yy_cp = yyg->yy_c_buf_p;
-				goto yy_find_action;
-			    }
+		    while (yy_chk[yy_base[yy_current_state] + yy_c] !=
+			   yy_current_state)
+		      {
+			  yy_current_state = (int) yy_def[yy_current_state];
+			  if (yy_current_state >= 21)
+			      yy_c = yy_meta[(unsigned int) yy_c];
 		      }
+		    yy_current_state =
+			yy_nxt[yy_base[yy_current_state] + (unsigned int) yy_c];
+		    ++yy_cp;
+		}
+	      while (yy_base[yy_current_state] != 31);
 
-		    else
-			switch (yy_get_next_buffer (yyscanner))
+	    yy_find_action:
+	      yy_act = yy_accept[yy_current_state];
+	      if (yy_act == 0)
+		{		/* have to back up */
+		    yy_cp = yyg->yy_last_accepting_cpos;
+		    yy_current_state = yyg->yy_last_accepting_state;
+		    yy_act = yy_accept[yy_current_state];
+		}
+
+	      YY_DO_BEFORE_ACTION;
+
+	    do_action:		/* This label is used only to access EOF actions. */
+
+	      switch (yy_act)
+		{		/* beginning of action switch */
+		case 0:	/* must back up */
+		    /* undo the effects of YY_DO_BEFORE_ACTION */
+		    *yy_cp = yyg->yy_hold_char;
+		    yy_cp = yyg->yy_last_accepting_cpos;
+		    yy_current_state = yyg->yy_last_accepting_state;
+		    goto yy_find_action;
+
+		case 1:
+		    YY_RULE_SETUP
+#line 60 "kmlLexer.l"
+		    {
+			kml_freeString (&
+					(Kmlget_extra (yyscanner)->
+					 KmlLval.pval));
+			return KML_END;
+		    }
+		    YY_BREAK case 2:YY_RULE_SETUP
+#line 61 "kmlLexer.l"
+		    {
+			kml_freeString (&
+					(Kmlget_extra (yyscanner)->
+					 KmlLval.pval));
+			return KML_EQ;
+		    }
+		    YY_BREAK case 3:YY_RULE_SETUP
+#line 62 "kmlLexer.l"
+		    {
+			kml_freeString (&
+					(Kmlget_extra (yyscanner)->
+					 KmlLval.pval));
+			return KML_OPEN;
+		    }
+		    YY_BREAK case 4:YY_RULE_SETUP
+#line 63 "kmlLexer.l"
+		    {
+			kml_freeString (&
+					(Kmlget_extra (yyscanner)->
+					 KmlLval.pval));
+			return KML_CLOSE;
+		    }
+		    YY_BREAK case 5:YY_RULE_SETUP
+#line 64 "kmlLexer.l"
+		    {
+			kml_saveString (&
+					(Kmlget_extra (yyscanner)->
+					 KmlLval.pval), yytext);
+			return KML_COORD;
+		    }
+		    YY_BREAK case 6:
+/* rule 6 can match eol */
+		      YY_RULE_SETUP
+#line 65 "kmlLexer.l"
+		    {
+			kml_saveString (&
+					(Kmlget_extra (yyscanner)->
+					 KmlLval.pval), yytext);
+			return KML_VALUE;
+		    }
+		    YY_BREAK case 7:YY_RULE_SETUP
+#line 66 "kmlLexer.l"
+		    {
+			kml_saveString (&
+					(Kmlget_extra (yyscanner)->
+					 KmlLval.pval), yytext);
+			return KML_KEYWORD;
+		    }
+		    YY_BREAK case 8:YY_RULE_SETUP
+#line 68 "kmlLexer.l"
+		    {
+			kml_freeString (&
+					(Kmlget_extra (yyscanner)->
+					 KmlLval.pval));
+			Kmlget_extra (yyscanner)->kml_col +=
+			    (int) strlen (yytext);
+		    }		/* ignore but count white space */
+		    YY_BREAK case 9:
+/* rule 9 can match eol */
+		      YY_RULE_SETUP
+#line 70 "kmlLexer.l"
+		    {
+			kml_freeString (&
+					(Kmlget_extra (yyscanner)->
+					 KmlLval.pval));
+			Kmlget_extra (yyscanner)->kml_col = 0;
+			Kmlget_extra (yyscanner)->kml_line++;
+		    }
+		    YY_BREAK case 10:YY_RULE_SETUP
+#line 72 "kmlLexer.l"
+		    {
+			kml_freeString (&
+					(Kmlget_extra (yyscanner)->
+					 KmlLval.pval));
+			Kmlget_extra (yyscanner)->kml_col +=
+			    (int) strlen (yytext);
+			return -1;
+		    }
+		    YY_BREAK case 11:YY_RULE_SETUP
+#line 73 "kmlLexer.l"
+		      ECHO;
+		    YY_BREAK
+#line 860 "lex.Kml.c"
+		case YY_STATE_EOF (INITIAL):
+		    yyterminate ();
+
+		case YY_END_OF_BUFFER:
+		    {
+			/* Amount of text matched not including the EOB char. */
+			int yy_amount_of_matched_text =
+			    (int) (yy_cp - yyg->yytext_ptr) - 1;
+
+			/* Undo the effects of YY_DO_BEFORE_ACTION. */
+			*yy_cp = yyg->yy_hold_char;
+			YY_RESTORE_YY_MORE_OFFSET
+			    if (YY_CURRENT_BUFFER_LVALUE->yy_buffer_status ==
+				YY_BUFFER_NEW)
 			  {
-			  case EOB_ACT_END_OF_FILE:
-			      {
-				  yyg->yy_did_buffer_switch_on_eof = 0;
+			      /* We're scanning a new file or input source.  It's
+			       * possible that this happened because the user
+			       * just pointed yyin at a new source and called
+			       * Kmllex().  If so, then we have to assure
+			       * consistency between YY_CURRENT_BUFFER and our
+			       * globals.  Here is the right place to do so, because
+			       * this is the first action (other than possibly a
+			       * back-up) that will match for the new input source.
+			       */
+			      yyg->yy_n_chars =
+				  YY_CURRENT_BUFFER_LVALUE->yy_n_chars;
+			      YY_CURRENT_BUFFER_LVALUE->yy_input_file = yyin;
+			      YY_CURRENT_BUFFER_LVALUE->yy_buffer_status =
+				  YY_BUFFER_NORMAL;
+			  }
 
-				  if (Kmlwrap (yyscanner))
-				    {
-					/* Note: because we've taken care in
-					 * yy_get_next_buffer() to have set up
-					 * yytext, we can now set up
-					 * yy_c_buf_p so that if some total
-					 * hoser (like flex itself) wants to
-					 * call the scanner after we return the
-					 * YY_NULL, it'll still work - another
-					 * YY_NULL will get returned.
-					 */
-					yyg->yy_c_buf_p =
-					    yyg->yytext_ptr + YY_MORE_ADJ;
+			/* Note that here we test for yy_c_buf_p "<=" to the position
+			 * of the first EOB in the buffer, since yy_c_buf_p will
+			 * already have been incremented past the NUL character
+			 * (since all states make transitions on EOB to the
+			 * end-of-buffer state).  Contrast this with the test
+			 * in input().
+			 */
+			if (yyg->yy_c_buf_p <=
+			    &YY_CURRENT_BUFFER_LVALUE->
+			    yy_ch_buf[yyg->yy_n_chars])
+			  {	/* This was really a NUL. */
+			      yy_state_type yy_next_state;
 
-					yy_act = YY_STATE_EOF (YY_START);
-					goto do_action;
-				    }
-
-				  else
-				    {
-					if (!yyg->yy_did_buffer_switch_on_eof)
-					    YY_NEW_FILE;
-				    }
-				  break;
-			      }
-
-			  case EOB_ACT_CONTINUE_SCAN:
 			      yyg->yy_c_buf_p =
 				  yyg->yytext_ptr + yy_amount_of_matched_text;
 
 			      yy_current_state =
 				  yy_get_previous_state (yyscanner);
 
-			      yy_cp = yyg->yy_c_buf_p;
+			      /* Okay, we're now positioned to make the NUL
+			       * transition.  We couldn't have
+			       * yy_get_previous_state() go ahead and do it
+			       * for us because it doesn't know how to deal
+			       * with the possibility of jamming (and we don't
+			       * want to build jamming into it because then it
+			       * will run more slowly).
+			       */
+
+			      yy_next_state =
+				  yy_try_NUL_trans (yy_current_state,
+						    yyscanner);
+
 			      yy_bp = yyg->yytext_ptr + YY_MORE_ADJ;
-			      goto yy_match;
 
-			  case EOB_ACT_LAST_MATCH:
-			      yyg->yy_c_buf_p =
-				  &YY_CURRENT_BUFFER_LVALUE->yy_ch_buf[yyg->
-								       yy_n_chars];
+			      if (yy_next_state)
+				{
+				    /* Consume the NUL. */
+				    yy_cp = ++yyg->yy_c_buf_p;
+				    yy_current_state = yy_next_state;
+				    goto yy_match;
+				}
 
-			      yy_current_state =
-				  yy_get_previous_state (yyscanner);
-
-			      yy_cp = yyg->yy_c_buf_p;
-			      yy_bp = yyg->yytext_ptr + YY_MORE_ADJ;
-			      goto yy_find_action;
+			      else
+				{
+				    yy_cp = yyg->yy_c_buf_p;
+				    goto yy_find_action;
+				}
 			  }
-		    break;
-		}
 
-	    default:
-		YY_FATAL_ERROR
-		    ("fatal flex scanner internal error--no action found");
-	    }			/* end of action switch */
-      }				/* end of scanning one token */
+			else
+			    switch (yy_get_next_buffer (yyscanner))
+			      {
+			      case EOB_ACT_END_OF_FILE:
+				  {
+				      yyg->yy_did_buffer_switch_on_eof = 0;
+
+				      if (Kmlwrap (yyscanner))
+					{
+					    /* Note: because we've taken care in
+					     * yy_get_next_buffer() to have set up
+					     * yytext, we can now set up
+					     * yy_c_buf_p so that if some total
+					     * hoser (like flex itself) wants to
+					     * call the scanner after we return the
+					     * YY_NULL, it'll still work - another
+					     * YY_NULL will get returned.
+					     */
+					    yyg->yy_c_buf_p =
+						yyg->yytext_ptr + YY_MORE_ADJ;
+
+					    yy_act = YY_STATE_EOF (YY_START);
+					    goto do_action;
+					}
+
+				      else
+					{
+					    if (!yyg->yy_did_buffer_switch_on_eof)
+						YY_NEW_FILE;
+					}
+				      break;
+				  }
+
+			      case EOB_ACT_CONTINUE_SCAN:
+				  yyg->yy_c_buf_p =
+				      yyg->yytext_ptr +
+				      yy_amount_of_matched_text;
+
+				  yy_current_state =
+				      yy_get_previous_state (yyscanner);
+
+				  yy_cp = yyg->yy_c_buf_p;
+				  yy_bp = yyg->yytext_ptr + YY_MORE_ADJ;
+				  goto yy_match;
+
+			      case EOB_ACT_LAST_MATCH:
+				  yyg->yy_c_buf_p =
+				      &YY_CURRENT_BUFFER_LVALUE->
+				      yy_ch_buf[yyg->yy_n_chars];
+
+				  yy_current_state =
+				      yy_get_previous_state (yyscanner);
+
+				  yy_cp = yyg->yy_c_buf_p;
+				  yy_bp = yyg->yytext_ptr + YY_MORE_ADJ;
+				  goto yy_find_action;
+			      }
+			break;
+		    }
+
+		default:
+		    YY_FATAL_ERROR
+			("fatal flex scanner internal error--no action found");
+		}		/* end of action switch */
+	  }			/* end of scanning one token */
+    }				/* end of user's declarations */
 }				/* end of Kmllex */
 
 /* yy_get_next_buffer - try to read in a new buffer
@@ -1047,20 +1097,20 @@ yy_get_next_buffer (yyscan_t yyscanner)
 
     else
       {
-	  int num_to_read =
+	  yy_size_t num_to_read =
 	      YY_CURRENT_BUFFER_LVALUE->yy_buf_size - number_to_move - 1;
 
 	  while (num_to_read <= 0)
 	    {			/* Not enough room in the buffer - grow it. */
 
 		/* just a shorter name for the current buffer */
-		YY_BUFFER_STATE b = YY_CURRENT_BUFFER;
+		YY_BUFFER_STATE b = YY_CURRENT_BUFFER_LVALUE;
 
 		int yy_c_buf_p_offset = (int) (yyg->yy_c_buf_p - b->yy_ch_buf);
 
 		if (b->yy_is_our_buffer)
 		  {
-		      int new_size = b->yy_buf_size * 2;
+		      yy_size_t new_size = b->yy_buf_size * 2;
 
 		      if (new_size <= 0)
 			  b->yy_buf_size += b->yy_buf_size / 8;
@@ -1092,7 +1142,7 @@ yy_get_next_buffer (yyscan_t yyscanner)
 
 	  /* Read in more data. */
 	  YY_INPUT ((&YY_CURRENT_BUFFER_LVALUE->yy_ch_buf[number_to_move]),
-		    yyg->yy_n_chars, (size_t) num_to_read);
+		    yyg->yy_n_chars, num_to_read);
 
 	  YY_CURRENT_BUFFER_LVALUE->yy_n_chars = yyg->yy_n_chars;
       }
@@ -1163,7 +1213,7 @@ yy_get_previous_state (yyscan_t yyscanner)
 	  while (yy_chk[yy_base[yy_current_state] + yy_c] != yy_current_state)
 	    {
 		yy_current_state = (int) yy_def[yy_current_state];
-		if (yy_current_state >= 19)
+		if (yy_current_state >= 21)
 		    yy_c = yy_meta[(unsigned int) yy_c];
 	    }
 	  yy_current_state =
@@ -1194,12 +1244,13 @@ yy_try_NUL_trans (yy_state_type yy_current_state, yyscan_t yyscanner)
     while (yy_chk[yy_base[yy_current_state] + yy_c] != yy_current_state)
       {
 	  yy_current_state = (int) yy_def[yy_current_state];
-	  if (yy_current_state >= 19)
+	  if (yy_current_state >= 21)
 	      yy_c = yy_meta[(unsigned int) yy_c];
       }
     yy_current_state = yy_nxt[yy_base[yy_current_state] + (unsigned int) yy_c];
-    yy_is_jam = (yy_current_state == 18);
+    yy_is_jam = (yy_current_state == 20);
 
+    (void) yyg;
     return yy_is_jam ? 0 : yy_current_state;
 }
 
@@ -1230,7 +1281,7 @@ input (yyscan_t yyscanner)
 
 	  else
 	    {			/* need more input */
-		int offset = yyg->yy_c_buf_p - yyg->yytext_ptr;
+		yy_size_t offset = yyg->yy_c_buf_p - yyg->yytext_ptr;
 		++yyg->yy_c_buf_p;
 
 		switch (yy_get_next_buffer (yyscanner))
@@ -1398,10 +1449,6 @@ Kml_delete_buffer (YY_BUFFER_STATE b, yyscan_t yyscanner)
     Kmlfree ((void *) b, yyscanner);
 }
 
-#ifndef __cplusplus
-extern int isatty (int);
-#endif /* __cplusplus */
-
 /* Initializes or reinitializes a buffer.
  * This function is sometimes called more than once on the same buffer,
  * such as during a Kmlrestart() or at EOF.
@@ -1524,7 +1571,7 @@ Kmlpop_buffer_state (yyscan_t yyscanner)
 static void
 Kmlensure_buffer_stack (yyscan_t yyscanner)
 {
-    int num_to_alloc;
+    yy_size_t num_to_alloc;
     struct yyguts_t *yyg = (struct yyguts_t *) yyscanner;
 
     if (!yyg->yy_buffer_stack)
@@ -1623,18 +1670,19 @@ Kml_scan_string (yyconst char *yystr, yyscan_t yyscanner)
 
 /** Setup the input buffer state to scan the given bytes. The next call to Kmllex() will
  * scan from a @e copy of @a bytes.
- * @param bytes the byte buffer to scan
- * @param len the number of bytes in the buffer pointed to by @a bytes.
+ * @param yybytes the byte buffer to scan
+ * @param _yybytes_len the number of bytes in the buffer pointed to by @a bytes.
  * @param yyscanner The scanner object.
  * @return the newly allocated buffer state object.
  */
 YY_BUFFER_STATE
-Kml_scan_bytes (yyconst char *yybytes, int _yybytes_len, yyscan_t yyscanner)
+Kml_scan_bytes (yyconst char *yybytes, yy_size_t _yybytes_len,
+		yyscan_t yyscanner)
 {
     YY_BUFFER_STATE b;
     char *buf;
     yy_size_t n;
-    int i;
+    yy_size_t i;
 
     /* Get memory for full buffer, including space for trailing EOB's. */
     n = _yybytes_len + 2;
@@ -1666,7 +1714,7 @@ Kml_scan_bytes (yyconst char *yybytes, int _yybytes_len, yyscan_t yyscanner)
 static void
 yy_fatal_error (yyconst char *msg, yyscan_t yyscanner)
 {
-    (void) fprintf (stderr, "%s\n", msg);
+    (void) spatialite_e ("%s\n", msg);
     exit (YY_EXIT_FAILURE);
 }
 
@@ -1750,7 +1798,7 @@ Kmlget_out (yyscan_t yyscanner)
 /** Get the length of the current token.
  * @param yyscanner The scanner object.
  */
-int
+yy_size_t
 Kmlget_leng (yyscan_t yyscanner)
 {
     struct yyguts_t *yyg = (struct yyguts_t *) yyscanner;
@@ -1790,7 +1838,7 @@ Kmlset_lineno (int line_number, yyscan_t yyscanner)
 
     /* lineno is only valid if an input buffer exists. */
     if (!YY_CURRENT_BUFFER)
-	yy_fatal_error ("Kmlset_lineno called with no buffer", yyscanner);
+	YY_FATAL_ERROR ("Kmlset_lineno called with no buffer");
 
     yylineno = line_number;
 }
@@ -1806,7 +1854,7 @@ Kmlset_column (int column_no, yyscan_t yyscanner)
 
     /* column is only valid if an input buffer exists. */
     if (!YY_CURRENT_BUFFER)
-	yy_fatal_error ("Kmlset_column called with no buffer", yyscanner);
+	YY_FATAL_ERROR ("Kmlset_column called with no buffer");
 
     yycolumn = column_no;
 }
@@ -2034,6 +2082,10 @@ Kmlfree (void *ptr, yyscan_t yyscanner)
 }
 
 #define YYTABLES_NAME "yytables"
+
+#line 73 "kmlLexer.l"
+
+
 
 int
 Kmlwrap (yyscan_t yyscanner)

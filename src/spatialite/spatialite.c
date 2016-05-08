@@ -501,18 +501,18 @@ fnct_has_geos_only_reentrant (sqlite3_context * context, int argc,
 }
 
 static void
-fnct_lwgeom_version (sqlite3_context * context, int argc, sqlite3_value ** argv)
+fnct_rttopo_version (sqlite3_context * context, int argc, sqlite3_value ** argv)
 {
 /* SQL function:
-/ lwgeom_version()
+/ rttopo_version()
 /
-/ return a text string representing the current LWGEOM version
-/ or NULL if LWGEOM is currently unsupported
+/ return a text string representing the current RTTOPO version
+/ or NULL if RTTOPO is currently unsupported
 */
 
-#ifdef ENABLE_LWGEOM		/* LWGEOM version */
+#ifdef ENABLE_RTTOPO		/* RTTOPO version */
     int len;
-    const char *p_result = splite_lwgeom_version ();
+    const char *p_result = splite_rttopo_version ();
     GAIA_UNUSED ();		/* LCOV_EXCL_LINE */
     len = strlen (p_result);
     sqlite3_result_text (context, p_result, len, SQLITE_TRANSIENT);
@@ -546,15 +546,15 @@ fnct_libxml2_version (sqlite3_context * context, int argc,
 }
 
 static void
-fnct_has_lwgeom (sqlite3_context * context, int argc, sqlite3_value ** argv)
+fnct_has_rttopo (sqlite3_context * context, int argc, sqlite3_value ** argv)
 {
 /* SQL function:
-/ HasLwGeom()
+/ HasRtTopo()
 /
-/ return 1 if built including LWGEOM; otherwise 0
+/ return 1 if built including RTTOPO; otherwise 0
 */
     GAIA_UNUSED ();		/* LCOV_EXCL_LINE */
-#ifdef ENABLE_LWGEOM		/* LWGEOM is supported */
+#ifdef ENABLE_RTTOPO		/* RTTOPO is supported */
     sqlite3_result_int (context, 1);
 #else
     sqlite3_result_int (context, 0);
@@ -700,7 +700,7 @@ fnct_has_topology (sqlite3_context * context, int argc, sqlite3_value ** argv)
 / return 1 if built including GroundControlPoints support (GGP); otherwise 0
 */
     GAIA_UNUSED ();		/* LCOV_EXCL_LINE */
-#ifdef POSTGIS_2_2		/* POSTGIS_2_2 is supported */
+#ifdef RTTOPO			/* RTTOPO is supported */
     sqlite3_result_int (context, 1);
 #else
     sqlite3_result_int (context, 0);
@@ -2108,12 +2108,15 @@ fnct_InitSpatialMetaData (sqlite3_context * context, int argc,
     ret = sqlite3_exec (sqlite, sql, NULL, NULL, &errMsg);
     if (ret != SQLITE_OK)
 	goto error;
+
+#ifndef OMIT_KNN		/* only if KNN is enabled */
 /* creating the KNN VIRTUAL TABLE */
     strcpy (sql, "CREATE VIRTUAL TABLE KNN ");
     strcat (sql, "USING VirtualKNN()");
     ret = sqlite3_exec (sqlite, sql, NULL, NULL, &errMsg);
     if (ret != SQLITE_OK)
 	goto error;
+#endif /* end KNN conditional */
 
     if (transaction)
       {
@@ -4048,8 +4051,8 @@ fnct_RecoverGeometryColumn (sqlite3_context * context, int argc,
     int exists = 0;
     const char *p_type = NULL;
     const char *p_dims = NULL;
-    int n_type;
-    int n_dims;
+    int n_type = GAIA_UNKNOWN;
+    int n_dims = -1;
     char *sql_statement;
     sqlite3 *sqlite = sqlite3_context_db_handle (context);
     GAIA_UNUSED ();		/* LCOV_EXCL_LINE */
@@ -8617,7 +8620,7 @@ static void
 fnct_AsFGF (sqlite3_context * context, int argc, sqlite3_value ** argv)
 {
 /* SQL function:
-/ AsFGF(BLOB encoded geometry)
+/ AsFGF(BLOB encoded geometry, int dims)
 /
 / returns the corresponding FGF encoded value
 / or NULL if any error is encountered
@@ -18687,7 +18690,7 @@ fnct_CollectionExtract (sqlite3_context * context, int argc,
     int n_bytes;
     int type;
     gaiaGeomCollPtr geo = NULL;
-    gaiaGeomCollPtr result;
+    gaiaGeomCollPtr result = NULL;
     int gpkg_amphibious = 0;
     int gpkg_mode = 0;
     struct splite_internal_cache *cache = sqlite3_user_data (context);
@@ -19048,8 +19051,8 @@ static void
 fnct_IsValidReason (sqlite3_context * context, int argc, sqlite3_value ** argv)
 {
 /* SQL function:
-/ IsValidReason(geom)
-/ ST_IsValidReason(geom)
+/ IsValidReason(geom [ , esri_flag] )
+/ ST_IsValidReason(geom [ , esri_flag] )
 /
 / return a TEXT string stating if a Geometry is valid
 / and if not valid, a reason why
@@ -19059,6 +19062,7 @@ fnct_IsValidReason (sqlite3_context * context, int argc, sqlite3_value ** argv)
     int n_bytes;
     int len;
     gaiaGeomCollPtr geom;
+    int esri_flag = 0;
     char *str;
     void *data = sqlite3_user_data (context);
     int gpkg_amphibious = 0;
@@ -19077,9 +19081,61 @@ fnct_IsValidReason (sqlite3_context * context, int argc, sqlite3_value ** argv)
       }
     p_blob = (unsigned char *) sqlite3_value_blob (argv[0]);
     n_bytes = sqlite3_value_bytes (argv[0]);
+    if (argc >= 2)
+      {
+	  if (sqlite3_value_type (argv[1]) != SQLITE_INTEGER)
+	    {
+		sqlite3_result_null (context);
+		return;
+	    }
+	  esri_flag = sqlite3_value_int (argv[1]);
+      }
     geom =
 	gaiaFromSpatiaLiteBlobWkbEx (p_blob, n_bytes, gpkg_mode,
 				     gpkg_amphibious);
+    if (esri_flag)
+      {
+	  gaiaGeomCollPtr detail;
+	  if (data != NULL)
+	      detail = gaiaIsValidDetailEx_r (data, geom, esri_flag);
+	  else
+	      detail = gaiaIsValidDetailEx (geom, esri_flag);
+	  if (detail == NULL)
+	    {
+		/* performing extra checks */
+		if (data != NULL)
+		  {
+		      if (gaiaIsToxic_r (data, geom))
+			  sqlite3_result_text (context,
+					       "Invalid: Toxic Geometry ... too few points",
+					       -1, SQLITE_TRANSIENT);
+		      else if (gaiaIsNotClosedGeomColl_r (data, geom))
+			  sqlite3_result_text (context,
+					       "Invalid: Unclosed Rings were detected",
+					       -1, SQLITE_TRANSIENT);
+		      else
+			  sqlite3_result_text (context, "Valid Geometry", -1,
+					       SQLITE_TRANSIENT);
+		  }
+		else
+		  {
+		      if (gaiaIsToxic (geom))
+			  sqlite3_result_text (context,
+					       "Invalid: Toxic Geometry ... too few points",
+					       -1, SQLITE_TRANSIENT);
+		      else if (gaiaIsNotClosedGeomColl (geom))
+			  sqlite3_result_text (context,
+					       "Invalid: Unclosed Rings were detected",
+					       -1, SQLITE_TRANSIENT);
+		      else
+			  sqlite3_result_text (context, "Valid Geometry", -1,
+					       SQLITE_TRANSIENT);
+		  }
+		goto end;
+	    }
+	  else
+	      gaiaFreeGeomColl (detail);
+      }
     if (data != NULL)
 	str = gaiaIsValidReason_r (data, geom);
     else
@@ -19091,6 +19147,7 @@ fnct_IsValidReason (sqlite3_context * context, int argc, sqlite3_value ** argv)
 	  len = strlen (str);
 	  sqlite3_result_text (context, str, len, free);
       }
+  end:
     if (geom != NULL)
 	gaiaFreeGeomColl (geom);
 }
@@ -19099,8 +19156,8 @@ static void
 fnct_IsValidDetail (sqlite3_context * context, int argc, sqlite3_value ** argv)
 {
 /* SQL function:
-/ IsValidDetail(geom)
-/ ST_IsValidDetail(geom)
+/ IsValidDetail(geom [ , esri_flag] )
+/ ST_IsValidDetail(geom [ , esri_flag] )
 /
 / return a Geometry detail causing a Geometry to be invalid
 / return NULL on any other case
@@ -19110,6 +19167,7 @@ fnct_IsValidDetail (sqlite3_context * context, int argc, sqlite3_value ** argv)
     int len;
     gaiaGeomCollPtr geom;
     gaiaGeomCollPtr detail;
+    int esri_flag = 0;
     unsigned char *p_result = NULL;
     void *data = sqlite3_user_data (context);
     int gpkg_amphibious = 0;
@@ -19128,13 +19186,22 @@ fnct_IsValidDetail (sqlite3_context * context, int argc, sqlite3_value ** argv)
       }
     p_blob = (unsigned char *) sqlite3_value_blob (argv[0]);
     n_bytes = sqlite3_value_bytes (argv[0]);
+    if (argc >= 2)
+      {
+	  if (sqlite3_value_type (argv[1]) != SQLITE_INTEGER)
+	    {
+		sqlite3_result_null (context);
+		return;
+	    }
+	  esri_flag = sqlite3_value_int (argv[1]);
+      }
     geom =
 	gaiaFromSpatiaLiteBlobWkbEx (p_blob, n_bytes, gpkg_mode,
 				     gpkg_amphibious);
     if (data != NULL)
-	detail = gaiaIsValidDetail_r (data, geom);
+	detail = gaiaIsValidDetailEx_r (data, geom, esri_flag);
     else
-	detail = gaiaIsValidDetail (geom);
+	detail = gaiaIsValidDetailEx (geom, esri_flag);
     if (detail == NULL)
 	sqlite3_result_null (context);
     else
@@ -19362,7 +19429,7 @@ static void
 fnct_IsValid (sqlite3_context * context, int argc, sqlite3_value ** argv)
 {
 /* SQL function:
-/ IsValid(BLOB encoded GEOMETRY)
+/ IsValid(BLOB encoded GEOMETRY [ , BOOLEAN esri_flag] )
 /
 / returns:
 / 1 if this GEOMETRY is a valid one
@@ -19373,6 +19440,7 @@ fnct_IsValid (sqlite3_context * context, int argc, sqlite3_value ** argv)
     int n_bytes;
     int ret;
     gaiaGeomCollPtr geo = NULL;
+    int esri_flag = 0;
     int gpkg_amphibious = 0;
     int gpkg_mode = 0;
     struct splite_internal_cache *cache = sqlite3_user_data (context);
@@ -19389,6 +19457,15 @@ fnct_IsValid (sqlite3_context * context, int argc, sqlite3_value ** argv)
       }
     p_blob = (unsigned char *) sqlite3_value_blob (argv[0]);
     n_bytes = sqlite3_value_bytes (argv[0]);
+    if (argc >= 2)
+      {
+	  if (sqlite3_value_type (argv[1]) != SQLITE_INTEGER)
+	    {
+		sqlite3_result_null (context);
+		return;
+	    }
+	  esri_flag = sqlite3_value_int (argv[1]);
+      }
     geo =
 	gaiaFromSpatiaLiteBlobWkbEx (p_blob, n_bytes, gpkg_mode,
 				     gpkg_amphibious);
@@ -19397,6 +19474,43 @@ fnct_IsValid (sqlite3_context * context, int argc, sqlite3_value ** argv)
     else
       {
 	  void *data = sqlite3_user_data (context);
+	  if (esri_flag)
+	    {
+		gaiaGeomCollPtr detail;
+		if (data != NULL)
+		    detail = gaiaIsValidDetailEx_r (data, geo, esri_flag);
+		else
+		    detail = gaiaIsValidDetailEx (geo, esri_flag);
+		if (detail == NULL)
+		  {
+		      /* extra checks */
+		      int extra = 0;
+		      if (data != NULL)
+			{
+			    if (gaiaIsToxic_r (data, geo))
+				extra = 1;
+			    if (gaiaIsNotClosedGeomColl_r (data, geo))
+				extra = 1;
+			}
+		      else
+			{
+			    if (gaiaIsToxic (geo))
+				extra = 1;
+			    if (gaiaIsNotClosedGeomColl (geo))
+				extra = 1;
+			}
+		      if (extra)
+			  sqlite3_result_int (context, 0);
+		      else
+			  sqlite3_result_int (context, 1);
+		  }
+		else
+		  {
+		      gaiaFreeGeomColl (detail);
+		      sqlite3_result_int (context, 0);
+		  }
+		goto end;
+	    }
 	  if (data != NULL)
 	      ret = gaiaIsValid_r (data, geo);
 	  else
@@ -19406,6 +19520,7 @@ fnct_IsValid (sqlite3_context * context, int argc, sqlite3_value ** argv)
 	  else
 	      sqlite3_result_int (context, ret);
       }
+  end:
     gaiaFreeGeomColl (geo);
 }
 
@@ -19653,7 +19768,7 @@ fnct_Perimeter (sqlite3_context * context, int argc, sqlite3_value ** argv)
     length_common (data, context, argc, argv, 1);
 }
 
-#ifdef ENABLE_LWGEOM		/* only if LWGEOM is enabled */
+#ifdef ENABLE_RTTOPO		/* only if RTTOPO is enabled */
 
 static void
 fnct_3dLength (sqlite3_context * context, int argc, sqlite3_value ** argv)
@@ -19697,7 +19812,7 @@ fnct_3dLength (sqlite3_context * context, int argc, sqlite3_value ** argv)
 	sqlite3_result_null (context);
     else
       {
-	  ret = gaia3dLength (geo, &length);
+	  ret = gaia3dLength (cache, geo, &length);
 	  if (!ret)
 	      sqlite3_result_null (context);
 	  else
@@ -19706,7 +19821,7 @@ fnct_3dLength (sqlite3_context * context, int argc, sqlite3_value ** argv)
     gaiaFreeGeomColl (geo);
 }
 
-#endif /* end LWGEOM conditional */
+#endif /* end RTTOPO conditional */
 
 static void
 fnct_Area (sqlite3_context * context, int argc, sqlite3_value ** argv)
@@ -19722,12 +19837,12 @@ fnct_Area (sqlite3_context * context, int argc, sqlite3_value ** argv)
     double area = 0.0;
     int ret;
     int use_ellipsoid = -1;
-#ifdef ENABLE_LWGEOM		/* only if LWGEOM is enabled */
+#ifdef ENABLE_RTTOPO		/* only if RTTOPO is enabled */
     double a;
     double b;
     double rf;
     sqlite3 *sqlite = sqlite3_context_db_handle (context);
-#endif /* end LWGEOM conditional */
+#endif /* end RTTOPO conditional */
     gaiaGeomCollPtr geo = NULL;
     int gpkg_amphibious = 0;
     int gpkg_mode = 0;
@@ -19765,15 +19880,17 @@ fnct_Area (sqlite3_context * context, int argc, sqlite3_value ** argv)
       {
 	  if (use_ellipsoid >= 0)
 	    {
-#ifdef ENABLE_LWGEOM		/* only if LWGEOM is enabled */
+#ifdef ENABLE_RTTOPO		/* only if RTTOPO is enabled */
 		/* attempting to identify the corresponding ellipsoid */
 		if (getEllipsoidParams (sqlite, geo->Srid, &a, &b, &rf))
-		    ret = gaiaGeodesicArea (geo, a, b, use_ellipsoid, &area);
+		    ret =
+			gaiaGeodesicArea (cache, geo, a, b, use_ellipsoid,
+					  &area);
 		else
 		    ret = 0;
 #else
 		ret = 0;
-#endif /* end LWGEOM conditional */
+#endif /* end RTTOPO conditional */
 	    }
 	  else
 	    {
@@ -24289,21 +24406,22 @@ fnct_ConcaveHull (sqlite3_context * context, int argc, sqlite3_value ** argv)
 
 #endif /* end GEOS advanced features */
 
-#ifdef ENABLE_LWGEOM		/* enabling LWGEOM support */
+#ifdef ENABLE_RTTOPO		/* enabling RTTOPO support */
 
 static void
-fnct_LWGEOM_GetLastWarningMsg (sqlite3_context * context, int argc,
+fnct_RTTOPO_GetLastWarningMsg (sqlite3_context * context, int argc,
 			       sqlite3_value ** argv)
 {
 /* SQL function:
-/ LWGEOM_GetLastWarningMsg()
+/ RTTOPO_GetLastWarningMsg()
 /
-/ return the most recent LWGEOM warning message (if any)
+/ return the most recent RTTOPO warning message (if any)
 / return NULL on any other case
 */
     const char *msg;
+    struct splite_internal_cache *cache = sqlite3_user_data (context);
     GAIA_UNUSED ();		/* LCOV_EXCL_LINE */
-    msg = gaiaGetLwGeomWarningMsg ();
+    msg = gaiaGetRtTopoWarningMsg (cache);
     if (msg == NULL)
 	sqlite3_result_null (context);
     else
@@ -24311,18 +24429,19 @@ fnct_LWGEOM_GetLastWarningMsg (sqlite3_context * context, int argc,
 }
 
 static void
-fnct_LWGEOM_GetLastErrorMsg (sqlite3_context * context, int argc,
+fnct_RTTOPO_GetLastErrorMsg (sqlite3_context * context, int argc,
 			     sqlite3_value ** argv)
 {
 /* SQL function:
-/ LWGEOM_GetLastErrorMsg()
+/ RTTOPO_GetLastErrorMsg()
 /
-/ return the most recent LWGEOM error message (if any)
+/ return the most recent RTEOM error message (if any)
 / return NULL on any other case
 */
     const char *msg;
+    struct splite_internal_cache *cache = sqlite3_user_data (context);
     GAIA_UNUSED ();		/* LCOV_EXCL_LINE */
-    msg = gaiaGetLwGeomErrorMsg ();
+    msg = gaiaGetRtTopoErrorMsg (cache);
     if (msg == NULL)
 	sqlite3_result_null (context);
     else
@@ -24365,17 +24484,17 @@ fnct_MakeValid (sqlite3_context * context, int argc, sqlite3_value ** argv)
 	sqlite3_result_null (context);
     else
       {
-	  result = gaiaMakeValid (geo);
+	  result = gaiaMakeValid (cache, geo);
 	  if (result == NULL)
 	    {
 		char *msg;
-		const char *lw_err = gaiaGetLwGeomErrorMsg ();
+		const char *lw_err = gaiaGetRtTopoErrorMsg (cache);
 		if (lw_err)
 		    msg = sqlite3_mprintf
-			("MakeValid error - LWGEOM reports: %s\n", lw_err);
+			("MakeValid error - RTTOPO reports: %s\n", lw_err);
 		else
 		    msg = sqlite3_mprintf
-			("MakeValid error - LWGEOM reports: Unknown Reason\n");
+			("MakeValid error - RTTOPO reports: Unknown Reason\n");
 		sqlite3_result_error (context, msg, strlen (msg));
 		sqlite3_free (msg);
 	    }
@@ -24431,7 +24550,7 @@ fnct_MakeValidDiscarded (sqlite3_context * context, int argc,
 	sqlite3_result_null (context);
     else
       {
-	  result = gaiaMakeValidDiscarded (geo);
+	  result = gaiaMakeValidDiscarded (cache, geo);
 	  if (result == NULL)
 	      sqlite3_result_null (context);
 	  else
@@ -24498,7 +24617,7 @@ fnct_Segmentize (sqlite3_context * context, int argc, sqlite3_value ** argv)
 	sqlite3_result_null (context);
     else
       {
-	  result = gaiaSegmentize (geo, dist);
+	  result = gaiaSegmentize (cache, geo, dist);
 	  if (result == NULL)
 	      sqlite3_result_null (context);
 	  else
@@ -24571,7 +24690,7 @@ fnct_Split (sqlite3_context * context, int argc, sqlite3_value ** argv)
       }
     else
       {
-	  result = gaiaSplit (input, blade);
+	  result = gaiaSplit (cache, input, blade);
 	  if (result == NULL)
 	      sqlite3_result_null (context);
 	  else
@@ -24645,7 +24764,7 @@ fnct_SplitLeft (sqlite3_context * context, int argc, sqlite3_value ** argv)
       }
     else
       {
-	  result = gaiaSplitLeft (input, blade);
+	  result = gaiaSplitLeft (cache, input, blade);
 	  if (result == NULL)
 	      sqlite3_result_null (context);
 	  else
@@ -24719,7 +24838,7 @@ fnct_SplitRight (sqlite3_context * context, int argc, sqlite3_value ** argv)
       }
     else
       {
-	  result = gaiaSplitRight (input, blade);
+	  result = gaiaSplitRight (cache, input, blade);
 	  if (result == NULL)
 	      sqlite3_result_null (context);
 	  else
@@ -24832,14 +24951,14 @@ fnct_Azimuth (sqlite3_context * context, int argc, sqlite3_value ** argv)
 
     if (getEllipsoidParams (sqlite, srid, &a, &b, &rf))
       {
-	  if (gaiaEllipsoidAzimuth (x1, y1, x2, y2, a, b, &azimuth))
+	  if (gaiaEllipsoidAzimuth (cache, x1, y1, x2, y2, a, b, &azimuth))
 	      sqlite3_result_double (context, azimuth);
 	  else
 	      sqlite3_result_null (context);
 	  return;
       }
 
-    if (gaiaAzimuth (x1, y1, x2, y2, &azimuth))
+    if (gaiaAzimuth (cache, x1, y1, x2, y2, &azimuth))
 	sqlite3_result_double (context, azimuth);
     else
 	sqlite3_result_null (context);
@@ -24948,7 +25067,7 @@ fnct_Project (sqlite3_context * context, int argc, sqlite3_value ** argv)
 	  return;
       }
 
-    if (gaiaProjectedPoint (x1, y1, a, b, distance, azimuth, &x2, &y2))
+    if (gaiaProjectedPoint (cache, x1, y1, a, b, distance, azimuth, &x2, &y2))
       {
 	  gaiaMakePoint (x2, y2, srid, &p_blob, &n_bytes);
 	  if (!p_blob)
@@ -25011,7 +25130,7 @@ fnct_GeoHash (sqlite3_context * context, int argc, sqlite3_value ** argv)
 	  sqlite3_result_null (context);
 	  return;
       }
-    geo_hash = gaiaGeoHash (geom, precision);
+    geo_hash = gaiaGeoHash (cache, geom, precision);
     if (geo_hash != NULL)
       {
 	  int len = strlen (geo_hash);
@@ -25145,7 +25264,7 @@ fnct_AsX3D (sqlite3_context * context, int argc, sqlite3_value ** argv)
 	      longshort = 1;
 	  srs = get_srs_by_srid (sqlite, geom->Srid, longshort);
       }
-    x3d = gaiaAsX3D (geom, srs, precision, options, refid);
+    x3d = gaiaAsX3D (cache, geom, srs, precision, options, refid);
     if (x3d != NULL)
       {
 	  int len = strlen (x3d);
@@ -25205,7 +25324,7 @@ fnct_3DDistance (sqlite3_context * context, int argc, sqlite3_value ** argv)
 	sqlite3_result_null (context);
     else
       {
-	  ret = gaia3DDistance (geo1, geo2, &dist);
+	  ret = gaia3DDistance (cache, geo1, geo2, &dist);
 	  if (!ret)
 	      sqlite3_result_null (context);
 	  else
@@ -25262,7 +25381,7 @@ fnct_MaxDistance (sqlite3_context * context, int argc, sqlite3_value ** argv)
 	sqlite3_result_null (context);
     else
       {
-	  ret = gaiaMaxDistance (geo1, geo2, &dist);
+	  ret = gaiaMaxDistance (cache, geo1, geo2, &dist);
 	  if (!ret)
 	      sqlite3_result_null (context);
 	  else
@@ -25319,7 +25438,7 @@ fnct_3DMaxDistance (sqlite3_context * context, int argc, sqlite3_value ** argv)
 	sqlite3_result_null (context);
     else
       {
-	  ret = gaia3DMaxDistance (geo1, geo2, &dist);
+	  ret = gaia3DMaxDistance (cache, geo1, geo2, &dist);
 	  if (!ret)
 	      sqlite3_result_null (context);
 	  else
@@ -25369,7 +25488,7 @@ fnct_Node (sqlite3_context * context, int argc, sqlite3_value ** argv)
 	  return;
       }
 
-    result = gaiaNodeLines (input);
+    result = gaiaNodeLines (cache, input);
     if (result != NULL)
       {
 	  gaiaToSpatiaLiteBlobWkbEx (result, &p_blob, &n_bytes, gpkg_mode);
@@ -25638,7 +25757,7 @@ fnct_SelfIntersections (sqlite3_context * context, int argc,
 /* extracting all input nodes */
     nodes_in = get_nodes (input);
 
-    noded = gaiaNodeLines (input);
+    noded = gaiaNodeLines (cache, input);
     gaiaFreeGeomColl (input);
 /* extracting all output nodes */
     nodes_out = get_nodes (noded);
@@ -25659,7 +25778,7 @@ fnct_SelfIntersections (sqlite3_context * context, int argc,
 	sqlite3_result_null (context);
 }
 
-#endif /* end LWGEOM support */
+#endif /* end RTTOPO support */
 
 
 static void
@@ -26833,8 +26952,8 @@ fnct_math_atan2 (sqlite3_context * context, int argc, sqlite3_value ** argv)
 / or NULL if any error is encountered
 */
     int int_value;
-    double x;
-    double y;
+    double x = 0.0;
+    double y = 0.0;
     double t;
     GAIA_UNUSED ();		/* LCOV_EXCL_LINE */
     if (sqlite3_value_type (argv[0]) == SQLITE_FLOAT)
@@ -28585,7 +28704,7 @@ fnct_DropGeoTable (sqlite3_context * context, int argc, sqlite3_value ** argv)
 / NULL on invalid arguments
 */
     char *db_prefix = "main";
-    char *table;
+    char *table = NULL;
     int transaction = 1;
     int ret;
     int cnt;
@@ -28631,7 +28750,7 @@ fnct_DropGeoTable (sqlite3_context * context, int argc, sqlite3_value ** argv)
       }
 
     cnt = sqlite3_total_changes (db_handle);
-    ret = gaiaDropTableEx2 (db_handle, db_prefix, table, transaction);
+    ret = gaiaDropTableEx3 (db_handle, db_prefix, table, transaction, NULL);
     if (ret)
       {
 	  if (sqlite3_total_changes (db_handle) <= cnt)
@@ -28852,6 +28971,10 @@ fnct_ImportSHP (sqlite3_context * context, int argc, sqlite3_value ** argv)
 /           TEXT geom_column, TEXT pk_column, TEXT geom_type,
 /           INT coerce2d, INT compressed, INT spatial_index,
 /           INT text_dates)
+/ ImportSHP(TEXT filename, TEXT table, TEXT charset, INT srid, 
+/           TEXT geom_column, TEXT pk_column, TEXT geom_type,
+/           INT coerce2d, INT compressed, INT spatial_index,
+/           INT text_dates, INT verbose)
 /
 / returns:
 / the number of imported rows
@@ -28866,6 +28989,7 @@ fnct_ImportSHP (sqlite3_context * context, int argc, sqlite3_value ** argv)
     int compressed = 0;
     int spatial_index = 0;
     int text_dates = 0;
+    int verbose = 1;
     char *pk_column = NULL;
     char *geo_column = NULL;
     char *geom_type = NULL;
@@ -28970,10 +29094,20 @@ fnct_ImportSHP (sqlite3_context * context, int argc, sqlite3_value ** argv)
 	  else
 	      text_dates = sqlite3_value_int (argv[10]);
       }
+    if (argc > 11)
+      {
+	  if (sqlite3_value_type (argv[11]) != SQLITE_INTEGER)
+	    {
+		sqlite3_result_null (context);
+		return;
+	    }
+	  else
+	      verbose = sqlite3_value_int (argv[11]);
+      }
 
     ret =
 	load_shapefile_ex2 (db_handle, path, table, charset, srid, geo_column,
-			    geom_type, pk_column, coerce2d, compressed, 1,
+			    geom_type, pk_column, coerce2d, compressed, verbose,
 			    spatial_index, text_dates, &rows, NULL);
 
     if (rows < 0 || !ret)
@@ -31586,7 +31720,7 @@ fnct_XB_Create (sqlite3_context * context, int argc, sqlite3_value ** argv)
 /   if such internal SchemaURI doesn't exists, or if the formal
 /   Schema Validation fails, NULL will be returned.
 */
-    int len;
+    int len = 0;
     unsigned char *p_result = NULL;
     const unsigned char *xml;
     int xml_len;
@@ -31839,7 +31973,7 @@ fnct_XB_SchemaValidate (sqlite3_context * context, int argc,
 / returns a validated XmlBLOB object if the SchemaValidation was successful
 / or NULL if any error is encountered
 */
-    int len;
+    int len = 0;
     unsigned char *p_result = NULL;
     const unsigned char *p_blob;
     int n_bytes;
@@ -33620,8 +33754,8 @@ fnct_AffineTransformMatrix_Translate (sqlite3_context * context, int argc,
     int int_value;
     unsigned char *blob;
     int blob_sz;
-    const unsigned char *iblob;
-    int iblob_sz;
+    const unsigned char *iblob = NULL;
+    int iblob_sz = 0;
     GAIA_UNUSED ();		/* LCOV_EXCL_LINE */
 
 /* validating the input args */
@@ -33751,8 +33885,8 @@ fnct_AffineTransformMatrix_Scale (sqlite3_context * context, int argc,
     int int_value;
     unsigned char *blob;
     int blob_sz;
-    const unsigned char *iblob;
-    int iblob_sz;
+    const unsigned char *iblob = NULL;
+    int iblob_sz = 0;
     GAIA_UNUSED ();		/* LCOV_EXCL_LINE */
 
 /* validating the input args */
@@ -34884,7 +35018,7 @@ fnct_getDecimalPrecision (sqlite3_context * context, int argc,
     sqlite3_result_int (context, cache->decimal_precision);
 }
 
-#ifdef POSTGIS_2_2		/* only if TOPOLOGY is enabled */
+#ifdef ENABLE_RTTOPO		/* only if RTTOPO is enabled */
 
 static void
 fnct_CreateTopology (sqlite3_context * context, int argc, sqlite3_value ** argv)
@@ -35056,6 +35190,13 @@ fnct_TopoGeo_FromGeoTable (sqlite3_context * context, int argc,
 }
 
 static void
+fnct_TopoGeo_FromGeoTableExt (sqlite3_context * context, int argc,
+			      sqlite3_value ** argv)
+{
+    fnctaux_TopoGeo_FromGeoTableExt (context, argc, argv);
+}
+
+static void
 fnct_TopoGeo_ToGeoTable (sqlite3_context * context, int argc,
 			 sqlite3_value ** argv)
 {
@@ -35067,6 +35208,27 @@ fnct_TopoGeo_ToGeoTableGeneralize (sqlite3_context * context, int argc,
 				   sqlite3_value ** argv)
 {
     fnctaux_TopoGeo_ToGeoTableGeneralize (context, argc, argv);
+}
+
+static void
+fnct_TopoGeo_RemoveSmallFaces (sqlite3_context * context, int argc,
+			       sqlite3_value ** argv)
+{
+    fnctaux_TopoGeo_RemoveSmallFaces (context, argc, argv);
+}
+
+static void
+fnct_TopoGeo_RemoveDanglingEdges (sqlite3_context * context, int argc,
+				  sqlite3_value ** argv)
+{
+    fnctaux_TopoGeo_RemoveDanglingEdges (context, argc, argv);
+}
+
+static void
+fnct_TopoGeo_RemoveDanglingNodes (sqlite3_context * context, int argc,
+				  sqlite3_value ** argv)
+{
+    fnctaux_TopoGeo_RemoveDanglingNodes (context, argc, argv);
 }
 
 static void
@@ -35136,6 +35298,20 @@ fnct_TopoGeo_UpdateSeeds (sqlite3_context * context, int argc,
 			  sqlite3_value ** argv)
 {
     fnctaux_TopoGeo_UpdateSeeds (context, argc, argv);
+}
+
+static void
+fnct_TopoGeo_SnapPointToSeed (sqlite3_context * context, int argc,
+			      sqlite3_value ** argv)
+{
+    fnctaux_TopoGeo_SnapPointToSeed (context, argc, argv);
+}
+
+static void
+fnct_TopoGeo_SnapLineToSeed (sqlite3_context * context, int argc,
+			     sqlite3_value ** argv)
+{
+    fnctaux_TopoGeo_SnapLineToSeed (context, argc, argv);
 }
 
 static void
@@ -35345,8 +35521,8 @@ splite_close_callback (void *p_cache)
 	|| cache->magic2 != SPATIALITE_CACHE_MAGIC2)
 	return;
 
-#ifdef ENABLE_LWGEOM
-    gaiaResetLwGeomMsg ();
+#ifdef ENABLE_RTTOPO
+    gaiaResetRtTopoMsg (cache);
 #endif
 
     free_internal_cache (cache);
@@ -35385,9 +35561,9 @@ register_spatialite_sql_functions (void *p_db, const void *p_cache)
     sqlite3_create_function_v2 (db, "geos_version", 0,
 				SQLITE_UTF8 | SQLITE_DETERMINISTIC, 0,
 				fnct_geos_version, 0, 0, 0);
-    sqlite3_create_function_v2 (db, "lwgeom_version", 0,
+    sqlite3_create_function_v2 (db, "rttopo_version", 0,
 				SQLITE_UTF8 | SQLITE_DETERMINISTIC, 0,
-				fnct_lwgeom_version, 0, 0, 0);
+				fnct_rttopo_version, 0, 0, 0);
     sqlite3_create_function_v2 (db, "libxml2_version", 0,
 				SQLITE_UTF8 | SQLITE_DETERMINISTIC, 0,
 				fnct_libxml2_version, 0, 0, 0);
@@ -35409,9 +35585,9 @@ register_spatialite_sql_functions (void *p_db, const void *p_cache)
     sqlite3_create_function_v2 (db, "HasGeosOnlyReentrant", 0,
 				SQLITE_UTF8 | SQLITE_DETERMINISTIC, 0,
 				fnct_has_geos_only_reentrant, 0, 0, 0);
-    sqlite3_create_function_v2 (db, "HasLwGeom", 0,
+    sqlite3_create_function_v2 (db, "HasRtTopo", 0,
 				SQLITE_UTF8 | SQLITE_DETERMINISTIC, 0,
-				fnct_has_lwgeom, 0, 0, 0);
+				fnct_has_rttopo, 0, 0, 0);
     sqlite3_create_function_v2 (db, "HasMathSql", 0,
 				SQLITE_UTF8 | SQLITE_DETERMINISTIC, 0,
 				fnct_has_math_sql, 0, 0, 0);
@@ -37120,6 +37296,9 @@ register_spatialite_sql_functions (void *p_db, const void *p_cache)
 	  sqlite3_create_function_v2 (db, "ImportSHP", 11,
 				      SQLITE_UTF8 | SQLITE_DETERMINISTIC, 0,
 				      fnct_ImportSHP, 0, 0, 0);
+	  sqlite3_create_function_v2 (db, "ImportSHP", 12,
+				      SQLITE_UTF8 | SQLITE_DETERMINISTIC, 0,
+				      fnct_ImportSHP, 0, 0, 0);
 	  sqlite3_create_function_v2 (db, "ExportSHP", 4,
 				      SQLITE_UTF8 | SQLITE_DETERMINISTIC, 0,
 				      fnct_ExportSHP, 0, 0, 0);
@@ -37485,13 +37664,29 @@ register_spatialite_sql_functions (void *p_db, const void *p_cache)
     sqlite3_create_function_v2 (db, "GEOS_GetCriticalPointFromMsg", 1,
 				SQLITE_UTF8, cache,
 				fnct_GEOS_GetCriticalPointFromMsg, 0, 0, 0);
-    sqlite3_create_function_v2 (db, "IsValidReason", 1, SQLITE_UTF8, cache,
+    sqlite3_create_function_v2 (db, "IsValidReason", 1,
+				SQLITE_UTF8 | SQLITE_DETERMINISTIC, cache,
 				fnct_IsValidReason, 0, 0, 0);
-    sqlite3_create_function_v2 (db, "ST_IsValidReason", 1, SQLITE_UTF8, cache,
+    sqlite3_create_function_v2 (db, "IsValidReason", 2,
+				SQLITE_UTF8 | SQLITE_DETERMINISTIC, cache,
 				fnct_IsValidReason, 0, 0, 0);
-    sqlite3_create_function_v2 (db, "IsValidDetail", 1, SQLITE_UTF8, cache,
+    sqlite3_create_function_v2 (db, "ST_IsValidReason", 1,
+				SQLITE_UTF8 | SQLITE_DETERMINISTIC, cache,
+				fnct_IsValidReason, 0, 0, 0);
+    sqlite3_create_function_v2 (db, "ST_IsValidReason", 2,
+				SQLITE_UTF8 | SQLITE_DETERMINISTIC, cache,
+				fnct_IsValidReason, 0, 0, 0);
+    sqlite3_create_function_v2 (db, "IsValidDetail", 1,
+				SQLITE_UTF8 | SQLITE_DETERMINISTIC, cache,
 				fnct_IsValidDetail, 0, 0, 0);
-    sqlite3_create_function_v2 (db, "ST_IsValidDetail", 1, SQLITE_UTF8, cache,
+    sqlite3_create_function_v2 (db, "IsValidDetail", 2,
+				SQLITE_UTF8 | SQLITE_DETERMINISTIC, cache,
+				fnct_IsValidDetail, 0, 0, 0);
+    sqlite3_create_function_v2 (db, "ST_IsValidDetail", 1,
+				SQLITE_UTF8 | SQLITE_DETERMINISTIC, cache,
+				fnct_IsValidDetail, 0, 0, 0);
+    sqlite3_create_function_v2 (db, "ST_IsValidDetail", 2,
+				SQLITE_UTF8 | SQLITE_DETERMINISTIC, cache,
 				fnct_IsValidDetail, 0, 0, 0);
 
     sqlite3_create_function_v2 (db, "Boundary", 1,
@@ -37521,7 +37716,13 @@ register_spatialite_sql_functions (void *p_db, const void *p_cache)
     sqlite3_create_function_v2 (db, "IsValid", 1,
 				SQLITE_UTF8 | SQLITE_DETERMINISTIC, cache,
 				fnct_IsValid, 0, 0, 0);
+    sqlite3_create_function_v2 (db, "IsValid", 2,
+				SQLITE_UTF8 | SQLITE_DETERMINISTIC, cache,
+				fnct_IsValid, 0, 0, 0);
     sqlite3_create_function_v2 (db, "ST_IsValid", 1,
+				SQLITE_UTF8 | SQLITE_DETERMINISTIC, cache,
+				fnct_IsValid, 0, 0, 0);
+    sqlite3_create_function_v2 (db, "ST_IsValid", 2,
 				SQLITE_UTF8 | SQLITE_DETERMINISTIC, cache,
 				fnct_IsValid, 0, 0, 0);
     sqlite3_create_function_v2 (db, "GLength", 1,
@@ -37977,12 +38178,12 @@ register_spatialite_sql_functions (void *p_db, const void *p_cache)
 
 #endif /* end GEOS advanced features */
 
-#ifdef ENABLE_LWGEOM		/* enabling LWGEOM support */
+#ifdef ENABLE_RTTOPO		/* enabling RTTOPO support */
 
-    sqlite3_create_function_v2 (db, "LWGEOM_GetLastErrorMsg", 0, SQLITE_UTF8,
-				0, fnct_LWGEOM_GetLastErrorMsg, 0, 0, 0);
-    sqlite3_create_function_v2 (db, "LWGEOM_GetLastWarningMsg", 0, SQLITE_UTF8,
-				0, fnct_LWGEOM_GetLastWarningMsg, 0, 0, 0);
+    sqlite3_create_function_v2 (db, "RTTOPO_GetLastErrorMsg", 0, SQLITE_UTF8,
+				0, fnct_RTTOPO_GetLastErrorMsg, 0, 0, 0);
+    sqlite3_create_function_v2 (db, "RTTOPO_GetLastWarningMsg", 0, SQLITE_UTF8,
+				0, fnct_RTTOPO_GetLastWarningMsg, 0, 0, 0);
 
     sqlite3_create_function_v2 (db, "MakeValid", 1,
 				SQLITE_UTF8 | SQLITE_DETERMINISTIC, cache,
@@ -37991,7 +38192,7 @@ register_spatialite_sql_functions (void *p_db, const void *p_cache)
 				SQLITE_UTF8 | SQLITE_DETERMINISTIC, cache,
 				fnct_MakeValid, 0, 0, 0);
     sqlite3_create_function_v2 (db, "MakeValidDiscarded", 1,
-				SQLITE_UTF8 | SQLITE_DETERMINISTIC, 0,
+				SQLITE_UTF8 | SQLITE_DETERMINISTIC, cache,
 				fnct_MakeValidDiscarded, 0, 0, 0);
     sqlite3_create_function_v2 (db, "ST_MakeValidDiscarded", 1,
 				SQLITE_UTF8 | SQLITE_DETERMINISTIC, cache,
@@ -38099,7 +38300,7 @@ register_spatialite_sql_functions (void *p_db, const void *p_cache)
 				SQLITE_UTF8 | SQLITE_DETERMINISTIC, cache,
 				fnct_3dLength, 0, 0, 0);
 
-#endif /* end LWGEOM support */
+#endif /* end RTTOPO support */
 
     sqlite3_create_function_v2 (db, "ST_Cutter", 7,
 				SQLITE_UTF8 | SQLITE_DETERMINISTIC, cache,
@@ -38478,7 +38679,7 @@ register_spatialite_sql_functions (void *p_db, const void *p_cache)
 
 #endif /* end enabling GeoPackage extensions */
 
-#ifdef POSTGIS_2_2		/* only if TOPOLOGY is enabled */
+#ifdef ENABLE_RTTOPO		/* only if RTTOPO is enabled */
     if (sqlite3_libversion_number () >= 3008003)
       {
 	  /* only SQLite >= 3.8.3 can suppoty WITH RECURSIVE */
@@ -38578,6 +38779,12 @@ register_spatialite_sql_functions (void *p_db, const void *p_cache)
 	  sqlite3_create_function_v2 (db, "TopoGeo_FromGeoTable", 7,
 				      SQLITE_UTF8 | SQLITE_DETERMINISTIC, cache,
 				      fnct_TopoGeo_FromGeoTable, 0, 0, 0);
+	  sqlite3_create_function_v2 (db, "TopoGeo_FromGeoTableExt", 7,
+				      SQLITE_UTF8 | SQLITE_DETERMINISTIC, cache,
+				      fnct_TopoGeo_FromGeoTableExt, 0, 0, 0);
+	  sqlite3_create_function_v2 (db, "TopoGeo_FromGeoTableExt", 9,
+				      SQLITE_UTF8 | SQLITE_DETERMINISTIC, cache,
+				      fnct_TopoGeo_FromGeoTableExt, 0, 0, 0);
 	  sqlite3_create_function_v2 (db, "TopoGeo_ToGeoTable", 5,
 				      SQLITE_UTF8 | SQLITE_DETERMINISTIC, cache,
 				      fnct_TopoGeo_ToGeoTable, 0, 0, 0);
@@ -38591,6 +38798,17 @@ register_spatialite_sql_functions (void *p_db, const void *p_cache)
 	  sqlite3_create_function_v2 (db, "TopoGeo_ToGeoTableGeneralize", 7,
 				      SQLITE_UTF8 | SQLITE_DETERMINISTIC, cache,
 				      fnct_TopoGeo_ToGeoTableGeneralize, 0, 0,
+				      0);
+	  sqlite3_create_function_v2 (db, "TopoGeo_RemoveSmallFaces", 2,
+				      SQLITE_UTF8 | SQLITE_DETERMINISTIC, cache,
+				      fnct_TopoGeo_RemoveSmallFaces, 0, 0, 0);
+	  sqlite3_create_function_v2 (db, "TopoGeo_RemoveDanglingEdges", 1,
+				      SQLITE_UTF8 | SQLITE_DETERMINISTIC, cache,
+				      fnct_TopoGeo_RemoveDanglingEdges, 0, 0,
+				      0);
+	  sqlite3_create_function_v2 (db, "TopoGeo_RemoveDanglingNodes", 1,
+				      SQLITE_UTF8 | SQLITE_DETERMINISTIC, cache,
+				      fnct_TopoGeo_RemoveDanglingNodes, 0, 0,
 				      0);
 	  sqlite3_create_function_v2 (db, "TopoGeo_Clone", 3,
 				      SQLITE_UTF8 | SQLITE_DETERMINISTIC, cache,
@@ -38610,6 +38828,12 @@ register_spatialite_sql_functions (void *p_db, const void *p_cache)
 	  sqlite3_create_function_v2 (db, "TopoGeo_UpdateSeeds", 2,
 				      SQLITE_UTF8 | SQLITE_DETERMINISTIC, cache,
 				      fnct_TopoGeo_UpdateSeeds, 0, 0, 0);
+	  sqlite3_create_function_v2 (db, "TopoGeo_SnapPointToSeed", 3,
+				      SQLITE_UTF8 | SQLITE_DETERMINISTIC, cache,
+				      fnct_TopoGeo_SnapPointToSeed, 0, 0, 0);
+	  sqlite3_create_function_v2 (db, "TopoGeo_SnapLineToSeed", 3,
+				      SQLITE_UTF8 | SQLITE_DETERMINISTIC, cache,
+				      fnct_TopoGeo_SnapLineToSeed, 0, 0, 0);
 	  sqlite3_create_function_v2 (db, "TopoGeo_CreateTopoLayer", 5,
 				      SQLITE_UTF8 | SQLITE_DETERMINISTIC, cache,
 				      fnct_TopoGeo_CreateTopoLayer, 0, 0, 0);
@@ -38782,8 +39006,11 @@ init_spatialite_virtualtables (void *p_db, const void *p_cache)
     virtual_spatialindex_extension_init (db);
 /* initializing the VirtualElementary  extension */
     virtual_elementary_extension_init (db);
+
+#ifndef OMIT_KNN		/* only if KNN is enabled */
 /* initializing the VirtualKNN  extension */
     virtual_knn_extension_init (db);
+#endif /* end KNN conditional */
 
 #ifdef ENABLE_GEOPACKAGE	/* only if GeoPackage support is enabled */
 /* initializing the VirtualFDO  extension */
@@ -38806,10 +39033,6 @@ init_spatialite_extension (sqlite3 * db, char **pzErrMsg,
 	(struct splite_internal_cache *) p_cache;
     SQLITE_EXTENSION_INIT2 (pApi);
 
-#ifdef POSTGIS_2_1		/* initializing liblwgeom from PostGIS 2.1.x (or later) */
-    splite_lwgeom_init ();
-#endif /* end POSTGIS_2_1 */
-
 /* setting the POSIX locale for numeric */
     setlocale (LC_NUMERIC, "POSIX");
     *pzErrMsg = NULL;
@@ -38828,7 +39051,7 @@ init_spatialite_extension (sqlite3 * db, char **pzErrMsg,
 SPATIALITE_DECLARE void
 spatialite_init_geos (void)
 {
-/* initializes GEOS (or resets to initial state - as required by LWGEOM) */
+/* initializes GEOS (or resets to initial state - as required by RTTOPO) */
 #ifndef OMIT_GEOS		/* initializing GEOS */
 #ifndef GEOS_USE_ONLY_R_API	/* obsolete versions non fully thread-safe */
     initGEOS (geos_warning, geos_error);
@@ -38865,8 +39088,11 @@ spatialite_splash_screen (int verbose)
 		    ("\t- 'VirtualSpatialIndex'\t[R*Tree metahandler]\n");
 		spatialite_i
 		    ("\t- 'VirtualElementary'\t[ElemGeoms metahandler]\n");
+
+#ifndef OMIT_KNN		/* only if KNN is enabled */
 		spatialite_i
 		    ("\t- 'VirtualKNN'\t[K-Nearest Neighbors metahandler]\n");
+#endif /* end KNN conditional */
 
 #ifdef ENABLE_LIBXML2		/* VirtualXPath is supported */
 		spatialite_i
@@ -38891,11 +39117,11 @@ spatialite_splash_screen (int verbose)
 	  if (verbose)
 	      spatialite_i ("GEOS version ........: %s\n", GEOSversion ());
 #endif /* end GEOS version */
-#ifdef ENABLE_LWGEOM		/* LWGEOM version */
+#ifdef ENABLE_RTTOPO		/* RTTOPO version */
 	  if (verbose)
-	      spatialite_i ("LWGEOM version ......: %s\n",
-			    splite_lwgeom_version ());
-#endif /* end LWGEOM version */
+	      spatialite_i ("RTTOPO version ......: %s\n",
+			    splite_rttopo_version ());
+#endif /* end RTTOPO version */
 	  if (verbose)
 	      spatialite_i ("TARGET CPU ..........: %s\n",
 			    spatialite_target_cpu ());
@@ -38919,10 +39145,6 @@ spatialite_init_ex (sqlite3 * db_handle, const void *p_cache, int verbose)
 /* setting the POSIX locale for numeric */
     setlocale (LC_NUMERIC, "POSIX");
 
-#ifdef POSTGIS_2_1		/* initializing liblwgeom from PostGIS 2.1.x (or later) */
-    splite_lwgeom_init ();
-#endif /* end POSTGIS_2_1 */
-
     register_spatialite_sql_functions (db_handle, cache);
 
     init_spatialite_virtualtables (db_handle, p_cache);
@@ -38943,8 +39165,8 @@ spatialite_cleanup_ex (const void *ptr)
 	|| cache->magic2 != SPATIALITE_CACHE_MAGIC2)
 	return;
 
-#ifdef ENABLE_LWGEOM
-    gaiaResetLwGeomMsg ();
+#ifdef ENABLE_RTTOPO
+    gaiaResetRtTopoMsg (cache);
 #endif
 
     free_internal_cache (cache);

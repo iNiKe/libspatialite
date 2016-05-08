@@ -2850,7 +2850,7 @@ gaiaIsValidReason_r (const void *p_cache, gaiaGeomCollPtr geom)
 	  strcpy (text, str);
 	  return text;
       }
-    if (gaiaIsToxic (geom))
+    if (gaiaIsToxic_r (cache, geom))
       {
 	  str = "Invalid: Toxic Geometry ... too few points";
 	  len = strlen (str);
@@ -2879,7 +2879,7 @@ gaiaIsValidReason_r (const void *p_cache, gaiaGeomCollPtr geom)
 }
 
 GAIAGEO_DECLARE gaiaGeomCollPtr
-gaiaIsValidDetail (gaiaGeomCollPtr geom)
+gaiaIsValidDetailEx (gaiaGeomCollPtr geom, int esri_flag)
 {
 /* return a Geometry detail causing a Geometry to be invalid */
     gaiaGeomCollPtr detail = NULL;
@@ -2895,7 +2895,9 @@ gaiaIsValidDetail (gaiaGeomCollPtr geom)
     if (gaiaIsNotClosedGeomColl (geom))
 	return NULL;
     g = gaiaToGeos (geom);
-    GEOSisValidDetail (g, 0, &reason, &d);
+    if (esri_flag)
+	esri_flag = GEOSVALID_ALLOW_SELFTOUCHING_RING_FORMING_HOLE;
+    GEOSisValidDetail (g, esri_flag, &reason, &d);
     GEOSGeom_destroy (g);
     if (reason != NULL)
 	GEOSFree (reason);
@@ -2911,7 +2913,14 @@ gaiaIsValidDetail (gaiaGeomCollPtr geom)
 }
 
 GAIAGEO_DECLARE gaiaGeomCollPtr
-gaiaIsValidDetail_r (const void *p_cache, gaiaGeomCollPtr geom)
+gaiaIsValidDetail (gaiaGeomCollPtr geom)
+{
+/* return a Geometry detail causing a Geometry to be invalid */
+    return gaiaIsValidDetailEx (geom, 0);
+}
+
+GAIAGEO_DECLARE gaiaGeomCollPtr
+gaiaIsValidDetailEx_r (const void *p_cache, gaiaGeomCollPtr geom, int esri_flag)
 {
 /* return a Geometry detail causing a Geometry to be invalid */
     char *reason = NULL;
@@ -2937,7 +2946,9 @@ gaiaIsValidDetail_r (const void *p_cache, gaiaGeomCollPtr geom)
     if (gaiaIsNotClosedGeomColl_r (cache, geom))
 	return NULL;
     g = gaiaToGeos_r (cache, geom);
-    GEOSisValidDetail_r (handle, g, 0, &reason, &d);
+    if (esri_flag)
+	esri_flag = GEOSVALID_ALLOW_SELFTOUCHING_RING_FORMING_HOLE;
+    GEOSisValidDetail_r (handle, g, esri_flag, &reason, &d);
     GEOSGeom_destroy_r (handle, g);
     if (reason != NULL)
 	GEOSFree_r (handle, reason);
@@ -2946,6 +2957,13 @@ gaiaIsValidDetail_r (const void *p_cache, gaiaGeomCollPtr geom)
     detail = gaiaFromGeos_XY_r (cache, d);
     GEOSGeom_destroy_r (handle, d);
     return detail;
+}
+
+GAIAGEO_DECLARE gaiaGeomCollPtr
+gaiaIsValidDetail_r (const void *p_cache, gaiaGeomCollPtr geom)
+{
+/* return a Geometry detail causing a Geometry to be invalid */
+    return gaiaIsValidDetailEx_r (p_cache, geom, 0);
 }
 
 GAIAGEO_DECLARE int
@@ -3561,7 +3579,7 @@ gaiaPolygonizeCommon (const void *cache, GEOSContextHandle_t handle,
     int lns = 0;
     int pgs = 0;
     int items;
-    int error;
+    int error = 0;
     double x;
     double y;
     double z;

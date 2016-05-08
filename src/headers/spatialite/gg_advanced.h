@@ -850,6 +850,26 @@ extern "C"
 
 /**
  return a Geometry detail causing a Geometry to be invalid
+ * 
+ \param geom pointer to the Geometry object to be validated.
+ \param esri_flag if set to TRUE if set to TRUE all ESRI-like holes (violating
+ the basic OGC model) will be considered to be valid.
+
+ \return pointer to a Geometry object causing invalidity, or NULL.
+
+ \sa gaiaIsValid, gaiaIsValidReason, gaiaIsValidDetail_r
+
+ \note you are responsible to destroy the returned Geometry\n
+ not reentrant and thread unsafe.
+
+ \remark \b GEOS support required.
+ */
+    GAIAGEO_DECLARE gaiaGeomCollPtr gaiaIsValidDetailEx (gaiaGeomCollPtr geom,
+							 int esri_flag);
+
+
+/**
+ return a Geometry detail causing a Geometry to be invalid
 
  \param p_cache a memory pointer returned by spatialite_alloc_connection()
  \param geom pointer to the Geometry object to be validated.
@@ -865,6 +885,28 @@ extern "C"
  */
     GAIAGEO_DECLARE gaiaGeomCollPtr gaiaIsValidDetail_r (const void *p_cache,
 							 gaiaGeomCollPtr geom);
+
+
+/**
+ return a Geometry detail causing a Geometry to be invalid
+
+ \param p_cache a memory pointer returned by spatialite_alloc_connection()
+ \param geom pointer to the Geometry object to be validated.
+ \param esri_flag if set to TRUE all ESRI-like holes (violating
+ the basic OGC model) will be considered to be valid.
+
+ \return pointer to a Geometry object causing invalidity, or NULL.
+
+ \sa gaiaIsValid_r, gaiaIsValidReason_r, gaiaIsValidDetail
+
+ \note you are responsible to destroy the returned Geometry\n
+ reentrant and thread-safe.
+
+ \remark \b GEOS support required.
+ */
+    GAIAGEO_DECLARE gaiaGeomCollPtr gaiaIsValidDetailEx_r (const void *p_cache,
+							   gaiaGeomCollPtr geom,
+							   int esri_flag);
 
 /**
  Checks if a Geometry object represents an OGC Valid Geometry
@@ -3252,82 +3294,85 @@ extern "C"
 #endif				/* end GEOS experimental features */
 
 #ifndef DOXYGEN_SHOULD_IGNORE_THIS
-#ifdef ENABLE_LWGEOM
+#ifdef ENABLE_RTTOPO
 #endif
 
 /**
- Resets the LWGEOM error and warning messages to an empty state
+ Resets the RTTOPO error and warning messages to an empty state
+ 
+ \param p_cache a memory pointer returned by spatialite_alloc_connection()
+ 
+ \sa gaiaGetRtTopoErrorMsg, gaiaGetRtTopoWarningMsg, gaiaSetRtTopoErrorMsg,
+ gaiaSetRtTopoWarningMsg
 
- \sa gaiaGetLwGeomErrorMsg, gaiaGetLwGeomWarningMsg, gaiaSetLwGeomErrorMsg,
- gaiaSetLwGeomWarningMsg
-
- \note not reentrant and thread unsafe.
-
- \remark \b LWGEOM support required.
+ \remark \b RTTOPO support required.
  */
-    GAIAGEO_DECLARE void gaiaResetLwGeomMsg (void);
+    GAIAGEO_DECLARE void gaiaResetRtTopoMsg (const void *p_cache);
 
 /**
- Return the latest LWGEOM error message (if any)
+ Return the latest RTTOPO error message (if any)
 
- \return the latest LWGEOM error message: an empty string if no error was
+ \return the latest RTTOPO error message: an empty string if no error was
  previoysly found.
 
- \note not reentrant and thread unsafe.
+ \param p_cache a memory pointer returned by spatialite_alloc_connection()
+ 
+ \sa gaiaResetRtTopoMsg, gaiaGetRtTopoWarningMsg, gaiaSetRtTopoErrorMsg,
+ gaiaSetRtTopoWarningMsg
 
- \sa gaiaResetLwGeomMsg, gaiaGetLwGeomWarningMsg, gaiaSetLwGeomErrorMsg,
- gaiaSetLwGeomWarningMsg
-
- \remark \b LWGEOM support required.
+ \remark \b RTTOPO support required.
  */
-    GAIAGEO_DECLARE const char *gaiaGetLwGeomErrorMsg (void);
+    GAIAGEO_DECLARE const char *gaiaGetRtTopoErrorMsg (const void *p_cache);
 
 /**
- Return the latest LWGEOM warning message (if any)
+ Return the latest RTTOPO warning message (if any)
 
- \return the latest LWGEOM warning message: an empty string if no warning was 
+ \return the latest RTTOPO warning message: an empty string if no warning was 
  previoysly found.
 
- \sa gaiaResetLwGeomMsg, gaiaGetLwGeomErrorMsg, gaiaSetLwGeomErrorMsg,
- gaiaSetLwGeomWarningMsg
+ \param p_cache a memory pointer returned by spatialite_alloc_connection()
+
+ \sa gaiaResetRtTopoMsg, gaiaGetRtTopoErrorMsg, gaiaSetRtTopoErrorMsg,
+ gaiaSetRtTopoWarningMsg
 
  \note not reentrant and thread unsafe.
 
- \remark \b LWGEOM support required.
+ \remark \b RTTOPO support required.
  */
-    GAIAGEO_DECLARE const char *gaiaGetLwGeomWarningMsg (void);
+    GAIAGEO_DECLARE const char *gaiaGetRtTopoWarningMsg (const void *p_cache);
 
 /**
- Set the current LWGEOM error message
+ Set the current RTTOPO error message
 
+ \param p_cache a memory pointer returned by spatialite_alloc_connection()
  \param msg the error message to be set.
 
- \sa gaiaResetLwGeomMsg, gaiaGetLwGeomErrorMsg, gaiaGetLwGeomWarningMsg,
- gaiaSetLwGeomWarningMsg
+ \sa gaiaResetRtTopoMsg, gaiaGetRtTopoErrorMsg, gaiaGetRtTopoWarningMsg,
+ gaiaSetRtTopoWarningMsg
 
- \note not reentrant and thread unsafe.
-
- \remark \b LWGEOM support required.
+ \remark \b RTTOPO support required.
  */
-    GAIAGEO_DECLARE void gaiaSetLwGeomErrorMsg (const char *msg);
+    GAIAGEO_DECLARE void gaiaSetRtTopoErrorMsg (const void *p_cache,
+						const char *msg);
 
 /**
- Set the current LWGEOM warning message
+ Set the current RTTOPO warning message
 
+ \param p_cache a memory pointer returned by spatialite_alloc_connection()
  \param msg the warning message to be set.
 
- \sa gaiaResetLwGeomMsg, gaiaGetLwGeomErrorMsg, gaiaGetLwGeomWarningMsg,
- gaiaSetLwGeomErrorMsg
+ \sa gaiaResetRtTopoMsg, gaiaGetRtTopoErrorMsg, gaiaGetRtTopoWarningMsg,
+ gaiaSetRtTopoErrorMsg
 
- \note not reentrant and thread unsafe.
-
- \remark \b LWGEOM support required.
+ \remark \b RTTOPO support required.
  */
-    GAIAGEO_DECLARE void gaiaSetLwGeomWarningMsg (const char *msg);
+    GAIAGEO_DECLARE void gaiaSetRtTopoWarningMsg (const void *p_cache,
+						  const char *msg);
 
 /**
  Utility function: MakeValid
 
+ \param p_cache a memory pointer returned by spatialite_alloc_connection()
  \param geom the input Geometry object.
 
  \return the pointer to newly created Geometry object: NULL on failure.
@@ -3341,13 +3386,15 @@ extern "C"
  \note you are responsible to destroy (before or after) any allocated Geometry,
  this including any Geometry returned by gaiaMakeValid()
 
- \remark \b LWGEOM support required.
+ \remark \b RTTOPO support required.
  */
-    GAIAGEO_DECLARE gaiaGeomCollPtr gaiaMakeValid (gaiaGeomCollPtr geom);
+    GAIAGEO_DECLARE gaiaGeomCollPtr gaiaMakeValid (const void *p_cache,
+						   gaiaGeomCollPtr geom);
 
 /**
  Utility function: MakeValidDiscarded
 
+ \param p_cache a memory pointer returned by spatialite_alloc_connection()
  \param geom the input Geometry object.
 
  \return the pointer to newly created Geometry object: NULL on failure.
@@ -3362,14 +3409,16 @@ extern "C"
  \note you are responsible to destroy (before or after) any allocated Geometry,
  this including any Geometry returned by gaiaMakeValidDiscarded()
 
- \remark \b LWGEOM support required.
+ \remark \b RTTOPO support required.
  */
-    GAIAGEO_DECLARE gaiaGeomCollPtr gaiaMakeValidDiscarded (gaiaGeomCollPtr
+    GAIAGEO_DECLARE gaiaGeomCollPtr gaiaMakeValidDiscarded (const void *p_cache,
+							    gaiaGeomCollPtr
 							    geom);
 
 /**
  Utility function: Segmentize
 
+ \param p_cache a memory pointer returned by spatialite_alloc_connection()
  \param geom the input Geometry object.
  \param dist the meximum segment length.
 
@@ -3384,14 +3433,16 @@ extern "C"
  \note you are responsible to destroy (before or after) any allocated Geometry,
  this including any Geometry returned by gaiaSegmentize()
 
- \remark \b LWGEOM support required.
+ \remark \b RTTOPO support required.
  */
-    GAIAGEO_DECLARE gaiaGeomCollPtr gaiaSegmentize (gaiaGeomCollPtr geom,
+    GAIAGEO_DECLARE gaiaGeomCollPtr gaiaSegmentize (const void *p_cache,
+						    gaiaGeomCollPtr geom,
 						    double dist);
 
 /**
  Utility function: Azimuth
 
+ \param p_cache a memory pointer returned by spatialite_alloc_connection()
  \param xa the X coordinate of PointA.
  \param ya the Y coordinate of PointA.
  \param xb the X ccordinate of PointB.
@@ -3404,14 +3455,15 @@ extern "C"
 
  \sa gaiaProjectedPoint
 
- \remark \b LWGEOM support required.
+ \remark \b RTTOPO support required.
  */
-    GAIAGEO_DECLARE int gaiaAzimuth (double xa, double ya, double xb,
-				     double yb, double *azimuth);
+    GAIAGEO_DECLARE int gaiaAzimuth (const void *p_cache, double xa, double ya,
+				     double xb, double yb, double *azimuth);
 
 /**
  Utility function: EllipsoidAzimuth
 
+ \param p_cache a memory pointer returned by spatialite_alloc_connection()
  \param xa the X coordinate of PointA.
  \param ya the Y coordinate of PointA.
  \param xb the X ccordinate of PointB.
@@ -3426,15 +3478,17 @@ extern "C"
 
  \sa gaiaAzimuth
 
- \remark \b LWGEOM support required.
+ \remark \b RTTOPO support required.
  */
-    GAIAGEO_DECLARE int gaiaEllipsoidAzimuth (double xa, double ya, double xb,
-					      double yb, double a, double b,
+    GAIAGEO_DECLARE int gaiaEllipsoidAzimuth (const void *p_cache, double xa,
+					      double ya, double xb, double yb,
+					      double a, double b,
 					      double *azimuth);
 
 /**
  Utility function: ProjectedPoint
 
+ \param p_cache a memory pointer returned by spatialite_alloc_connection()
  \param x1 the X coordinate of the Start Point.
  \param y1 the Y coordinate of the Start Point.
  \param a major axis of the reference spheroid.
@@ -3449,16 +3503,17 @@ extern "C"
 
  \return 0 on failure: any other value on success
 
- \remark \b LWGEOM support required.
+ \remark \b RTTOPO support required.
  */
-    GAIAGEO_DECLARE int gaiaProjectedPoint (double x1, double y1, double a,
-					    double b, double distance,
-					    double azimuth, double *x2,
-					    double *y2);
+    GAIAGEO_DECLARE int gaiaProjectedPoint (const void *p_cache, double x1,
+					    double y1, double a, double b,
+					    double distance, double azimuth,
+					    double *x2, double *y2);
 
 /**
  Utility function: GeoHash
 
+ \param p_cache a memory pointer returned by spatialite_alloc_connection()
  \param geom the input geometry.
  \param precision the expected precision: if <= 0 will be automatically determined.
 
@@ -3467,13 +3522,15 @@ extern "C"
  \note you are responsible to free (before or after) any text string returned
   by gaiaGeoHash()
 
- \remark \b LWGEOM support required.
+ \remark \b RTTOPO support required.
  */
-    GAIAGEO_DECLARE char *gaiaGeoHash (gaiaGeomCollPtr geom, int precision);
+    GAIAGEO_DECLARE char *gaiaGeoHash (const void *p_cache,
+				       gaiaGeomCollPtr geom, int precision);
 
 /**
  Utility function: AsX3D
 
+ \param p_cache a memory pointer returned by spatialite_alloc_connection()
  \param geom the input geometry.
  \param srs the WKT SRS definition.
  \param precision the expected precision (coord decimal digits).
@@ -3485,15 +3542,16 @@ extern "C"
  \note you are responsible to free (before or after) any text string returned
   by gaiaAsX3D()
 
- \remark \b LWGEOM support required.
+ \remark \b RTTOPO support required.
  */
-    GAIAGEO_DECLARE char *gaiaAsX3D (gaiaGeomCollPtr geom, const char *srs,
-				     int precision, int options,
-				     const char *refid);
+    GAIAGEO_DECLARE char *gaiaAsX3D (const void *p_cache, gaiaGeomCollPtr geom,
+				     const char *srs, int precision,
+				     int options, const char *refid);
 
 /**
  Calculates the minimum 3D distance intercurring between two Geometry objects
 
+ \param p_cache a memory pointer returned by spatialite_alloc_connection()
  \param geom1 the first Geometry object 
  \param geom2 the second Geometry object 
  \param dist on completion this variable will contain the calculated distance
@@ -3504,14 +3562,16 @@ extern "C"
 
  \note this function computes the 3D cartesian distance (if Z is supported)
 
- \remark \b LWGEOM support required.
+ \remark \b RTTOPO support required.
  */
-    GAIAGEO_DECLARE int gaia3DDistance (gaiaGeomCollPtr geom1,
+    GAIAGEO_DECLARE int gaia3DDistance (const void *p_cache,
+					gaiaGeomCollPtr geom1,
 					gaiaGeomCollPtr geom2, double *dist);
 
 /**
  Calculates the maximum 2D distance intercurring between two Geometry objects
 
+ \param p_cache a memory pointer returned by spatialite_alloc_connection()
  \param geom1 the first Geometry object 
  \param geom2 the second Geometry object 
  \param dist on completion this variable will contain the calculated distance
@@ -3522,14 +3582,16 @@ extern "C"
 
  \note this function computes the 2D maximum cartesian distance (Z is always ignored)
 
- \remark \b LWGEOM support required.
+ \remark \b RTTOPO support required.
  */
-    GAIAGEO_DECLARE int gaiaMaxDistance (gaiaGeomCollPtr geom1,
+    GAIAGEO_DECLARE int gaiaMaxDistance (const void *p_cache,
+					 gaiaGeomCollPtr geom1,
 					 gaiaGeomCollPtr geom2, double *dist);
 
 /**
  Calculates the maximum 3D distance intercurring between two Geometry objects
 
+ \param p_cache a memory pointer returned by spatialite_alloc_connection()
  \param geom1 the first Geometry object 
  \param geom2 the second Geometry object 
  \param dist on completion this variable will contain the calculated distance
@@ -3540,15 +3602,17 @@ extern "C"
 
  \note this function computes the 3D maximum cartesian distance (if Z is supported)
 
- \remark \b LWGEOM support required.
+ \remark \b RTTOPO support required.
  */
-    GAIAGEO_DECLARE int gaia3DMaxDistance (gaiaGeomCollPtr geom1,
+    GAIAGEO_DECLARE int gaia3DMaxDistance (const void *p_cache,
+					   gaiaGeomCollPtr geom1,
 					   gaiaGeomCollPtr geom2, double *dist);
 
 /**
  Calculates the 2D or 3D Length for a Linestring or Multilinestring
  accordingly to the dimensions of Geometry
 
+ \param p_cache a memory pointer returned by spatialite_alloc_connection()
  \param geom the Geometry object 
  \param length on completion this variable will contain the calculated length
 
@@ -3556,13 +3620,15 @@ extern "C"
 
  \sa gaiaGeomCollDistance
 
- \remark \b LWGEOM support required.
+ \remark \b RTTOPO support required.
  */
-    GAIAGEO_DECLARE int gaia3dLength (gaiaGeomCollPtr geom, double *length);
+    GAIAGEO_DECLARE int gaia3dLength (const void *p_cache, gaiaGeomCollPtr geom,
+				      double *length);
 
 /**
  Utility function: Split
 
+ \param p_cache a memory pointer returned by spatialite_alloc_connection()
  \param input the input Geometry object.
  \param blade the blade Geometry object.
 
@@ -3576,14 +3642,16 @@ extern "C"
  
  \note gaiaSplit will return both the \b left and the \b right split halves at the same time.
 
- \remark \b LWGEOM support required.
+ \remark \b RTTOPO support required.
  */
-    GAIAGEO_DECLARE gaiaGeomCollPtr gaiaSplit (gaiaGeomCollPtr input,
+    GAIAGEO_DECLARE gaiaGeomCollPtr gaiaSplit (const void *p_cache,
+					       gaiaGeomCollPtr input,
 					       gaiaGeomCollPtr blade);
 
 /**
  Utility function: SplitLeft
 
+ \param p_cache a memory pointer returned by spatialite_alloc_connection()
  \param input the input Geometry object.
  \param blade the blade Geometry object.
 
@@ -3598,14 +3666,16 @@ extern "C"
  \note gaiaSplitLeft will only return the \b left split half; NULL may be eventually
  returned if empty.
 
- \remark \b LWGEOM support required.
+ \remark \b RTTOPO support required.
  */
-    GAIAGEO_DECLARE gaiaGeomCollPtr gaiaSplitLeft (gaiaGeomCollPtr input,
+    GAIAGEO_DECLARE gaiaGeomCollPtr gaiaSplitLeft (const void *p_cache,
+						   gaiaGeomCollPtr input,
 						   gaiaGeomCollPtr blade);
 
 /**
  Utility function: SplitRight
 
+ \param p_cache a memory pointer returned by spatialite_alloc_connection()
  \param input the input Geometry object.
  \param blade the blade Geometry object.
 
@@ -3620,14 +3690,16 @@ extern "C"
  \note gaiaSplitLeft will only return the \b right split half; NULL may be eventually
  returned if empty.
 
- \remark \b LWGEOM support required.
+ \remark \b RTTOPO support required.
  */
-    GAIAGEO_DECLARE gaiaGeomCollPtr gaiaSplitRight (gaiaGeomCollPtr input,
+    GAIAGEO_DECLARE gaiaGeomCollPtr gaiaSplitRight (const void *p_cache,
+						    gaiaGeomCollPtr input,
 						    gaiaGeomCollPtr blade);
 
 /**
  Measures the total Area for a Geometry object (geodesic)
 
+ \param p_cache a memory pointer returned by spatialite_alloc_connection()
  \param geom pointer to Geometry object
  \param a major axis of the reference spheroid.
  \param b minor axis of the reference spheroid.
@@ -3639,15 +3711,17 @@ extern "C"
 
  \sa gaiaGeomCollLength, gaiaMeasureArea, gaiaGeomCollArea
 
- \remark \b LWGEOM support required.
+ \remark \b RTTOPO support required.
  */
-    GAIAGEO_DECLARE int gaiaGeodesicArea (gaiaGeomCollPtr geom, double a,
+    GAIAGEO_DECLARE int gaiaGeodesicArea (const void *p_cache,
+					  gaiaGeomCollPtr geom, double a,
 					  double b, int use_ellipsoid,
 					  double *area);
 
 /**
  Utility function: re-noding lines
 
+ \param p_cache a memory pointer returned by spatialite_alloc_connection()
  \param input the input Geometry object.
 
  \return the pointer to newly created Geometry object: NULL on failure.
@@ -3659,11 +3733,12 @@ extern "C"
  \note you are responsible to destroy (before or after) any allocated Geometry,
  this including any Geometry returned by gaiaNode()
 
- \remark \b LWGEOM support required.
+ \remark \b RTTOPO support required.
  */
-    GAIAGEO_DECLARE gaiaGeomCollPtr gaiaNodeLines (gaiaGeomCollPtr input);
+    GAIAGEO_DECLARE gaiaGeomCollPtr gaiaNodeLines (const void *p_cache,
+						   gaiaGeomCollPtr input);
 
-#endif				/* end LWGEOM support */
+#endif				/* end RTTOPO support */
 
 #endif				/* end including GEOS */
 

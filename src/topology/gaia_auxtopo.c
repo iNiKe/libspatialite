@@ -59,6 +59,7 @@ CIG: 6038019AE5
 #include <stdio.h>
 #include <string.h>
 #include <float.h>
+#include <math.h>
 
 #if defined(_WIN32) && !defined(__MINGW32__)
 #include "config-msvc.h"
@@ -66,7 +67,7 @@ CIG: 6038019AE5
 #include "config.h"
 #endif
 
-#ifdef POSTGIS_2_2		/* only if TOPOLOGY is enabled */
+#ifdef ENABLE_RTTOPO		/* only if RTTOPO is enabled */
 
 #include <spatialite/sqlite.h>
 #include <spatialite/debug.h>
@@ -78,13 +79,16 @@ CIG: 6038019AE5
 #include <spatialite.h>
 #include <spatialite_private.h>
 
-#include <liblwgeom.h>
-#include <liblwgeom_topo.h>
+#include <librttopo.h>
 
 #include <lwn_network.h>
 
 #include "topology_private.h"
 #include "network_private.h"
+
+#ifdef _WIN32
+#define strcasecmp	_stricmp
+#endif /* not WIN32 */
 
 #define GAIA_UNUSED() if (argc || argv) argc = argc;
 
@@ -2153,11 +2157,18 @@ gaiaTopologyFromDBMS (sqlite3 * handle, const void *p_cache,
 		      const char *topo_name)
 {
 /* attempting to create a Topology Accessor Object into the Connection Cache */
-    LWT_BE_CALLBACKS *callbacks;
+    const RTCTX *ctx = NULL;
+    RTT_BE_CALLBACKS *callbacks;
     struct gaia_topology *ptr;
     struct splite_internal_cache *cache =
 	(struct splite_internal_cache *) p_cache;
     if (cache == 0)
+	return NULL;
+    if (cache->magic1 != SPATIALITE_CACHE_MAGIC1
+	|| cache->magic2 != SPATIALITE_CACHE_MAGIC2)
+	return NULL;
+    ctx = cache->RTTOPO_handle;
+    if (ctx == NULL)
 	return NULL;
 
 /* allocating and initializing the opaque object */
@@ -2168,13 +2179,12 @@ gaiaTopologyFromDBMS (sqlite3 * handle, const void *p_cache,
     ptr->srid = -1;
     ptr->tolerance = 0;
     ptr->has_z = 0;
-    ptr->inside_lwt_callback = 0;
     ptr->last_error_message = NULL;
-    ptr->lwt_iface = lwt_CreateBackendIface ((const LWT_BE_DATA *) ptr);
+    ptr->rtt_iface = rtt_CreateBackendIface (ctx, (const RTT_BE_DATA *) ptr);
     ptr->prev = cache->lastTopology;
     ptr->next = NULL;
 
-    callbacks = malloc (sizeof (LWT_BE_CALLBACKS));
+    callbacks = malloc (sizeof (RTT_BE_CALLBACKS));
     callbacks->lastErrorMessage = callback_lastErrorMessage;
     callbacks->topoGetSRID = callback_topoGetSRID;
     callbacks->topoGetPrecision = callback_topoGetPrecision;
@@ -2215,8 +2225,8 @@ gaiaTopologyFromDBMS (sqlite3 * handle, const void *p_cache,
     callbacks->getFaceWithinBox2D = callback_getFaceWithinBox2D;
     ptr->callbacks = callbacks;
 
-    lwt_BackendIfaceRegisterCallbacks (ptr->lwt_iface, callbacks);
-    ptr->lwt_topology = lwt_LoadTopology (ptr->lwt_iface, topo_name);
+    rtt_BackendIfaceRegisterCallbacks (ptr->rtt_iface, callbacks);
+    ptr->rtt_topology = rtt_LoadTopology (ptr->rtt_iface, topo_name);
 
     ptr->stmt_getNodeWithinDistance2D = NULL;
     ptr->stmt_insertNodes = NULL;
@@ -2236,8 +2246,13 @@ gaiaTopologyFromDBMS (sqlite3 * handle, const void *p_cache,
     ptr->stmt_deleteFacesById = NULL;
     ptr->stmt_deleteNodesById = NULL;
     ptr->stmt_getRingEdges = NULL;
-    if (ptr->lwt_topology == NULL)
-	goto invalid;
+    if (ptr->rtt_topology == NULL)
+      {
+	  char *msg =
+	      sqlite3_mprintf ("Topology \"%s\" is undefined !!!", topo_name);
+	  gaiaSetRtTopoErrorMsg (p_cache, msg);
+	  goto invalid;
+      }
 
 /* creating the SQL prepared statements */
     create_topogeo_prepared_stmts ((GaiaTopologyAccessorPtr) ptr);
@@ -2263,10 +2278,10 @@ gaiaTopologyDestroy (GaiaTopologyAccessorPtr topo_ptr)
     prev = ptr->prev;
     next = ptr->next;
     cache = (struct splite_internal_cache *) (ptr->cache);
-    if (ptr->lwt_topology != NULL)
-	lwt_FreeTopology ((LWT_TOPOLOGY *) (ptr->lwt_topology));
-    if (ptr->lwt_iface != NULL)
-	lwt_FreeBackendIface ((LWT_BE_IFACE *) (ptr->lwt_iface));
+    if (ptr->rtt_topology != NULL)
+	rtt_FreeTopology ((RTT_TOPOLOGY *) (ptr->rtt_topology));
+    if (ptr->rtt_iface != NULL)
+	rtt_FreeBackendIface ((RTT_BE_IFACE *) (ptr->rtt_iface));
     if (ptr->callbacks != NULL)
 	free (ptr->callbacks);
     if (ptr->topology_name != NULL)
@@ -2445,6 +2460,8 @@ gaiatopo_reset_last_error_msg (GaiaTopologyAccessorPtr accessor)
     if (topo == NULL)
 	return;
 
+    if (topo->cache != NULL)
+	gaiaResetRtTopoMsg (topo->cache);
     if (topo->last_error_message != NULL)
 	free (topo->last_error_message);
     topo->last_error_message = NULL;
@@ -2568,40 +2585,44 @@ GAIATOPO_DECLARE sqlite3_int64
 gaiaAddIsoNode (GaiaTopologyAccessorPtr accessor,
 		sqlite3_int64 face, gaiaPointPtr pt, int skip_checks)
 {
-/* LWT wrapper - AddIsoNode */
+/* RTT wrapper - AddIsoNode */
+    const RTCTX *ctx = NULL;
+    struct splite_internal_cache *cache = NULL;
     sqlite3_int64 ret;
     int has_z = 0;
-    LWPOINT *lw_pt;
-    POINTARRAY *pa;
-    POINT4D point;
+    RTPOINT *rt_pt;
+    RTPOINTARRAY *pa;
+    RTPOINT4D point;
     struct gaia_topology *topo = (struct gaia_topology *) accessor;
     if (topo == NULL)
 	return 0;
 
+    cache = (struct splite_internal_cache *) topo->cache;
+    if (cache == NULL)
+	return 0;
+    if (cache->magic1 != SPATIALITE_CACHE_MAGIC1
+	|| cache->magic2 != SPATIALITE_CACHE_MAGIC2)
+	return 0;
+    ctx = cache->RTTOPO_handle;
+    if (ctx == NULL)
+	return 0;
+
     if (pt->DimensionModel == GAIA_XY_Z || pt->DimensionModel == GAIA_XY_Z_M)
 	has_z = 1;
-    pa = ptarray_construct (has_z, 0, 1);
+    pa = ptarray_construct (ctx, has_z, 0, 1);
     point.x = pt->X;
     point.y = pt->Y;
     if (has_z)
 	point.z = pt->Z;
-    ptarray_set_point4d (pa, 0, &point);
-    lw_pt = lwpoint_construct (topo->srid, NULL, pa);
+    ptarray_set_point4d (ctx, pa, 0, &point);
+    rt_pt = rtpoint_construct (ctx, topo->srid, NULL, pa);
 
-/* locking the semaphore */
-    splite_lwgeom_semaphore_lock ();
-
-    splite_lwgeomtopo_init ();
-    gaiaResetLwGeomMsg ();
+    gaiaResetRtTopoMsg (cache);
     ret =
-	lwt_AddIsoNode ((LWT_TOPOLOGY *) (topo->lwt_topology), face, lw_pt,
+	rtt_AddIsoNode ((RTT_TOPOLOGY *) (topo->rtt_topology), face, rt_pt,
 			skip_checks);
-    splite_lwgeom_init ();
 
-/* unlocking the semaphore */
-    splite_lwgeom_semaphore_unlock ();
-
-    lwpoint_free (lw_pt);
+    rtpoint_free (ctx, rt_pt);
     return ret;
 }
 
@@ -2609,38 +2630,42 @@ GAIATOPO_DECLARE int
 gaiaMoveIsoNode (GaiaTopologyAccessorPtr accessor,
 		 sqlite3_int64 node, gaiaPointPtr pt)
 {
-/* LWT wrapper - MoveIsoNode */
+/* RTT wrapper - MoveIsoNode */
+    const RTCTX *ctx = NULL;
+    struct splite_internal_cache *cache = NULL;
     int ret;
     int has_z = 0;
-    LWPOINT *lw_pt;
-    POINTARRAY *pa;
-    POINT4D point;
+    RTPOINT *rt_pt;
+    RTPOINTARRAY *pa;
+    RTPOINT4D point;
     struct gaia_topology *topo = (struct gaia_topology *) accessor;
     if (topo == NULL)
 	return 0;
 
+    cache = (struct splite_internal_cache *) topo->cache;
+    if (cache == NULL)
+	return 0;
+    if (cache->magic1 != SPATIALITE_CACHE_MAGIC1
+	|| cache->magic2 != SPATIALITE_CACHE_MAGIC2)
+	return 0;
+    ctx = cache->RTTOPO_handle;
+    if (ctx == NULL)
+	return 0;
+
     if (pt->DimensionModel == GAIA_XY_Z || pt->DimensionModel == GAIA_XY_Z_M)
 	has_z = 1;
-    pa = ptarray_construct (has_z, 0, 1);
+    pa = ptarray_construct (ctx, has_z, 0, 1);
     point.x = pt->X;
     point.y = pt->Y;
     if (has_z)
 	point.z = pt->Z;
-    ptarray_set_point4d (pa, 0, &point);
-    lw_pt = lwpoint_construct (topo->srid, NULL, pa);
+    ptarray_set_point4d (ctx, pa, 0, &point);
+    rt_pt = rtpoint_construct (ctx, topo->srid, NULL, pa);
 
-/* locking the semaphore */
-    splite_lwgeom_semaphore_lock ();
+    gaiaResetRtTopoMsg (cache);
+    ret = rtt_MoveIsoNode ((RTT_TOPOLOGY *) (topo->rtt_topology), node, rt_pt);
 
-    splite_lwgeomtopo_init ();
-    gaiaResetLwGeomMsg ();
-    ret = lwt_MoveIsoNode ((LWT_TOPOLOGY *) (topo->lwt_topology), node, lw_pt);
-    splite_lwgeom_init ();
-
-/* unlocking the semaphore */
-    splite_lwgeom_semaphore_unlock ();
-
-    lwpoint_free (lw_pt);
+    rtpoint_free (ctx, rt_pt);
     if (ret == 0)
 	return 1;
     return 0;
@@ -2649,22 +2674,22 @@ gaiaMoveIsoNode (GaiaTopologyAccessorPtr accessor,
 GAIATOPO_DECLARE int
 gaiaRemIsoNode (GaiaTopologyAccessorPtr accessor, sqlite3_int64 node)
 {
-/* LWT wrapper - RemIsoNode */
+/* RTT wrapper - RemIsoNode */
+    struct splite_internal_cache *cache = NULL;
     int ret;
     struct gaia_topology *topo = (struct gaia_topology *) accessor;
     if (topo == NULL)
 	return 0;
 
-/* locking the semaphore */
-    splite_lwgeom_semaphore_lock ();
+    cache = (struct splite_internal_cache *) topo->cache;
+    if (cache == NULL)
+	return 0;
+    if (cache->magic1 != SPATIALITE_CACHE_MAGIC1
+	|| cache->magic2 != SPATIALITE_CACHE_MAGIC2)
+	return 0;
 
-    splite_lwgeomtopo_init ();
-    gaiaResetLwGeomMsg ();
-    ret = lwt_RemoveIsoNode ((LWT_TOPOLOGY *) (topo->lwt_topology), node);
-    splite_lwgeom_init ();
-
-/* unlocking the semaphore */
-    splite_lwgeom_semaphore_unlock ();
+    gaiaResetRtTopoMsg (cache);
+    ret = rtt_RemoveIsoNode ((RTT_TOPOLOGY *) (topo->rtt_topology), node);
 
     if (ret == 0)
 	return 1;
@@ -2676,51 +2701,56 @@ gaiaAddIsoEdge (GaiaTopologyAccessorPtr accessor,
 		sqlite3_int64 start_node, sqlite3_int64 end_node,
 		gaiaLinestringPtr ln)
 {
-/* LWT wrapper - AddIsoEdge */
+/* RTT wrapper - AddIsoEdge */
+    const RTCTX *ctx = NULL;
+    struct splite_internal_cache *cache = NULL;
     sqlite3_int64 ret;
-    LWLINE *lw_line;
+    RTLINE *rt_line;
     struct gaia_topology *topo = (struct gaia_topology *) accessor;
     if (topo == NULL)
 	return 0;
 
-    lw_line = gaia_convert_linestring_to_lwline (ln, topo->srid, topo->has_z);
+    cache = (struct splite_internal_cache *) topo->cache;
+    if (cache == NULL)
+	return 0;
+    if (cache->magic1 != SPATIALITE_CACHE_MAGIC1
+	|| cache->magic2 != SPATIALITE_CACHE_MAGIC2)
+	return 0;
+    ctx = cache->RTTOPO_handle;
+    if (ctx == NULL)
+	return 0;
 
-/* locking the semaphore */
-    splite_lwgeom_semaphore_lock ();
+    rt_line =
+	gaia_convert_linestring_to_rtline (ctx, ln, topo->srid, topo->has_z);
 
-    splite_lwgeomtopo_init ();
-    gaiaResetLwGeomMsg ();
+    gaiaResetRtTopoMsg (cache);
     ret =
-	lwt_AddIsoEdge ((LWT_TOPOLOGY *) (topo->lwt_topology), start_node,
-			end_node, lw_line);
-    splite_lwgeom_init ();
+	rtt_AddIsoEdge ((RTT_TOPOLOGY *) (topo->rtt_topology), start_node,
+			end_node, rt_line);
 
-/* unlocking the semaphore */
-    splite_lwgeom_semaphore_unlock ();
-
-    lwline_free (lw_line);
+    rtline_free (ctx, rt_line);
     return ret;
 }
 
 GAIATOPO_DECLARE int
 gaiaRemIsoEdge (GaiaTopologyAccessorPtr accessor, sqlite3_int64 edge)
 {
-/* LWT wrapper - RemIsoEdge */
+/* RTT wrapper - RemIsoEdge */
+    struct splite_internal_cache *cache = NULL;
     int ret;
     struct gaia_topology *topo = (struct gaia_topology *) accessor;
     if (topo == NULL)
 	return 0;
 
-/* locking the semaphore */
-    splite_lwgeom_semaphore_lock ();
+    cache = (struct splite_internal_cache *) topo->cache;
+    if (cache == NULL)
+	return 0;
+    if (cache->magic1 != SPATIALITE_CACHE_MAGIC1
+	|| cache->magic2 != SPATIALITE_CACHE_MAGIC2)
+	return 0;
 
-    splite_lwgeomtopo_init ();
-    gaiaResetLwGeomMsg ();
-    ret = lwt_RemIsoEdge ((LWT_TOPOLOGY *) (topo->lwt_topology), edge);
-    splite_lwgeom_init ();
-
-/* unlocking the semaphore */
-    splite_lwgeom_semaphore_unlock ();
+    gaiaResetRtTopoMsg (cache);
+    ret = rtt_RemIsoEdge ((RTT_TOPOLOGY *) (topo->rtt_topology), edge);
 
     if (ret == 0)
 	return 1;
@@ -2731,72 +2761,390 @@ GAIATOPO_DECLARE int
 gaiaChangeEdgeGeom (GaiaTopologyAccessorPtr accessor,
 		    sqlite3_int64 edge_id, gaiaLinestringPtr ln)
 {
-/* LWT wrapper - ChangeEdgeGeom  */
+/* RTT wrapper - ChangeEdgeGeom  */
+    const RTCTX *ctx = NULL;
+    struct splite_internal_cache *cache = NULL;
     int ret;
-    LWLINE *lw_line;
+    RTLINE *rt_line;
     struct gaia_topology *topo = (struct gaia_topology *) accessor;
     if (topo == NULL)
 	return 0;
 
-    lw_line = gaia_convert_linestring_to_lwline (ln, topo->srid, topo->has_z);
+    cache = (struct splite_internal_cache *) topo->cache;
+    if (cache == NULL)
+	return 0;
+    if (cache->magic1 != SPATIALITE_CACHE_MAGIC1
+	|| cache->magic2 != SPATIALITE_CACHE_MAGIC2)
+	return 0;
+    ctx = cache->RTTOPO_handle;
+    if (ctx == NULL)
+	return 0;
 
-/* locking the semaphore */
-    splite_lwgeom_semaphore_lock ();
+    rt_line =
+	gaia_convert_linestring_to_rtline (ctx, ln, topo->srid, topo->has_z);
 
-    splite_lwgeomtopo_init ();
-    gaiaResetLwGeomMsg ();
+    gaiaResetRtTopoMsg (cache);
     ret =
-	lwt_ChangeEdgeGeom ((LWT_TOPOLOGY *) (topo->lwt_topology), edge_id,
-			    lw_line);
-    splite_lwgeom_init ();
+	rtt_ChangeEdgeGeom ((RTT_TOPOLOGY *) (topo->rtt_topology), edge_id,
+			    rt_line);
 
-/* unlocking the semaphore */
-    splite_lwgeom_semaphore_unlock ();
-
-    lwline_free (lw_line);
+    rtline_free (ctx, rt_line);
     if (ret == 0)
 	return 1;
     return 0;
+}
+
+static void
+do_check_mod_split_edge3d (struct gaia_topology *topo, gaiaPointPtr pt,
+			   sqlite3_int64 old_edge)
+{
+/*
+/ defensive programming: carefully ensuring that lwgeom could
+/ never shift Edges' start/end points after computing ModSplit
+/ 3D topology
+*/
+    sqlite3_stmt *stmt = NULL;
+    int ret;
+    char *sql;
+    char *table;
+    char *xtable;
+    double x1s;
+    double y1s;
+    double z1s;
+    double x1e;
+    double y1e;
+    double z1e;
+    double x2s;
+    double y2s;
+    double z2s;
+    double x2e;
+    double y2e;
+    double z2e;
+    sqlite3_int64 new_edge = sqlite3_last_insert_rowid (topo->db_handle);
+    table = sqlite3_mprintf ("%s_edge", topo->topology_name);
+    xtable = gaiaDoubleQuotedSql (table);
+    sql =
+	sqlite3_mprintf
+	("SELECT ST_X(ST_StartPoint(geom)), ST_Y(ST_StartPoint(geom)), "
+	 "ST_Z(ST_StartPoint(geom)), ST_X(ST_EndPoint(geom)), ST_Y(ST_EndPoint(geom)), "
+	 "ST_Z(ST_EndPoint(geom)) FROM \"%s\" WHERE edge_id = ?", xtable);
+    free (xtable);
+    sqlite3_free (table);
+    ret = sqlite3_prepare_v2 (topo->db_handle, sql, strlen (sql), &stmt, NULL);
+    sqlite3_free (sql);
+    if (ret != SQLITE_OK)
+	return;
+
+    sqlite3_reset (stmt);
+    sqlite3_clear_bindings (stmt);
+    sqlite3_bind_int64 (stmt, 1, old_edge);
+    while (1)
+      {
+	  /* scrolling the result set rows */
+	  ret = sqlite3_step (stmt);
+	  if (ret == SQLITE_DONE)
+	      break;		/* end of result set */
+	  if (ret == SQLITE_ROW)
+	    {
+		x1s = sqlite3_column_double (stmt, 0);
+		y1s = sqlite3_column_double (stmt, 1);
+		z1s = sqlite3_column_double (stmt, 2);
+		x1e = sqlite3_column_double (stmt, 3);
+		y1e = sqlite3_column_double (stmt, 4);
+		z1e = sqlite3_column_double (stmt, 5);
+	    }
+	  else
+	      goto error;
+      }
+
+    sqlite3_reset (stmt);
+    sqlite3_clear_bindings (stmt);
+    sqlite3_bind_int64 (stmt, 1, new_edge);
+    while (1)
+      {
+	  /* scrolling the result set rows */
+	  ret = sqlite3_step (stmt);
+	  if (ret == SQLITE_DONE)
+	      break;		/* end of result set */
+	  if (ret == SQLITE_ROW)
+	    {
+		x2s = sqlite3_column_double (stmt, 0);
+		y2s = sqlite3_column_double (stmt, 1);
+		z2s = sqlite3_column_double (stmt, 2);
+		x2e = sqlite3_column_double (stmt, 3);
+		y2e = sqlite3_column_double (stmt, 4);
+		z2e = sqlite3_column_double (stmt, 5);
+	    }
+	  else
+	      goto error;
+      }
+    if (x1s == x2e && y1s == y2e && z1s == z2e)
+      {
+	  /* just silencing stupid compiler warnings */
+	  ;
+      }
+    if (x1e == x2s && y1e == y2s && z1e == z2s)
+      {
+	  if (x1e != pt->X || y1e != pt->Y || z1e != pt->Z)
+	      goto fixme;
+      }
+  error:
+    sqlite3_finalize (stmt);
+    return;
+
+  fixme:
+    sqlite3_finalize (stmt);
+    table = sqlite3_mprintf ("%s_edge", topo->topology_name);
+    xtable = gaiaDoubleQuotedSql (table);
+    sql =
+	sqlite3_mprintf
+	("UPDATE \"%s\" SET geom = ST_SetEndPoint(geom, MakePointZ(?, ?, ?)) WHERE edge_id = ?",
+	 xtable);
+    free (xtable);
+    sqlite3_free (table);
+    ret = sqlite3_prepare_v2 (topo->db_handle, sql, strlen (sql), &stmt, NULL);
+    sqlite3_free (sql);
+    if (ret != SQLITE_OK)
+	return;
+    sqlite3_reset (stmt);
+    sqlite3_clear_bindings (stmt);
+    sqlite3_bind_double (stmt, 1, pt->X);
+    sqlite3_bind_double (stmt, 2, pt->Y);
+    sqlite3_bind_double (stmt, 3, pt->Z);
+    sqlite3_bind_int64 (stmt, 4, old_edge);
+    ret = sqlite3_step (stmt);
+    if (ret == SQLITE_DONE || ret == SQLITE_ROW)
+	;
+    else
+	goto error2;
+
+    sqlite3_finalize (stmt);
+    table = sqlite3_mprintf ("%s_edge", topo->topology_name);
+    xtable = gaiaDoubleQuotedSql (table);
+    sql =
+	sqlite3_mprintf
+	("UPDATE \"%s\" SET geom = ST_SetStartPoint(geom, MakePointZ(?, ?, ?)) WHERE edge_id = ?",
+	 xtable);
+    free (xtable);
+    sqlite3_free (table);
+    ret = sqlite3_prepare_v2 (topo->db_handle, sql, strlen (sql), &stmt, NULL);
+    sqlite3_free (sql);
+    if (ret != SQLITE_OK)
+	return;
+    sqlite3_reset (stmt);
+    sqlite3_clear_bindings (stmt);
+    sqlite3_bind_double (stmt, 1, pt->X);
+    sqlite3_bind_double (stmt, 2, pt->Y);
+    sqlite3_bind_double (stmt, 3, pt->Z);
+    sqlite3_bind_int64 (stmt, 4, new_edge);
+    ret = sqlite3_step (stmt);
+    if (ret == SQLITE_DONE || ret == SQLITE_ROW)
+	;
+    else
+	goto error2;
+
+  error2:
+    sqlite3_finalize (stmt);
+    return;
+}
+
+static void
+do_check_mod_split_edge (struct gaia_topology *topo, gaiaPointPtr pt,
+			 sqlite3_int64 old_edge)
+{
+/*
+/ defensive programming: carefully ensuring that lwgeom could
+/ never shift Edges' start/end points after computing ModSplit
+/ 2D topology
+*/
+    sqlite3_stmt *stmt = NULL;
+    int ret;
+    char *sql;
+    char *table;
+    char *xtable;
+    double x1s;
+    double y1s;
+    double x1e;
+    double y1e;
+    double x2s;
+    double y2s;
+    double x2e;
+    double y2e;
+    sqlite3_int64 new_edge;
+    if (topo->has_z)
+      {
+	  do_check_mod_split_edge3d (topo, pt, old_edge);
+	  return;
+      }
+
+    new_edge = sqlite3_last_insert_rowid (topo->db_handle);
+    table = sqlite3_mprintf ("%s_edge", topo->topology_name);
+    xtable = gaiaDoubleQuotedSql (table);
+    sql =
+	sqlite3_mprintf
+	("SELECT ST_X(ST_StartPoint(geom)), ST_Y(ST_StartPoint(geom)), "
+	 "ST_X(ST_EndPoint(geom)), ST_Y(ST_EndPoint(geom)) FROM \"%s\" WHERE edge_id = ?",
+	 xtable);
+    free (xtable);
+    sqlite3_free (table);
+    ret = sqlite3_prepare_v2 (topo->db_handle, sql, strlen (sql), &stmt, NULL);
+    sqlite3_free (sql);
+    if (ret != SQLITE_OK)
+	return;
+
+    sqlite3_reset (stmt);
+    sqlite3_clear_bindings (stmt);
+    sqlite3_bind_int64 (stmt, 1, old_edge);
+    while (1)
+      {
+	  /* scrolling the result set rows */
+	  ret = sqlite3_step (stmt);
+	  if (ret == SQLITE_DONE)
+	      break;		/* end of result set */
+	  if (ret == SQLITE_ROW)
+	    {
+		x1s = sqlite3_column_double (stmt, 0);
+		y1s = sqlite3_column_double (stmt, 1);
+		x1e = sqlite3_column_double (stmt, 2);
+		y1e = sqlite3_column_double (stmt, 3);
+	    }
+	  else
+	      goto error;
+      }
+
+    sqlite3_reset (stmt);
+    sqlite3_clear_bindings (stmt);
+    sqlite3_bind_int64 (stmt, 1, new_edge);
+    while (1)
+      {
+	  /* scrolling the result set rows */
+	  ret = sqlite3_step (stmt);
+	  if (ret == SQLITE_DONE)
+	      break;		/* end of result set */
+	  if (ret == SQLITE_ROW)
+	    {
+		x2s = sqlite3_column_double (stmt, 0);
+		y2s = sqlite3_column_double (stmt, 1);
+		x2e = sqlite3_column_double (stmt, 2);
+		y2e = sqlite3_column_double (stmt, 3);
+	    }
+	  else
+	      goto error;
+      }
+    if (x1s == x2e && y1s == y2e)
+      {
+	  /* just silencing stupid compiler warnings */
+	  ;
+      }
+    if (x1e == x2s && y1e == y2s)
+      {
+	  if (x1e != pt->X || y1e != pt->Y)
+	      goto fixme;
+      }
+  error:
+    sqlite3_finalize (stmt);
+    return;
+
+  fixme:
+    sqlite3_finalize (stmt);
+    table = sqlite3_mprintf ("%s_edge", topo->topology_name);
+    xtable = gaiaDoubleQuotedSql (table);
+    sql =
+	sqlite3_mprintf
+	("UPDATE \"%s\" SET geom = ST_SetEndPoint(geom, MakePoint(?, ?)) WHERE edge_id = ?",
+	 xtable);
+    free (xtable);
+    sqlite3_free (table);
+    ret = sqlite3_prepare_v2 (topo->db_handle, sql, strlen (sql), &stmt, NULL);
+    sqlite3_free (sql);
+    if (ret != SQLITE_OK)
+	return;
+    sqlite3_reset (stmt);
+    sqlite3_clear_bindings (stmt);
+    sqlite3_bind_double (stmt, 1, pt->X);
+    sqlite3_bind_double (stmt, 2, pt->Y);
+    sqlite3_bind_int64 (stmt, 3, old_edge);
+    ret = sqlite3_step (stmt);
+    if (ret == SQLITE_DONE || ret == SQLITE_ROW)
+	;
+    else
+	goto error2;
+
+    sqlite3_finalize (stmt);
+    table = sqlite3_mprintf ("%s_edge", topo->topology_name);
+    xtable = gaiaDoubleQuotedSql (table);
+    sql =
+	sqlite3_mprintf
+	("UPDATE \"%s\" SET geom = ST_SetStartPoint(geom, MakePoint(?, ?)) WHERE edge_id = ?",
+	 xtable);
+    free (xtable);
+    sqlite3_free (table);
+    ret = sqlite3_prepare_v2 (topo->db_handle, sql, strlen (sql), &stmt, NULL);
+    sqlite3_free (sql);
+    if (ret != SQLITE_OK)
+	return;
+    sqlite3_reset (stmt);
+    sqlite3_clear_bindings (stmt);
+    sqlite3_bind_double (stmt, 1, pt->X);
+    sqlite3_bind_double (stmt, 2, pt->Y);
+    sqlite3_bind_int64 (stmt, 3, new_edge);
+    ret = sqlite3_step (stmt);
+    if (ret == SQLITE_DONE || ret == SQLITE_ROW)
+	;
+    else
+	goto error2;
+
+  error2:
+    sqlite3_finalize (stmt);
+    return;
 }
 
 GAIATOPO_DECLARE sqlite3_int64
 gaiaModEdgeSplit (GaiaTopologyAccessorPtr accessor,
 		  sqlite3_int64 edge, gaiaPointPtr pt, int skip_checks)
 {
-/* LWT wrapper - ModEdgeSplit */
+/* RTT wrapper - ModEdgeSplit */
+    const RTCTX *ctx = NULL;
+    struct splite_internal_cache *cache = NULL;
     sqlite3_int64 ret;
     int has_z = 0;
-    LWPOINT *lw_pt;
-    POINTARRAY *pa;
-    POINT4D point;
+    RTPOINT *rt_pt;
+    RTPOINTARRAY *pa;
+    RTPOINT4D point;
     struct gaia_topology *topo = (struct gaia_topology *) accessor;
     if (topo == NULL)
 	return 0;
 
+    cache = (struct splite_internal_cache *) topo->cache;
+    if (cache == NULL)
+	return 0;
+    if (cache->magic1 != SPATIALITE_CACHE_MAGIC1
+	|| cache->magic2 != SPATIALITE_CACHE_MAGIC2)
+	return 0;
+    ctx = cache->RTTOPO_handle;
+    if (ctx == NULL)
+	return 0;
+
     if (pt->DimensionModel == GAIA_XY_Z || pt->DimensionModel == GAIA_XY_Z_M)
 	has_z = 1;
-    pa = ptarray_construct (has_z, 0, 1);
+    pa = ptarray_construct (ctx, has_z, 0, 1);
     point.x = pt->X;
     point.y = pt->Y;
     if (has_z)
 	point.z = pt->Z;
-    ptarray_set_point4d (pa, 0, &point);
-    lw_pt = lwpoint_construct (topo->srid, NULL, pa);
+    ptarray_set_point4d (ctx, pa, 0, &point);
+    rt_pt = rtpoint_construct (ctx, topo->srid, NULL, pa);
 
-/* locking the semaphore */
-    splite_lwgeom_semaphore_lock ();
-
-    splite_lwgeomtopo_init ();
-    gaiaResetLwGeomMsg ();
+    gaiaResetRtTopoMsg (cache);
     ret =
-	lwt_ModEdgeSplit ((LWT_TOPOLOGY *) (topo->lwt_topology), edge, lw_pt,
+	rtt_ModEdgeSplit ((RTT_TOPOLOGY *) (topo->rtt_topology), edge, rt_pt,
 			  skip_checks);
-    splite_lwgeom_init ();
 
-/* unlocking the semaphore */
-    splite_lwgeom_semaphore_unlock ();
+    rtpoint_free (ctx, rt_pt);
 
-    lwpoint_free (lw_pt);
+    if (ret > 0)
+	do_check_mod_split_edge (topo, pt, edge);
+
     return ret;
 }
 
@@ -2804,40 +3152,44 @@ GAIATOPO_DECLARE sqlite3_int64
 gaiaNewEdgesSplit (GaiaTopologyAccessorPtr accessor,
 		   sqlite3_int64 edge, gaiaPointPtr pt, int skip_checks)
 {
-/* LWT wrapper - NewEdgesSplit */
+/* RTT wrapper - NewEdgesSplit */
+    const RTCTX *ctx = NULL;
+    struct splite_internal_cache *cache = NULL;
     sqlite3_int64 ret;
     int has_z = 0;
-    LWPOINT *lw_pt;
-    POINTARRAY *pa;
-    POINT4D point;
+    RTPOINT *rt_pt;
+    RTPOINTARRAY *pa;
+    RTPOINT4D point;
     struct gaia_topology *topo = (struct gaia_topology *) accessor;
     if (topo == NULL)
 	return 0;
 
+    cache = (struct splite_internal_cache *) topo->cache;
+    if (cache == NULL)
+	return 0;
+    if (cache->magic1 != SPATIALITE_CACHE_MAGIC1
+	|| cache->magic2 != SPATIALITE_CACHE_MAGIC2)
+	return 0;
+    ctx = cache->RTTOPO_handle;
+    if (ctx == NULL)
+	return 0;
+
     if (pt->DimensionModel == GAIA_XY_Z || pt->DimensionModel == GAIA_XY_Z_M)
 	has_z = 1;
-    pa = ptarray_construct (has_z, 0, 1);
+    pa = ptarray_construct (ctx, has_z, 0, 1);
     point.x = pt->X;
     point.y = pt->Y;
     if (has_z)
 	point.z = pt->Z;
-    ptarray_set_point4d (pa, 0, &point);
-    lw_pt = lwpoint_construct (topo->srid, NULL, pa);
+    ptarray_set_point4d (ctx, pa, 0, &point);
+    rt_pt = rtpoint_construct (ctx, topo->srid, NULL, pa);
 
-/* locking the semaphore */
-    splite_lwgeom_semaphore_lock ();
-
-    splite_lwgeomtopo_init ();
-    gaiaResetLwGeomMsg ();
+    gaiaResetRtTopoMsg (cache);
     ret =
-	lwt_NewEdgesSplit ((LWT_TOPOLOGY *) (topo->lwt_topology), edge, lw_pt,
+	rtt_NewEdgesSplit ((RTT_TOPOLOGY *) (topo->rtt_topology), edge, rt_pt,
 			   skip_checks);
-    splite_lwgeom_init ();
 
-/* unlocking the semaphore */
-    splite_lwgeom_semaphore_unlock ();
-
-    lwpoint_free (lw_pt);
+    rtpoint_free (ctx, rt_pt);
     return ret;
 }
 
@@ -2846,29 +3198,34 @@ gaiaAddEdgeModFace (GaiaTopologyAccessorPtr accessor,
 		    sqlite3_int64 start_node, sqlite3_int64 end_node,
 		    gaiaLinestringPtr ln, int skip_checks)
 {
-/* LWT wrapper - AddEdgeModFace */
+/* RTT wrapper - AddEdgeModFace */
+    const RTCTX *ctx = NULL;
+    struct splite_internal_cache *cache = NULL;
     sqlite3_int64 ret;
-    LWLINE *lw_line;
+    RTLINE *rt_line;
     struct gaia_topology *topo = (struct gaia_topology *) accessor;
     if (topo == NULL)
 	return 0;
 
-    lw_line = gaia_convert_linestring_to_lwline (ln, topo->srid, topo->has_z);
+    cache = (struct splite_internal_cache *) topo->cache;
+    if (cache == NULL)
+	return 0;
+    if (cache->magic1 != SPATIALITE_CACHE_MAGIC1
+	|| cache->magic2 != SPATIALITE_CACHE_MAGIC2)
+	return 0;
+    ctx = cache->RTTOPO_handle;
+    if (ctx == NULL)
+	return 0;
 
-/* locking the semaphore */
-    splite_lwgeom_semaphore_lock ();
+    rt_line =
+	gaia_convert_linestring_to_rtline (ctx, ln, topo->srid, topo->has_z);
 
-    splite_lwgeomtopo_init ();
-    gaiaResetLwGeomMsg ();
+    gaiaResetRtTopoMsg (cache);
     ret =
-	lwt_AddEdgeModFace ((LWT_TOPOLOGY *) (topo->lwt_topology), start_node,
-			    end_node, lw_line, skip_checks);
-    splite_lwgeom_init ();
+	rtt_AddEdgeModFace ((RTT_TOPOLOGY *) (topo->rtt_topology), start_node,
+			    end_node, rt_line, skip_checks);
 
-/* unlocking the semaphore */
-    splite_lwgeom_semaphore_unlock ();
-
-    lwline_free (lw_line);
+    rtline_free (ctx, rt_line);
     return ret;
 }
 
@@ -2877,51 +3234,56 @@ gaiaAddEdgeNewFaces (GaiaTopologyAccessorPtr accessor,
 		     sqlite3_int64 start_node, sqlite3_int64 end_node,
 		     gaiaLinestringPtr ln, int skip_checks)
 {
-/* LWT wrapper - AddEdgeNewFaces */
+/* RTT wrapper - AddEdgeNewFaces */
+    const RTCTX *ctx = NULL;
+    struct splite_internal_cache *cache = NULL;
     sqlite3_int64 ret;
-    LWLINE *lw_line;
+    RTLINE *rt_line;
     struct gaia_topology *topo = (struct gaia_topology *) accessor;
     if (topo == NULL)
 	return 0;
 
-    lw_line = gaia_convert_linestring_to_lwline (ln, topo->srid, topo->has_z);
+    cache = (struct splite_internal_cache *) topo->cache;
+    if (cache == NULL)
+	return 0;
+    if (cache->magic1 != SPATIALITE_CACHE_MAGIC1
+	|| cache->magic2 != SPATIALITE_CACHE_MAGIC2)
+	return 0;
+    ctx = cache->RTTOPO_handle;
+    if (ctx == NULL)
+	return 0;
 
-/* locking the semaphore */
-    splite_lwgeom_semaphore_lock ();
+    rt_line =
+	gaia_convert_linestring_to_rtline (ctx, ln, topo->srid, topo->has_z);
 
-    splite_lwgeomtopo_init ();
-    gaiaResetLwGeomMsg ();
+    gaiaResetRtTopoMsg (cache);
     ret =
-	lwt_AddEdgeNewFaces ((LWT_TOPOLOGY *) (topo->lwt_topology), start_node,
-			     end_node, lw_line, skip_checks);
-    splite_lwgeom_init ();
+	rtt_AddEdgeNewFaces ((RTT_TOPOLOGY *) (topo->rtt_topology), start_node,
+			     end_node, rt_line, skip_checks);
 
-/* unlocking the semaphore */
-    splite_lwgeom_semaphore_unlock ();
-
-    lwline_free (lw_line);
+    rtline_free (ctx, rt_line);
     return ret;
 }
 
 GAIATOPO_DECLARE sqlite3_int64
 gaiaRemEdgeNewFace (GaiaTopologyAccessorPtr accessor, sqlite3_int64 edge_id)
 {
-/* LWT wrapper - RemEdgeNewFace */
+/* RTT wrapper - RemEdgeNewFace */
+    struct splite_internal_cache *cache = NULL;
     sqlite3_int64 ret;
     struct gaia_topology *topo = (struct gaia_topology *) accessor;
     if (topo == NULL)
 	return 0;
 
-/* locking the semaphore */
-    splite_lwgeom_semaphore_lock ();
+    cache = (struct splite_internal_cache *) topo->cache;
+    if (cache == NULL)
+	return 0;
+    if (cache->magic1 != SPATIALITE_CACHE_MAGIC1
+	|| cache->magic2 != SPATIALITE_CACHE_MAGIC2)
+	return 0;
 
-    splite_lwgeomtopo_init ();
-    gaiaResetLwGeomMsg ();
-    ret = lwt_RemEdgeNewFace ((LWT_TOPOLOGY *) (topo->lwt_topology), edge_id);
-    splite_lwgeom_init ();
-
-/* unlocking the semaphore */
-    splite_lwgeom_semaphore_unlock ();
+    gaiaResetRtTopoMsg (cache);
+    ret = rtt_RemEdgeNewFace ((RTT_TOPOLOGY *) (topo->rtt_topology), edge_id);
 
     return ret;
 }
@@ -2929,22 +3291,22 @@ gaiaRemEdgeNewFace (GaiaTopologyAccessorPtr accessor, sqlite3_int64 edge_id)
 GAIATOPO_DECLARE sqlite3_int64
 gaiaRemEdgeModFace (GaiaTopologyAccessorPtr accessor, sqlite3_int64 edge_id)
 {
-/* LWT wrapper - RemEdgeModFace */
+/* RTT wrapper - RemEdgeModFace */
+    struct splite_internal_cache *cache = NULL;
     sqlite3_int64 ret;
     struct gaia_topology *topo = (struct gaia_topology *) accessor;
     if (topo == NULL)
 	return 0;
 
-/* locking the semaphore */
-    splite_lwgeom_semaphore_lock ();
+    cache = (struct splite_internal_cache *) topo->cache;
+    if (cache == NULL)
+	return 0;
+    if (cache->magic1 != SPATIALITE_CACHE_MAGIC1
+	|| cache->magic2 != SPATIALITE_CACHE_MAGIC2)
+	return 0;
 
-    splite_lwgeomtopo_init ();
-    gaiaResetLwGeomMsg ();
-    ret = lwt_RemEdgeModFace ((LWT_TOPOLOGY *) (topo->lwt_topology), edge_id);
-    splite_lwgeom_init ();
-
-/* unlocking the semaphore */
-    splite_lwgeom_semaphore_unlock ();
+    gaiaResetRtTopoMsg (cache);
+    ret = rtt_RemEdgeModFace ((RTT_TOPOLOGY *) (topo->rtt_topology), edge_id);
 
     return ret;
 }
@@ -2953,24 +3315,24 @@ GAIATOPO_DECLARE sqlite3_int64
 gaiaNewEdgeHeal (GaiaTopologyAccessorPtr accessor, sqlite3_int64 edge_id1,
 		 sqlite3_int64 edge_id2)
 {
-/* LWT wrapper - NewEdgeHeal */
+/* RTT wrapper - NewEdgeHeal */
+    struct splite_internal_cache *cache = NULL;
     sqlite3_int64 ret;
     struct gaia_topology *topo = (struct gaia_topology *) accessor;
     if (topo == NULL)
 	return 0;
 
-/* locking the semaphore */
-    splite_lwgeom_semaphore_lock ();
+    cache = (struct splite_internal_cache *) topo->cache;
+    if (cache == NULL)
+	return 0;
+    if (cache->magic1 != SPATIALITE_CACHE_MAGIC1
+	|| cache->magic2 != SPATIALITE_CACHE_MAGIC2)
+	return 0;
 
-    splite_lwgeomtopo_init ();
-    gaiaResetLwGeomMsg ();
+    gaiaResetRtTopoMsg (cache);
     ret =
-	lwt_NewEdgeHeal ((LWT_TOPOLOGY *) (topo->lwt_topology), edge_id1,
+	rtt_NewEdgeHeal ((RTT_TOPOLOGY *) (topo->rtt_topology), edge_id1,
 			 edge_id2);
-    splite_lwgeom_init ();
-
-/* unlocking the semaphore */
-    splite_lwgeom_semaphore_unlock ();
 
     return ret;
 }
@@ -2979,24 +3341,24 @@ GAIATOPO_DECLARE sqlite3_int64
 gaiaModEdgeHeal (GaiaTopologyAccessorPtr accessor, sqlite3_int64 edge_id1,
 		 sqlite3_int64 edge_id2)
 {
-/* LWT wrapper - ModEdgeHeal */
+/* RTT wrapper - ModEdgeHeal */
+    struct splite_internal_cache *cache = NULL;
     sqlite3_int64 ret;
     struct gaia_topology *topo = (struct gaia_topology *) accessor;
     if (topo == NULL)
 	return 0;
 
-/* locking the semaphore */
-    splite_lwgeom_semaphore_lock ();
+    cache = (struct splite_internal_cache *) topo->cache;
+    if (cache == NULL)
+	return 0;
+    if (cache->magic1 != SPATIALITE_CACHE_MAGIC1
+	|| cache->magic2 != SPATIALITE_CACHE_MAGIC2)
+	return 0;
 
-    splite_lwgeomtopo_init ();
-    gaiaResetLwGeomMsg ();
+    gaiaResetRtTopoMsg (cache);
     ret =
-	lwt_ModEdgeHeal ((LWT_TOPOLOGY *) (topo->lwt_topology), edge_id1,
+	rtt_ModEdgeHeal ((RTT_TOPOLOGY *) (topo->rtt_topology), edge_id1,
 			 edge_id2);
-    splite_lwgeom_init ();
-
-/* unlocking the semaphore */
-    splite_lwgeom_semaphore_unlock ();
 
     return ret;
 }
@@ -3004,12 +3366,14 @@ gaiaModEdgeHeal (GaiaTopologyAccessorPtr accessor, sqlite3_int64 edge_id1,
 GAIATOPO_DECLARE gaiaGeomCollPtr
 gaiaGetFaceGeometry (GaiaTopologyAccessorPtr accessor, sqlite3_int64 face)
 {
-/* LWT wrapper - GetFaceGeometry */
-    LWGEOM *result = NULL;
-    LWPOLY *lwpoly;
+/* RTT wrapper - GetFaceGeometry */
+    const RTCTX *ctx = NULL;
+    struct splite_internal_cache *cache = NULL;
+    RTGEOM *result = NULL;
+    RTPOLY *rtpoly;
     int has_z = 0;
-    POINTARRAY *pa;
-    POINT4D pt4d;
+    RTPOINTARRAY *pa;
+    RTPOINT4D pt4d;
     int iv;
     int ib;
     double x;
@@ -3023,42 +3387,36 @@ gaiaGetFaceGeometry (GaiaTopologyAccessorPtr accessor, sqlite3_int64 face)
     if (topo == NULL)
 	return 0;
 
-    if (topo->inside_lwt_callback == 0)
-      {
-	  /* locking the semaphore if not already inside a callback context */
-	  splite_lwgeom_semaphore_lock ();
-	  splite_lwgeomtopo_init ();
-	  gaiaResetLwGeomMsg ();
-      }
+    cache = (struct splite_internal_cache *) topo->cache;
+    if (cache == NULL)
+	return 0;
+    if (cache->magic1 != SPATIALITE_CACHE_MAGIC1
+	|| cache->magic2 != SPATIALITE_CACHE_MAGIC2)
+	return 0;
+    ctx = cache->RTTOPO_handle;
+    if (ctx == NULL)
+	return 0;
 
-    result = lwt_GetFaceGeometry ((LWT_TOPOLOGY *) (topo->lwt_topology), face);
-
-    if (topo->inside_lwt_callback == 0)
-      {
-	  /* unlocking the semaphore if not already inside a callback context */
-	  splite_lwgeom_init ();
-	  splite_lwgeom_semaphore_unlock ();
-      }
-
+    result = rtt_GetFaceGeometry ((RTT_TOPOLOGY *) (topo->rtt_topology), face);
     if (result == NULL)
 	return NULL;
 
 /* converting the result as a Gaia Geometry */
-    lwpoly = (LWPOLY *) result;
-    if (lwpoly->nrings <= 0)
+    rtpoly = (RTPOLY *) result;
+    if (rtpoly->nrings <= 0)
       {
 	  /* empty geometry */
-	  lwgeom_free (result);
+	  rtgeom_free (ctx, result);
 	  return NULL;
       }
-    pa = lwpoly->rings[0];
+    pa = rtpoly->rings[0];
     if (pa->npoints <= 0)
       {
 	  /* empty geometry */
-	  lwgeom_free (result);
+	  rtgeom_free (ctx, result);
 	  return NULL;
       }
-    if (FLAGS_GET_Z (pa->flags))
+    if (RTFLAGS_GET_Z (pa->flags))
 	has_z = 1;
     if (has_z)
       {
@@ -3070,12 +3428,12 @@ gaiaGetFaceGeometry (GaiaTopologyAccessorPtr accessor, sqlite3_int64 face)
 	  dimension_model = GAIA_XY;
 	  geom = gaiaAllocGeomColl ();
       }
-    pg = gaiaAddPolygonToGeomColl (geom, pa->npoints, lwpoly->nrings - 1);
+    pg = gaiaAddPolygonToGeomColl (geom, pa->npoints, rtpoly->nrings - 1);
     rng = pg->Exterior;
     for (iv = 0; iv < pa->npoints; iv++)
       {
 	  /* copying Exterior Ring vertices */
-	  getPoint4d_p (pa, iv, &pt4d);
+	  rt_getPoint4d_p (ctx, pa, iv, &pt4d);
 	  x = pt4d.x;
 	  y = pt4d.y;
 	  if (has_z)
@@ -3091,17 +3449,17 @@ gaiaGetFaceGeometry (GaiaTopologyAccessorPtr accessor, sqlite3_int64 face)
 		gaiaSetPoint (rng->Coords, iv, x, y);
 	    }
       }
-    for (ib = 1; ib < lwpoly->nrings; ib++)
+    for (ib = 1; ib < rtpoly->nrings; ib++)
       {
 	  has_z = 0;
-	  pa = lwpoly->rings[ib];
-	  if (FLAGS_GET_Z (pa->flags))
+	  pa = rtpoly->rings[ib];
+	  if (RTFLAGS_GET_Z (pa->flags))
 	      has_z = 1;
 	  rng = gaiaAddInteriorRing (pg, ib - 1, pa->npoints);
 	  for (iv = 0; iv < pa->npoints; iv++)
 	    {
 		/* copying Exterior Ring vertices */
-		getPoint4d_p (pa, iv, &pt4d);
+		rt_getPoint4d_p (ctx, pa, iv, &pt4d);
 		x = pt4d.x;
 		y = pt4d.y;
 		if (has_z)
@@ -3118,7 +3476,7 @@ gaiaGetFaceGeometry (GaiaTopologyAccessorPtr accessor, sqlite3_int64 face)
 		  }
 	    }
       }
-    lwgeom_free (result);
+    rtgeom_free (ctx, result);
     geom->DeclaredType = GAIA_POLYGON;
     geom->Srid = topo->srid;
     return geom;
@@ -3216,7 +3574,7 @@ do_check_create_faceedges_table (GaiaTopologyAccessorPtr accessor)
 
 static int
 do_populate_faceedges_table (GaiaTopologyAccessorPtr accessor,
-			     sqlite3_int64 face, LWT_ELEMID * edges,
+			     sqlite3_int64 face, RTT_ELEMID * edges,
 			     int num_edges)
 {
 /* populating the target table */
@@ -3312,24 +3670,29 @@ do_populate_faceedges_table (GaiaTopologyAccessorPtr accessor,
 GAIATOPO_DECLARE int
 gaiaGetFaceEdges (GaiaTopologyAccessorPtr accessor, sqlite3_int64 face)
 {
-/* LWT wrapper - GetFaceEdges */
-    LWT_ELEMID *edges = NULL;
+/* RTT wrapper - GetFaceEdges */
+    const RTCTX *ctx = NULL;
+    struct splite_internal_cache *cache = NULL;
+    RTT_ELEMID *edges = NULL;
     int num_edges;
     struct gaia_topology *topo = (struct gaia_topology *) accessor;
     if (topo == NULL)
 	return 0;
 
-    /* locking the semaphore */
-    splite_lwgeom_semaphore_lock ();
-    splite_lwgeomtopo_init ();
-    gaiaResetLwGeomMsg ();
+    cache = (struct splite_internal_cache *) topo->cache;
+    if (cache == NULL)
+	return 0;
+    if (cache->magic1 != SPATIALITE_CACHE_MAGIC1
+	|| cache->magic2 != SPATIALITE_CACHE_MAGIC2)
+	return 0;
+    ctx = cache->RTTOPO_handle;
+    if (ctx == NULL)
+	return 0;
+
+    gaiaResetRtTopoMsg (cache);
 
     num_edges =
-	lwt_GetFaceEdges ((LWT_TOPOLOGY *) (topo->lwt_topology), face, &edges);
-
-    /* unlocking the semaphore */
-    splite_lwgeom_init ();
-    splite_lwgeom_semaphore_unlock ();
+	rtt_GetFaceEdges ((RTT_TOPOLOGY *) (topo->rtt_topology), face, &edges);
 
     if (num_edges < 0)
 	return 0;
@@ -3339,18 +3702,18 @@ gaiaGetFaceEdges (GaiaTopologyAccessorPtr accessor, sqlite3_int64 face)
 	  /* attemtping to create or validate the target table */
 	  if (!do_check_create_faceedges_table (accessor))
 	    {
-		lwfree (edges);
+		rtfree (ctx, edges);
 		return 0;
 	    }
 
 	  /* populating the target table */
 	  if (!do_populate_faceedges_table (accessor, face, edges, num_edges))
 	    {
-		lwfree (edges);
+		rtfree (ctx, edges);
 		return 0;
 	    }
       }
-    lwfree (edges);
+    rtfree (ctx, edges);
     return 1;
 }
 
@@ -4724,39 +5087,43 @@ GAIATOPO_DECLARE sqlite3_int64
 gaiaGetNodeByPoint (GaiaTopologyAccessorPtr accessor, gaiaPointPtr pt,
 		    double tolerance)
 {
-/* LWT wrapper - GetNodeByPoint */
+/* RTT wrapper - GetNodeByPoint */
+    const RTCTX *ctx = NULL;
+    struct splite_internal_cache *cache = NULL;
     sqlite3_int64 ret;
     int has_z = 0;
-    LWPOINT *lw_pt;
-    POINTARRAY *pa;
-    POINT4D point;
+    RTPOINT *rt_pt;
+    RTPOINTARRAY *pa;
+    RTPOINT4D point;
     struct gaia_topology *topo = (struct gaia_topology *) accessor;
     if (topo == NULL)
 	return 0;
 
+    cache = (struct splite_internal_cache *) topo->cache;
+    if (cache == NULL)
+	return 0;
+    if (cache->magic1 != SPATIALITE_CACHE_MAGIC1
+	|| cache->magic2 != SPATIALITE_CACHE_MAGIC2)
+	return 0;
+    ctx = cache->RTTOPO_handle;
+    if (ctx == NULL)
+	return 0;
+
     if (pt->DimensionModel == GAIA_XY_Z || pt->DimensionModel == GAIA_XY_Z_M)
 	has_z = 1;
-    pa = ptarray_construct (has_z, 0, 1);
+    pa = ptarray_construct (ctx, has_z, 0, 1);
     point.x = pt->X;
     point.y = pt->Y;
     if (has_z)
 	point.z = pt->Z;
-    ptarray_set_point4d (pa, 0, &point);
-    lw_pt = lwpoint_construct (topo->srid, NULL, pa);
+    ptarray_set_point4d (ctx, pa, 0, &point);
+    rt_pt = rtpoint_construct (ctx, topo->srid, NULL, pa);
 
-/* locking the semaphore */
-    splite_lwgeom_semaphore_lock ();
-
-    splite_lwgeomtopo_init ();
-    gaiaResetLwGeomMsg ();
+    gaiaResetRtTopoMsg (cache);
     ret =
-	lwt_GetNodeByPoint ((LWT_TOPOLOGY *) (topo->lwt_topology), lw_pt,
+	rtt_GetNodeByPoint ((RTT_TOPOLOGY *) (topo->rtt_topology), rt_pt,
 			    tolerance);
-    lwpoint_free (lw_pt);
-    splite_lwgeom_init ();
-
-/* unlocking the semaphore */
-    splite_lwgeom_semaphore_unlock ();
+    rtpoint_free (ctx, rt_pt);
 
     return ret;
 }
@@ -4765,39 +5132,43 @@ GAIATOPO_DECLARE sqlite3_int64
 gaiaGetEdgeByPoint (GaiaTopologyAccessorPtr accessor, gaiaPointPtr pt,
 		    double tolerance)
 {
-/* LWT wrapper - GetEdgeByPoint */
+/* RTT wrapper - GetEdgeByPoint */
+    const RTCTX *ctx = NULL;
+    struct splite_internal_cache *cache = NULL;
     sqlite3_int64 ret;
     int has_z = 0;
-    LWPOINT *lw_pt;
-    POINTARRAY *pa;
-    POINT4D point;
+    RTPOINT *rt_pt;
+    RTPOINTARRAY *pa;
+    RTPOINT4D point;
     struct gaia_topology *topo = (struct gaia_topology *) accessor;
     if (topo == NULL)
 	return 0;
 
+    cache = (struct splite_internal_cache *) topo->cache;
+    if (cache == NULL)
+	return 0;
+    if (cache->magic1 != SPATIALITE_CACHE_MAGIC1
+	|| cache->magic2 != SPATIALITE_CACHE_MAGIC2)
+	return 0;
+    ctx = cache->RTTOPO_handle;
+    if (ctx == NULL)
+	return 0;
+
     if (pt->DimensionModel == GAIA_XY_Z || pt->DimensionModel == GAIA_XY_Z_M)
 	has_z = 1;
-    pa = ptarray_construct (has_z, 0, 1);
+    pa = ptarray_construct (ctx, has_z, 0, 1);
     point.x = pt->X;
     point.y = pt->Y;
     if (has_z)
 	point.z = pt->Z;
-    ptarray_set_point4d (pa, 0, &point);
-    lw_pt = lwpoint_construct (topo->srid, NULL, pa);
+    ptarray_set_point4d (ctx, pa, 0, &point);
+    rt_pt = rtpoint_construct (ctx, topo->srid, NULL, pa);
 
-/* locking the semaphore */
-    splite_lwgeom_semaphore_lock ();
-
-    splite_lwgeomtopo_init ();
-    gaiaResetLwGeomMsg ();
+    gaiaResetRtTopoMsg (cache);
     ret =
-	lwt_GetEdgeByPoint ((LWT_TOPOLOGY *) (topo->lwt_topology), lw_pt,
+	rtt_GetEdgeByPoint ((RTT_TOPOLOGY *) (topo->rtt_topology), rt_pt,
 			    tolerance);
-    lwpoint_free (lw_pt);
-    splite_lwgeom_init ();
-
-/* unlocking the semaphore */
-    splite_lwgeom_semaphore_unlock ();
+    rtpoint_free (ctx, rt_pt);
 
     return ret;
 }
@@ -4806,39 +5177,43 @@ GAIATOPO_DECLARE sqlite3_int64
 gaiaGetFaceByPoint (GaiaTopologyAccessorPtr accessor, gaiaPointPtr pt,
 		    double tolerance)
 {
-/* LWT wrapper - GetFaceByPoint */
+/* RTT wrapper - GetFaceByPoint */
+    const RTCTX *ctx = NULL;
+    struct splite_internal_cache *cache = NULL;
     sqlite3_int64 ret;
     int has_z = 0;
-    LWPOINT *lw_pt;
-    POINTARRAY *pa;
-    POINT4D point;
+    RTPOINT *rt_pt;
+    RTPOINTARRAY *pa;
+    RTPOINT4D point;
     struct gaia_topology *topo = (struct gaia_topology *) accessor;
     if (topo == NULL)
 	return 0;
 
+    cache = (struct splite_internal_cache *) topo->cache;
+    if (cache == NULL)
+	return 0;
+    if (cache->magic1 != SPATIALITE_CACHE_MAGIC1
+	|| cache->magic2 != SPATIALITE_CACHE_MAGIC2)
+	return 0;
+    ctx = cache->RTTOPO_handle;
+    if (ctx == NULL)
+	return 0;
+
     if (pt->DimensionModel == GAIA_XY_Z || pt->DimensionModel == GAIA_XY_Z_M)
 	has_z = 1;
-    pa = ptarray_construct (has_z, 0, 1);
+    pa = ptarray_construct (ctx, has_z, 0, 1);
     point.x = pt->X;
     point.y = pt->Y;
     if (has_z)
 	point.z = pt->Z;
-    ptarray_set_point4d (pa, 0, &point);
-    lw_pt = lwpoint_construct (topo->srid, NULL, pa);
+    ptarray_set_point4d (ctx, pa, 0, &point);
+    rt_pt = rtpoint_construct (ctx, topo->srid, NULL, pa);
 
-/* locking the semaphore */
-    splite_lwgeom_semaphore_lock ();
-
-    splite_lwgeomtopo_init ();
-    gaiaResetLwGeomMsg ();
+    gaiaResetRtTopoMsg (cache);
     ret =
-	lwt_GetFaceByPoint ((LWT_TOPOLOGY *) (topo->lwt_topology), lw_pt,
+	rtt_GetFaceByPoint ((RTT_TOPOLOGY *) (topo->rtt_topology), rt_pt,
 			    tolerance);
-    lwpoint_free (lw_pt);
-    splite_lwgeom_init ();
-
-/* unlocking the semaphore */
-    splite_lwgeom_semaphore_unlock ();
+    rtpoint_free (ctx, rt_pt);
 
     return ret;
 }
@@ -4847,38 +5222,42 @@ GAIATOPO_DECLARE sqlite3_int64
 gaiaTopoGeo_AddPoint (GaiaTopologyAccessorPtr accessor, gaiaPointPtr pt,
 		      double tolerance)
 {
-/* LWT wrapper - AddPoint */
+/* RTT wrapper - AddPoint */
+    const RTCTX *ctx = NULL;
+    struct splite_internal_cache *cache = NULL;
     sqlite3_int64 ret;
     int has_z = 0;
-    LWPOINT *lw_pt;
-    POINTARRAY *pa;
-    POINT4D point;
+    RTPOINT *rt_pt;
+    RTPOINTARRAY *pa;
+    RTPOINT4D point;
     struct gaia_topology *topo = (struct gaia_topology *) accessor;
     if (topo == NULL)
 	return 0;
 
+    cache = (struct splite_internal_cache *) topo->cache;
+    if (cache == NULL)
+	return 0;
+    if (cache->magic1 != SPATIALITE_CACHE_MAGIC1
+	|| cache->magic2 != SPATIALITE_CACHE_MAGIC2)
+	return 0;
+    ctx = cache->RTTOPO_handle;
+    if (ctx == NULL)
+	return 0;
+
     if (pt->DimensionModel == GAIA_XY_Z || pt->DimensionModel == GAIA_XY_Z_M)
 	has_z = 1;
-    pa = ptarray_construct (has_z, 0, 1);
+    pa = ptarray_construct (ctx, has_z, 0, 1);
     point.x = pt->X;
     point.y = pt->Y;
     if (has_z)
 	point.z = pt->Z;
-    ptarray_set_point4d (pa, 0, &point);
-    lw_pt = lwpoint_construct (topo->srid, NULL, pa);
+    ptarray_set_point4d (ctx, pa, 0, &point);
+    rt_pt = rtpoint_construct (ctx, topo->srid, NULL, pa);
 
-/* locking the semaphore */
-    splite_lwgeom_semaphore_lock ();
-
-    splite_lwgeomtopo_init ();
-    gaiaResetLwGeomMsg ();
+    gaiaResetRtTopoMsg (cache);
     ret =
-	lwt_AddPoint ((LWT_TOPOLOGY *) (topo->lwt_topology), lw_pt, tolerance);
-    lwpoint_free (lw_pt);
-    splite_lwgeom_init ();
-
-/* unlocking the semaphore */
-    splite_lwgeom_semaphore_unlock ();
+	rtt_AddPoint ((RTT_TOPOLOGY *) (topo->rtt_topology), rt_pt, tolerance);
+    rtpoint_free (ctx, rt_pt);
 
     return ret;
 }
@@ -4888,33 +5267,38 @@ gaiaTopoGeo_AddLineString (GaiaTopologyAccessorPtr accessor,
 			   gaiaLinestringPtr ln, double tolerance,
 			   sqlite3_int64 ** edge_ids, int *ids_count)
 {
-/* LWT wrapper - AddLinestring */
+/* RTT wrapper - AddLinestring */
+    const RTCTX *ctx = NULL;
+    struct splite_internal_cache *cache = NULL;
     int ret = 0;
-    LWT_ELEMID *edgeids;
+    RTT_ELEMID *edgeids;
     int nedges;
     int i;
     sqlite3_int64 *ids;
-    LWLINE *lw_line;
+    RTLINE *rt_line;
     struct gaia_topology *topo = (struct gaia_topology *) accessor;
     if (topo == NULL)
 	return 0;
 
-    lw_line = gaia_convert_linestring_to_lwline (ln, topo->srid, topo->has_z);
+    cache = (struct splite_internal_cache *) topo->cache;
+    if (cache == NULL)
+	return 0;
+    if (cache->magic1 != SPATIALITE_CACHE_MAGIC1
+	|| cache->magic2 != SPATIALITE_CACHE_MAGIC2)
+	return 0;
+    ctx = cache->RTTOPO_handle;
+    if (ctx == NULL)
+	return 0;
 
-/* locking the semaphore */
-    splite_lwgeom_semaphore_lock ();
+    rt_line =
+	gaia_convert_linestring_to_rtline (ctx, ln, topo->srid, topo->has_z);
 
-    splite_lwgeomtopo_init ();
-    gaiaResetLwGeomMsg ();
+    gaiaResetRtTopoMsg (cache);
     edgeids =
-	lwt_AddLine ((LWT_TOPOLOGY *) (topo->lwt_topology), lw_line, tolerance,
+	rtt_AddLine ((RTT_TOPOLOGY *) (topo->rtt_topology), rt_line, tolerance,
 		     &nedges);
-    splite_lwgeom_init ();
 
-/* unlocking the semaphore */
-    splite_lwgeom_semaphore_unlock ();
-
-    lwline_free (lw_line);
+    rtline_free (ctx, rt_line);
     if (edgeids != NULL)
       {
 	  ids = malloc (sizeof (sqlite3_int64) * nedges);
@@ -4923,7 +5307,7 @@ gaiaTopoGeo_AddLineString (GaiaTopologyAccessorPtr accessor,
 	  *edge_ids = ids;
 	  *ids_count = nedges;
 	  ret = 1;
-	  lwfree (edgeids);
+	  rtfree (ctx, edgeids);
       }
     return ret;
 }
@@ -4933,33 +5317,38 @@ gaiaTopoGeo_AddPolygon (GaiaTopologyAccessorPtr accessor, gaiaPolygonPtr pg,
 			double tolerance, sqlite3_int64 ** face_ids,
 			int *ids_count)
 {
-/* LWT wrapper - AddPolygon */
+/* RTT wrapper - AddPolygon */
+    const RTCTX *ctx = NULL;
+    struct splite_internal_cache *cache = NULL;
     int ret = 0;
-    LWT_ELEMID *faceids;
+    RTT_ELEMID *faceids;
     int nfaces;
     int i;
     sqlite3_int64 *ids;
-    LWPOLY *lw_polyg;
+    RTPOLY *rt_polyg;
     struct gaia_topology *topo = (struct gaia_topology *) accessor;
     if (topo == NULL)
 	return 0;
 
-    lw_polyg = gaia_convert_polygon_to_lwpoly (pg, topo->srid, topo->has_z);
+    cache = (struct splite_internal_cache *) topo->cache;
+    if (cache == NULL)
+	return 0;
+    if (cache->magic1 != SPATIALITE_CACHE_MAGIC1
+	|| cache->magic2 != SPATIALITE_CACHE_MAGIC2)
+	return 0;
+    ctx = cache->RTTOPO_handle;
+    if (ctx == NULL)
+	return 0;
 
-/* locking the semaphore */
-    splite_lwgeom_semaphore_lock ();
+    rt_polyg =
+	gaia_convert_polygon_to_rtpoly (ctx, pg, topo->srid, topo->has_z);
 
-    splite_lwgeomtopo_init ();
-    gaiaResetLwGeomMsg ();
+    gaiaResetRtTopoMsg (cache);
     faceids =
-	lwt_AddPolygon ((LWT_TOPOLOGY *) (topo->lwt_topology), lw_polyg,
+	rtt_AddPolygon ((RTT_TOPOLOGY *) (topo->rtt_topology), rt_polyg,
 			tolerance, &nfaces);
-    splite_lwgeom_init ();
 
-/* unlocking the semaphore */
-    splite_lwgeom_semaphore_unlock ();
-
-    lwpoly_free (lw_polyg);
+    rtpoly_free (ctx, rt_polyg);
     if (faceids != NULL)
       {
 	  ids = malloc (sizeof (sqlite3_int64) * nfaces);
@@ -4968,7 +5357,7 @@ gaiaTopoGeo_AddPolygon (GaiaTopologyAccessorPtr accessor, gaiaPolygonPtr pg,
 	  *face_ids = ids;
 	  *ids_count = nfaces;
 	  ret = 1;
-	  lwfree (faceids);
+	  rtfree (ctx, faceids);
       }
     return ret;
 }
@@ -5480,6 +5869,331 @@ gaiaTopoGeo_FromGeoTable (GaiaTopologyAccessorPtr accessor,
     if (stmt != NULL)
 	sqlite3_finalize (stmt);
     return 0;
+}
+
+static int
+insert_into_dustbin (sqlite3 * sqlite, const void *cache, sqlite3_stmt * stmt,
+		     sqlite3_stmt * stmt_dustbin, const char *message,
+		     double tolerance, int *count)
+{
+/* failing feature: inserting a reference into the dustbin table */
+    int icol;
+    int maxcol;
+    int ret;
+
+    start_topo_savepoint (sqlite, cache);
+    sqlite3_reset (stmt_dustbin);
+    sqlite3_clear_bindings (stmt_dustbin);
+    maxcol = sqlite3_column_count (stmt);
+    for (icol = 1; icol < maxcol - 1; icol++)
+      {
+	  /* binding column values */
+	  switch (sqlite3_column_type (stmt, icol))
+	    {
+	    case SQLITE_INTEGER:
+		sqlite3_bind_int64 (stmt_dustbin, icol,
+				    sqlite3_column_int64 (stmt, icol));
+		break;
+	    case SQLITE_FLOAT:
+		sqlite3_bind_double (stmt_dustbin, icol,
+				     sqlite3_column_double (stmt, icol));
+		break;
+	    case SQLITE_TEXT:
+		sqlite3_bind_text (stmt_dustbin, icol,
+				   (const char *) sqlite3_column_text (stmt,
+								       icol),
+				   sqlite3_column_bytes (stmt, icol),
+				   SQLITE_STATIC);
+		break;
+	    case SQLITE_BLOB:
+		sqlite3_bind_blob (stmt_dustbin, icol,
+				   sqlite3_column_blob (stmt, icol),
+				   sqlite3_column_bytes (stmt, icol),
+				   SQLITE_STATIC);
+		break;
+	    default:
+		sqlite3_bind_null (stmt_dustbin, icol);
+		break;
+	    }
+      }
+/* binding the error message */
+    maxcol = sqlite3_bind_parameter_count (stmt_dustbin);
+    sqlite3_bind_text (stmt_dustbin, maxcol - 1, message, strlen (message),
+		       SQLITE_STATIC);
+    sqlite3_bind_double (stmt_dustbin, maxcol, tolerance);
+    ret = sqlite3_step (stmt_dustbin);
+
+/* inserting the row into the dustbin table */
+    if (ret == SQLITE_DONE || ret == SQLITE_ROW)
+      {
+	  release_topo_savepoint (sqlite, cache);
+	  *count += 1;
+	  return 1;
+      }
+
+    /* some unexpected error occurred */
+    spatialite_e ("TopoGeo_FromGeoTableExt error: \"%s\"",
+		  sqlite3_errmsg (sqlite));
+    rollback_topo_savepoint (sqlite, cache);
+    return 0;
+}
+
+static int
+do_FromGeoTableExtended_block (GaiaTopologyAccessorPtr accessor,
+			       sqlite3_stmt * stmt, sqlite3_stmt * stmt_dustbin,
+			       double tolerance, int line_max_points,
+			       double max_length, sqlite3_int64 start,
+			       sqlite3_int64 * last, sqlite3_int64 * invalid,
+			       int *dustbin_count, sqlite3_int64 * dustbin_row)
+{
+/* attempting to import a whole block of input features */
+    struct gaia_topology *topo = (struct gaia_topology *) accessor;
+    int ret;
+    int gpkg_amphibious = 0;
+    int gpkg_mode = 0;
+    int totcnt = 0;
+    sqlite3_int64 last_rowid;
+
+    if (topo->cache != NULL)
+      {
+	  struct splite_internal_cache *cache =
+	      (struct splite_internal_cache *) (topo->cache);
+	  gpkg_amphibious = cache->gpkg_amphibious_mode;
+	  gpkg_mode = cache->gpkg_mode;
+      }
+
+    start_topo_savepoint (topo->db_handle, topo->cache);
+
+/* setting up the prepared statement */
+    sqlite3_reset (stmt);
+    sqlite3_clear_bindings (stmt);
+    sqlite3_bind_int64 (stmt, 1, start);
+
+    while (1)
+      {
+	  /* scrolling the result set rows */
+	  ret = sqlite3_step (stmt);
+	  if (ret == SQLITE_DONE)
+	      break;		/* end of result set */
+	  if (ret == SQLITE_ROW)
+	    {
+		sqlite3_int64 rowid = sqlite3_column_int64 (stmt, 0);
+		int igeo = sqlite3_column_count (stmt) - 1;	/* geometry always corresponds to the last resultset column */
+		if (rowid == *invalid)
+		  {
+		      /* succesfully recovered a previously failing block */
+		      release_topo_savepoint (topo->db_handle, topo->cache);
+		      *last = last_rowid;
+		      return 1;
+		  }
+		totcnt++;
+		if (totcnt > 256)
+		  {
+		      /* succesfully imported a full block */
+		      release_topo_savepoint (topo->db_handle, topo->cache);
+		      *last = last_rowid;
+		      return 1;
+		  }
+		if (sqlite3_column_type (stmt, igeo) == SQLITE_NULL)
+		  {
+		      last_rowid = rowid;
+		      continue;
+		  }
+		if (sqlite3_column_type (stmt, igeo) == SQLITE_BLOB)
+		  {
+		      const unsigned char *blob =
+			  sqlite3_column_blob (stmt, igeo);
+		      int blob_sz = sqlite3_column_bytes (stmt, igeo);
+		      gaiaGeomCollPtr geom =
+			  gaiaFromSpatiaLiteBlobWkbEx (blob, blob_sz, gpkg_mode,
+						       gpkg_amphibious);
+		      if (geom != NULL)
+			{
+			    gaiatopo_reset_last_error_msg (accessor);
+			    if (!auxtopo_insert_into_topology
+				(accessor, geom, tolerance, line_max_points,
+				 max_length))
+			      {
+				  char *msg;
+				  const char *rt_msg =
+				      gaiaGetRtTopoErrorMsg (topo->cache);
+				  if (rt_msg == NULL)
+				      msg =
+					  sqlite3_mprintf
+					  ("TopoGeo_FromGeoTableExt exception: UNKNOWN reason");
+				  else
+				      msg = sqlite3_mprintf ("%s", rt_msg);
+				  gaiaFreeGeomColl (geom);
+				  rollback_topo_savepoint (topo->db_handle,
+							   topo->cache);
+				  if (!insert_into_dustbin
+				      (topo->db_handle, topo->cache, stmt,
+				       stmt_dustbin, msg, tolerance,
+				       dustbin_count))
+				      goto error;
+				  last_rowid = rowid;
+				  *invalid = rowid;
+				  *dustbin_row =
+				      sqlite3_last_insert_rowid
+				      (topo->db_handle);
+				  return 0;
+			      }
+			    gaiaFreeGeomColl (geom);
+			    last_rowid = rowid;
+			}
+		      else
+			{
+			    rollback_topo_savepoint (topo->db_handle,
+						     topo->cache);
+			    if (!insert_into_dustbin
+				(topo->db_handle, topo->cache, stmt,
+				 stmt_dustbin,
+				 "TopoGeo_FromGeoTableExt error: Invalid Geometry",
+				 tolerance, dustbin_count))
+				goto error;
+			}
+		      last_rowid = rowid;
+		  }
+		else
+		  {
+		      rollback_topo_savepoint (topo->db_handle, topo->cache);
+		      if (!insert_into_dustbin
+			  (topo->db_handle, topo->cache, stmt, stmt_dustbin,
+			   "TopoGeo_FromGeoTableExt error: not a BLOB value",
+			   tolerance, dustbin_count))
+			  goto error;
+		  }
+	    }
+	  else
+	    {
+		char *msg =
+		    sqlite3_mprintf ("TopoGeo_FromGeoTableExt error: \"%s\"",
+				     sqlite3_errmsg (topo->db_handle));
+		gaiatopo_set_last_error_msg (accessor, msg);
+		sqlite3_free (msg);
+		rollback_topo_savepoint (topo->db_handle, topo->cache);
+		goto error;
+	    }
+      }
+/* eof */
+    release_topo_savepoint (topo->db_handle, topo->cache);
+    return 2;
+
+  error:
+    return -1;
+}
+
+GAIATOPO_DECLARE int
+gaiaTopoGeo_FromGeoTableExtended (GaiaTopologyAccessorPtr accessor,
+				  const char *sql_in, const char *sql_out,
+				  const char *sql_in2, double tolerance,
+				  int line_max_points, double max_length)
+{
+/* attempting to import a whole GeoTable into a Topology-Geometry - Extended mode */
+    struct gaia_topology *topo = (struct gaia_topology *) accessor;
+    sqlite3_stmt *stmt = NULL;
+    sqlite3_stmt *stmt_dustbin = NULL;
+    sqlite3_stmt *stmt_retry = NULL;
+    int ret;
+    int dustbin_count = 0;
+    sqlite3_int64 start = -1;
+    sqlite3_int64 last;
+    sqlite3_int64 invalid = -1;
+    sqlite3_int64 dustbin_row = -1;
+
+    if (topo == NULL)
+	return 0;
+    if (sql_in == NULL)
+	return 0;
+    if (sql_out == NULL)
+	return 0;
+
+/* building the SQL statement */
+    ret =
+	sqlite3_prepare_v2 (topo->db_handle, sql_in, strlen (sql_in), &stmt,
+			    NULL);
+    if (ret != SQLITE_OK)
+      {
+	  char *msg = sqlite3_mprintf ("TopoGeo_FromGeoTableExt error: \"%s\"",
+				       sqlite3_errmsg (topo->db_handle));
+	  gaiatopo_set_last_error_msg (accessor, msg);
+	  sqlite3_free (msg);
+	  goto error;
+      }
+
+/* building the SQL dustbin statement */
+    ret =
+	sqlite3_prepare_v2 (topo->db_handle, sql_out, strlen (sql_out),
+			    &stmt_dustbin, NULL);
+    if (ret != SQLITE_OK)
+      {
+	  char *msg = sqlite3_mprintf ("TopoGeo_FromGeoTableExt error: \"%s\"",
+				       sqlite3_errmsg (topo->db_handle));
+	  gaiatopo_set_last_error_msg (accessor, msg);
+	  sqlite3_free (msg);
+	  goto error;
+      }
+
+/* building the SQL retry statement */
+    ret =
+	sqlite3_prepare_v2 (topo->db_handle, sql_in2, strlen (sql_in2),
+			    &stmt_retry, NULL);
+    if (ret != SQLITE_OK)
+      {
+	  char *msg = sqlite3_mprintf ("TopoGeo_FromGeoTableExt error: \"%s\"",
+				       sqlite3_errmsg (topo->db_handle));
+	  gaiatopo_set_last_error_msg (accessor, msg);
+	  sqlite3_free (msg);
+	  goto error;
+      }
+
+    while (1)
+      {
+	  /* main loop: attempting to import a block of features */
+	  ret =
+	      do_FromGeoTableExtended_block (accessor, stmt, stmt_dustbin,
+					     tolerance, line_max_points,
+					     max_length, start, &last, &invalid,
+					     &dustbin_count, &dustbin_row);
+	  if (ret < 0)		/* some unexpected error occurred */
+	      goto error;
+	  if (ret > 1)
+	    {
+		/* eof */
+		break;
+	    }
+	  if (ret == 0)
+	    {
+		/* found a failing feature; recovering */
+		ret =
+		    do_FromGeoTableExtended_block (accessor, stmt, stmt_dustbin,
+						   tolerance, line_max_points,
+						   max_length, start, &last,
+						   &invalid, &dustbin_count,
+						   &dustbin_row);
+		if (ret != 1)
+		    goto error;
+		start = invalid;
+		invalid = -1;
+		dustbin_row = -1;
+		continue;
+	    }
+	  start = last;
+	  invalid = -1;
+	  dustbin_row = -1;
+      }
+
+    sqlite3_finalize (stmt);
+    sqlite3_finalize (stmt_dustbin);
+    sqlite3_finalize (stmt_retry);
+    return dustbin_count;
+
+  error:
+    if (stmt != NULL)
+	sqlite3_finalize (stmt);
+    if (stmt_dustbin != NULL)
+	sqlite3_finalize (stmt_dustbin);
+    return -1;
 }
 
 GAIATOPO_DECLARE gaiaGeomCollPtr
@@ -6121,6 +6835,365 @@ gaiaTopoGeoUpdateSeeds (GaiaTopologyAccessorPtr accessor, int incremental_mode)
       }
 
     return 1;
+}
+
+GAIATOPO_DECLARE gaiaGeomCollPtr
+gaiaTopoGeoSnapPointToSeed (GaiaTopologyAccessorPtr accessor,
+			    gaiaGeomCollPtr pt, double distance)
+{
+/* snapping a Point to TopoSeeds */
+    char *sql;
+    char *table;
+    char *xtable;
+    sqlite3_stmt *stmt = NULL;
+    sqlite3_stmt *stmt_snap = NULL;
+    int ret;
+    unsigned char *blob;
+    int blob_size;
+    unsigned char *blob2;
+    int blob_size2;
+    gaiaGeomCollPtr result = NULL;
+    struct gaia_topology *topo = (struct gaia_topology *) accessor;
+    if (topo == NULL)
+	return NULL;
+
+/* preparing the Snap statement */
+    sql = "SELECT ST_Snap(?, ?, ?)";
+    ret =
+	sqlite3_prepare_v2 (topo->db_handle, sql, strlen (sql), &stmt_snap,
+			    NULL);
+    if (ret != SQLITE_OK)
+      {
+	  char *msg =
+	      sqlite3_mprintf ("TopoGeo_SnapPointToSeed() error: \"%s\"",
+			       sqlite3_errmsg (topo->db_handle));
+	  gaiatopo_set_last_error_msg ((GaiaTopologyAccessorPtr) topo, msg);
+	  sqlite3_free (msg);
+	  goto error;
+      }
+
+/* preparing the SELECT statement */
+    table = sqlite3_mprintf ("%s_node", topo->topology_name);
+    xtable = gaiaDoubleQuotedSql (table);
+    sql = sqlite3_mprintf ("SELECT geom "
+			   "FROM \"%s\" WHERE ST_Distance(?, geom) <= ? AND rowid IN "
+			   "(SELECT rowid FROM SpatialIndex WHERE f_table_name = %Q AND search_frame = ST_Buffer(?, ?))",
+			   xtable, table);
+    free (xtable);
+    sqlite3_free (table);
+    ret = sqlite3_prepare_v2 (topo->db_handle, sql, strlen (sql), &stmt, NULL);
+    sqlite3_free (sql);
+    if (ret != SQLITE_OK)
+      {
+	  char *msg =
+	      sqlite3_mprintf ("TopoGeo_SnapPointToSeed() error: \"%s\"",
+			       sqlite3_errmsg (topo->db_handle));
+	  gaiatopo_set_last_error_msg ((GaiaTopologyAccessorPtr) topo, msg);
+	  sqlite3_free (msg);
+	  goto error;
+      }
+
+/* querying Seeds */
+    if (topo->has_z)
+	result = gaiaAllocGeomCollXYZ ();
+    else
+	result = gaiaAllocGeomColl ();
+    result->Srid = pt->Srid;
+    gaiaToSpatiaLiteBlobWkb (pt, &blob, &blob_size);
+    gaiaToSpatiaLiteBlobWkb (pt, &blob2, &blob_size2);
+    sqlite3_reset (stmt);
+    sqlite3_clear_bindings (stmt);
+    sqlite3_bind_blob (stmt, 1, blob, blob_size, free);
+    sqlite3_bind_double (stmt, 2, distance);
+    sqlite3_bind_blob (stmt, 3, blob2, blob_size2, free);
+    sqlite3_bind_double (stmt, 4, distance * 1.2);
+    while (1)
+      {
+	  /* scrolling the result set rows */
+	  ret = sqlite3_step (stmt);
+	  if (ret == SQLITE_DONE)
+	      break;		/* end of result set */
+	  if (ret == SQLITE_ROW)
+	    {
+		const unsigned char *p_blob = sqlite3_column_blob (stmt, 0);
+		int blobsz = sqlite3_column_bytes (stmt, 0);
+		gaiaGeomCollPtr geom =
+		    gaiaFromSpatiaLiteBlobWkb (p_blob, blobsz);
+		if (geom != NULL)
+		  {
+		      gaiaPointPtr pt = geom->FirstPoint;
+		      while (pt != NULL)
+			{
+			    /* copying all Points into the result Geometry */
+			    if (topo->has_z)
+				gaiaAddPointToGeomCollXYZ (result, pt->X, pt->Y,
+							   pt->Z);
+			    else
+				gaiaAddPointToGeomColl (result, pt->X, pt->Y);
+			    pt = pt->Next;
+			}
+		      gaiaFreeGeomColl (geom);
+		  }
+	    }
+	  else
+	    {
+		char *msg =
+		    sqlite3_mprintf ("TopoGeo_SnapPointToSeed error: \"%s\"",
+				     sqlite3_errmsg (topo->db_handle));
+		gaiatopo_set_last_error_msg ((GaiaTopologyAccessorPtr) topo,
+					     msg);
+		sqlite3_free (msg);
+		goto error;
+	    }
+      }
+
+    sqlite3_finalize (stmt);
+    stmt = NULL;
+    if (result->FirstPoint == NULL)
+	goto error;
+
+/* Snap */
+    gaiaToSpatiaLiteBlobWkb (pt, &blob, &blob_size);
+    gaiaToSpatiaLiteBlobWkb (result, &blob2, &blob_size2);
+    gaiaFreeGeomColl (result);
+    result = NULL;
+    sqlite3_reset (stmt_snap);
+    sqlite3_clear_bindings (stmt_snap);
+    sqlite3_bind_blob (stmt_snap, 1, blob, blob_size, free);
+    sqlite3_bind_blob (stmt_snap, 2, blob2, blob_size2, free);
+    sqlite3_bind_double (stmt_snap, 3, distance);
+    while (1)
+      {
+	  /* scrolling the result set rows */
+	  ret = sqlite3_step (stmt_snap);
+
+	  if (ret == SQLITE_DONE)
+	      break;		/* end of result set */
+	  if (ret == SQLITE_ROW)
+	    {
+		if (sqlite3_column_type (stmt_snap, 0) != SQLITE_NULL)
+		  {
+		      const unsigned char *p_blob =
+			  sqlite3_column_blob (stmt_snap, 0);
+		      int blobsz = sqlite3_column_bytes (stmt_snap, 0);
+		      if (result != NULL)
+			  gaiaFreeGeomColl (result);
+		      result = gaiaFromSpatiaLiteBlobWkb (p_blob, blobsz);
+		  }
+	    }
+	  else
+	    {
+		char *msg =
+		    sqlite3_mprintf ("TopoGeo_SnapPointToSeed error: \"%s\"",
+				     sqlite3_errmsg (topo->db_handle));
+		gaiatopo_set_last_error_msg ((GaiaTopologyAccessorPtr) topo,
+					     msg);
+		sqlite3_free (msg);
+		goto error;
+	    }
+      }
+    sqlite3_finalize (stmt_snap);
+    stmt_snap = NULL;
+    if (result == NULL)
+	goto error;
+    if (result->FirstLinestring != NULL || result->FirstPolygon != NULL)
+	goto error;
+    if (result->FirstPoint == NULL)
+	goto error;
+    if (result->FirstPoint != result->LastPoint)
+	goto error;
+    return result;
+
+  error:
+    if (stmt != NULL)
+	sqlite3_finalize (stmt);
+    if (stmt_snap != NULL)
+	sqlite3_finalize (stmt_snap);
+    if (result != NULL)
+	gaiaFreeGeomColl (result);
+    return NULL;
+}
+
+GAIATOPO_DECLARE gaiaGeomCollPtr
+gaiaTopoGeoSnapLinestringToSeed (GaiaTopologyAccessorPtr accessor,
+				 gaiaGeomCollPtr ln, double distance)
+{
+/* snapping a Linestring to TopoSeeds */
+    char *sql;
+    char *table;
+    char *xtable;
+    int ret;
+    unsigned char *blob;
+    int blob_size;
+    unsigned char *blob2;
+    int blob_size2;
+    gaiaGeomCollPtr result = NULL;
+    sqlite3_stmt *stmt = NULL;
+    sqlite3_stmt *stmt_snap = NULL;
+    struct gaia_topology *topo = (struct gaia_topology *) accessor;
+    if (topo == NULL)
+	return NULL;
+
+/* preparing the Snap statement */
+    sql = "SELECT ST_Snap(?, ?, ?)";
+    ret =
+	sqlite3_prepare_v2 (topo->db_handle, sql, strlen (sql), &stmt_snap,
+			    NULL);
+    if (ret != SQLITE_OK)
+      {
+	  char *msg =
+	      sqlite3_mprintf ("TopoGeo_SnapLinestringToSeed() error: \"%s\"",
+			       sqlite3_errmsg (topo->db_handle));
+	  gaiatopo_set_last_error_msg ((GaiaTopologyAccessorPtr) topo, msg);
+	  sqlite3_free (msg);
+	  goto error;
+      }
+
+/* preparing the SELECT statement */
+    table = sqlite3_mprintf ("%s_seeds", topo->topology_name);
+    xtable = gaiaDoubleQuotedSql (table);
+    sql = sqlite3_mprintf ("SELECT edge_id, geom "
+			   "FROM \"%s\" WHERE ST_Distance(?, geom) <= ? AND rowid IN "
+			   "(SELECT rowid FROM SpatialIndex WHERE f_table_name = %Q AND search_frame = ST_Buffer(?, ?))",
+			   xtable, table);
+    free (xtable);
+    sqlite3_free (table);
+    ret = sqlite3_prepare_v2 (topo->db_handle, sql, strlen (sql), &stmt, NULL);
+    sqlite3_free (sql);
+    if (ret != SQLITE_OK)
+      {
+	  char *msg =
+	      sqlite3_mprintf ("TopoGeo_SnapLinestringToSeed() error: \"%s\"",
+			       sqlite3_errmsg (topo->db_handle));
+	  gaiatopo_set_last_error_msg ((GaiaTopologyAccessorPtr) topo, msg);
+	  sqlite3_free (msg);
+	  goto error;
+      }
+
+/* querying Seeds */
+    if (topo->has_z)
+	result = gaiaAllocGeomCollXYZ ();
+    else
+	result = gaiaAllocGeomColl ();
+    result->Srid = ln->Srid;
+    gaiaToSpatiaLiteBlobWkb (ln, &blob, &blob_size);
+    gaiaToSpatiaLiteBlobWkb (ln, &blob2, &blob_size2);
+    sqlite3_reset (stmt);
+    sqlite3_clear_bindings (stmt);
+    sqlite3_bind_blob (stmt, 1, blob, blob_size, free);
+    sqlite3_bind_double (stmt, 2, distance);
+    sqlite3_bind_blob (stmt, 3, blob2, blob_size2, free);
+    sqlite3_bind_double (stmt, 4, distance * 1.2);
+    while (1)
+      {
+	  /* scrolling the result set rows */
+	  ret = sqlite3_step (stmt);
+	  if (ret == SQLITE_DONE)
+	      break;		/* end of result set */
+	  if (ret == SQLITE_ROW)
+	    {
+		if (sqlite3_column_type (stmt, 0) != SQLITE_NULL)
+		  {
+		      const unsigned char *p_blob =
+			  sqlite3_column_blob (stmt, 1);
+		      int blobsz = sqlite3_column_bytes (stmt, 1);
+		      gaiaGeomCollPtr geom =
+			  gaiaFromSpatiaLiteBlobWkb (p_blob, blobsz);
+		      if (geom != NULL)
+			{
+			    gaiaPointPtr pt = geom->FirstPoint;
+			    while (pt != NULL)
+			      {
+				  /* copying all Points into the result Geometry */
+				  if (topo->has_z)
+				      gaiaAddPointToGeomCollXYZ (result, pt->X,
+								 pt->Y, pt->Z);
+				  else
+				      gaiaAddPointToGeomColl (result, pt->X,
+							      pt->Y);
+				  pt = pt->Next;
+			      }
+			}
+		  }
+	    }
+	  else
+	    {
+		char *msg =
+		    sqlite3_mprintf
+		    ("TopoGeo_SnapLinestringToSeed error: \"%s\"",
+		     sqlite3_errmsg (topo->db_handle));
+		gaiatopo_set_last_error_msg ((GaiaTopologyAccessorPtr) topo,
+					     msg);
+		sqlite3_free (msg);
+		goto error;
+	    }
+      }
+
+    sqlite3_finalize (stmt);
+    stmt = NULL;
+    if (result->FirstPoint == NULL)
+	goto error;
+
+/* Snap */
+    gaiaToSpatiaLiteBlobWkb (ln, &blob, &blob_size);
+    gaiaToSpatiaLiteBlobWkb (result, &blob2, &blob_size2);
+    gaiaFreeGeomColl (result);
+    result = NULL;
+    sqlite3_reset (stmt_snap);
+    sqlite3_clear_bindings (stmt_snap);
+    sqlite3_bind_blob (stmt_snap, 1, blob, blob_size, free);
+    sqlite3_bind_blob (stmt_snap, 2, blob2, blob_size2, free);
+    sqlite3_bind_double (stmt_snap, 3, distance);
+    while (1)
+      {
+	  /* scrolling the result set rows */
+	  ret = sqlite3_step (stmt_snap);
+	  if (ret == SQLITE_DONE)
+	      break;		/* end of result set */
+	  if (ret == SQLITE_ROW)
+	    {
+		if (sqlite3_column_type (stmt_snap, 0) == SQLITE_BLOB)
+		  {
+		      const unsigned char *p_blob =
+			  sqlite3_column_blob (stmt_snap, 0);
+		      int blobsz = sqlite3_column_bytes (stmt_snap, 0);
+		      if (result != NULL)
+			  gaiaFreeGeomColl (result);
+		      result = gaiaFromSpatiaLiteBlobWkb (p_blob, blobsz);
+		  }
+	    }
+	  else
+	    {
+		char *msg =
+		    sqlite3_mprintf
+		    ("TopoGeo_SnapLinestringToSeed error: \"%s\"",
+		     sqlite3_errmsg (topo->db_handle));
+		gaiatopo_set_last_error_msg ((GaiaTopologyAccessorPtr) topo,
+					     msg);
+		sqlite3_free (msg);
+		goto error;
+	    }
+      }
+    sqlite3_finalize (stmt_snap);
+    stmt_snap = NULL;
+    if (result == NULL)
+	goto error;
+    if (result->FirstPoint != NULL || result->FirstPolygon != NULL)
+	goto error;
+    if (result->FirstLinestring == NULL)
+	goto error;
+    if (result->FirstLinestring != result->LastLinestring)
+	goto error;
+    return result;
+
+  error:
+    if (stmt != NULL)
+	sqlite3_finalize (stmt);
+    if (stmt_snap != NULL)
+	sqlite3_finalize (stmt_snap);
+    if (result != NULL)
+	gaiaFreeGeomColl (result);
+    return NULL;
 }
 
 static gaiaGeomCollPtr
@@ -6816,6 +7889,7 @@ do_eval_topogeo_seeds (struct gaia_topology *topo, sqlite3_stmt * stmt_ref,
 				gaiaFromSpatiaLiteBlobWkb (blob, blob_sz);
 			    if (geom != NULL)
 			      {
+				  gaiaGeomCollPtr result;
 				  unsigned char *p_blob;
 				  int n_bytes;
 				  int gpkg_mode = 0;
@@ -6826,15 +7900,14 @@ do_eval_topogeo_seeds (struct gaia_topology *topo, sqlite3_stmt * stmt_ref,
 					     *) (topo->cache);
 					gpkg_mode = cache->gpkg_mode;
 				    }
-				  gaiaGeomCollPtr result =
-				      do_eval_topogeo_geom (topo, geom,
-							    stmt_seed_edge,
-							    stmt_seed_face,
-							    stmt_node,
-							    stmt_edge,
-							    stmt_face,
-							    out_type,
-							    tolerance);
+				  result = do_eval_topogeo_geom (topo, geom,
+								 stmt_seed_edge,
+								 stmt_seed_face,
+								 stmt_node,
+								 stmt_edge,
+								 stmt_face,
+								 out_type,
+								 tolerance);
 				  gaiaFreeGeomColl (geom);
 				  if (result != NULL)
 				    {
@@ -6966,7 +8039,8 @@ gaiaTopoGeo_ToGeoTableGeneralize (GaiaTopologyAccessorPtr accessor,
     if (ret != SQLITE_OK)
       {
 	  char *msg =
-	      sqlite3_mprintf ("TopoGeo_ToGeoTable() error: \"%s\"", errMsg);
+	      sqlite3_mprintf ("TopoGeo_ToGeoTableGeneralize() error: \"%s\"",
+			       errMsg);
 	  sqlite3_free (errMsg);
 	  gaiatopo_set_last_error_msg ((GaiaTopologyAccessorPtr) topo, msg);
 	  sqlite3_free (msg);
@@ -7039,7 +8113,8 @@ gaiaTopoGeo_ToGeoTableGeneralize (GaiaTopologyAccessorPtr accessor,
     if (ret != SQLITE_OK)
       {
 	  char *msg =
-	      sqlite3_mprintf ("TopoGeo_ToGeoTable() error: \"%s\"", errMsg);
+	      sqlite3_mprintf ("TopoGeo_ToGeoTableGeneralize() error: \"%s\"",
+			       errMsg);
 	  sqlite3_free (errMsg);
 	  gaiatopo_set_last_error_msg ((GaiaTopologyAccessorPtr) topo, msg);
 	  sqlite3_free (msg);
@@ -7058,8 +8133,9 @@ gaiaTopoGeo_ToGeoTableGeneralize (GaiaTopologyAccessorPtr accessor,
 	  if (ret != SQLITE_OK)
 	    {
 		char *msg =
-		    sqlite3_mprintf ("TopoGeo_ToGeoTable() error: \"%s\"",
-				     errMsg);
+		    sqlite3_mprintf
+		    ("TopoGeo_ToGeoTableGeneralize() error: \"%s\"",
+		     errMsg);
 		sqlite3_free (errMsg);
 		gaiatopo_set_last_error_msg ((GaiaTopologyAccessorPtr) topo,
 					     msg);
@@ -7076,9 +8152,9 @@ gaiaTopoGeo_ToGeoTableGeneralize (GaiaTopologyAccessorPtr accessor,
     select = NULL;
     if (ret != SQLITE_OK)
       {
-	  char *msg = sqlite3_mprintf ("TopoGeo_ToGeoTable() error: \"%s\"",
-				       sqlite3_errmsg (topo->db_handle));
-	  sqlite3_free (errMsg);
+	  char *msg =
+	      sqlite3_mprintf ("TopoGeo_ToGeoTableGeneralize() error: \"%s\"",
+			       sqlite3_errmsg (topo->db_handle));
 	  gaiatopo_set_last_error_msg ((GaiaTopologyAccessorPtr) topo, msg);
 	  sqlite3_free (msg);
 	  goto error;
@@ -7092,9 +8168,9 @@ gaiaTopoGeo_ToGeoTableGeneralize (GaiaTopologyAccessorPtr accessor,
     insert = NULL;
     if (ret != SQLITE_OK)
       {
-	  char *msg = sqlite3_mprintf ("TopoGeo_ToGeoTable() error: \"%s\"",
-				       sqlite3_errmsg (topo->db_handle));
-	  sqlite3_free (errMsg);
+	  char *msg =
+	      sqlite3_mprintf ("TopoGeo_ToGeoTableGeneralize() error: \"%s\"",
+			       sqlite3_errmsg (topo->db_handle));
 	  gaiatopo_set_last_error_msg ((GaiaTopologyAccessorPtr) topo, msg);
 	  sqlite3_free (msg);
 	  goto error;
@@ -7115,9 +8191,9 @@ gaiaTopoGeo_ToGeoTableGeneralize (GaiaTopologyAccessorPtr accessor,
     sqlite3_free (sql);
     if (ret != SQLITE_OK)
       {
-	  char *msg = sqlite3_mprintf ("TopoGeo_ToGeoTable() error: \"%s\"",
-				       sqlite3_errmsg (topo->db_handle));
-	  sqlite3_free (errMsg);
+	  char *msg =
+	      sqlite3_mprintf ("TopoGeo_ToGeoTableGeneralize() error: \"%s\"",
+			       sqlite3_errmsg (topo->db_handle));
 	  gaiatopo_set_last_error_msg ((GaiaTopologyAccessorPtr) topo, msg);
 	  sqlite3_free (msg);
 	  goto error;
@@ -7138,9 +8214,9 @@ gaiaTopoGeo_ToGeoTableGeneralize (GaiaTopologyAccessorPtr accessor,
     sqlite3_free (sql);
     if (ret != SQLITE_OK)
       {
-	  char *msg = sqlite3_mprintf ("TopoGeo_ToGeoTable() error: \"%s\"",
-				       sqlite3_errmsg (topo->db_handle));
-	  sqlite3_free (errMsg);
+	  char *msg =
+	      sqlite3_mprintf ("TopoGeo_ToGeoTableGeneralize() error: \"%s\"",
+			       sqlite3_errmsg (topo->db_handle));
 	  gaiatopo_set_last_error_msg ((GaiaTopologyAccessorPtr) topo, msg);
 	  sqlite3_free (msg);
 	  goto error;
@@ -7161,9 +8237,9 @@ gaiaTopoGeo_ToGeoTableGeneralize (GaiaTopologyAccessorPtr accessor,
     sqlite3_free (sql);
     if (ret != SQLITE_OK)
       {
-	  char *msg = sqlite3_mprintf ("TopoGeo_ToGeoTable() error: \"%s\"",
-				       sqlite3_errmsg (topo->db_handle));
-	  sqlite3_free (errMsg);
+	  char *msg =
+	      sqlite3_mprintf ("TopoGeo_ToGeoTableGeneralize() error: \"%s\"",
+			       sqlite3_errmsg (topo->db_handle));
 	  gaiatopo_set_last_error_msg ((GaiaTopologyAccessorPtr) topo, msg);
 	  sqlite3_free (msg);
 	  goto error;
@@ -7188,9 +8264,9 @@ gaiaTopoGeo_ToGeoTableGeneralize (GaiaTopologyAccessorPtr accessor,
     sqlite3_free (sql);
     if (ret != SQLITE_OK)
       {
-	  char *msg = sqlite3_mprintf ("TopoGeo_ToGeoTable() error: \"%s\"",
-				       sqlite3_errmsg (topo->db_handle));
-	  sqlite3_free (errMsg);
+	  char *msg =
+	      sqlite3_mprintf ("TopoGeo_ToGeoTableGeneralize() error: \"%s\"",
+			       sqlite3_errmsg (topo->db_handle));
 	  gaiatopo_set_last_error_msg ((GaiaTopologyAccessorPtr) topo, msg);
 	  sqlite3_free (msg);
 	  goto error;
@@ -7217,9 +8293,9 @@ gaiaTopoGeo_ToGeoTableGeneralize (GaiaTopologyAccessorPtr accessor,
     sqlite3_free (sql);
     if (ret != SQLITE_OK)
       {
-	  char *msg = sqlite3_mprintf ("TopoGeo_ToGeoTable() error: \"%s\"",
-				       sqlite3_errmsg (topo->db_handle));
-	  sqlite3_free (errMsg);
+	  char *msg =
+	      sqlite3_mprintf ("TopoGeo_ToGeoTableGeneralize() error: \"%s\"",
+			       sqlite3_errmsg (topo->db_handle));
 	  gaiatopo_set_last_error_msg ((GaiaTopologyAccessorPtr) topo, msg);
 	  sqlite3_free (msg);
 	  goto error;
@@ -7262,6 +8338,290 @@ gaiaTopoGeo_ToGeoTableGeneralize (GaiaTopologyAccessorPtr accessor,
     if (stmt_face != NULL)
 	sqlite3_finalize (stmt_face);
     return 0;
+}
+
+static int
+do_remove_small_faces2 (struct gaia_topology *topo, sqlite3_int64 edge_id,
+			sqlite3_stmt * stmt_rem)
+{
+/* removing an Edge from a Face (step 2) */
+    int ret;
+    sqlite3_reset (stmt_rem);
+    sqlite3_clear_bindings (stmt_rem);
+    sqlite3_bind_int64 (stmt_rem, 1, edge_id);
+
+    ret = sqlite3_step (stmt_rem);
+    if (ret == SQLITE_DONE || ret == SQLITE_ROW)
+	return 1;
+    else
+      {
+	  char *msg = sqlite3_mprintf ("TopoGeo_RemoveSmallFaces error: \"%s\"",
+				       sqlite3_errmsg (topo->db_handle));
+	  gaiatopo_set_last_error_msg ((GaiaTopologyAccessorPtr) topo, msg);
+	  sqlite3_free (msg);
+      }
+    return 0;
+}
+
+static int
+do_remove_small_faces1 (struct gaia_topology *topo, sqlite3_int64 face_id,
+			sqlite3_stmt * stmt_edge, sqlite3_stmt * stmt_rem)
+{
+/* removing the longer Edge from a Face (step 1) */
+    int ret;
+    int first = 1;
+    sqlite3_reset (stmt_edge);
+    sqlite3_clear_bindings (stmt_edge);
+    sqlite3_bind_int64 (stmt_edge, 1, face_id);
+    sqlite3_bind_int64 (stmt_edge, 2, face_id);
+
+    while (1)
+      {
+	  /* scrolling the result set rows */
+	  ret = sqlite3_step (stmt_edge);
+	  if (ret == SQLITE_DONE)
+	      break;		/* end of result set */
+	  if (ret == SQLITE_ROW)
+	    {
+		sqlite3_int64 edge_id = sqlite3_column_int64 (stmt_edge, 0);
+		if (first)
+		  {
+		      first = 0;
+		      if (do_remove_small_faces2 (topo, edge_id, stmt_rem))
+			  goto error;
+		  }
+	    }
+	  else
+	    {
+		char *msg =
+		    sqlite3_mprintf ("TopoGeo_RemoveSmallFaces error: \"%s\"",
+				     sqlite3_errmsg (topo->db_handle));
+		gaiatopo_set_last_error_msg ((GaiaTopologyAccessorPtr) topo,
+					     msg);
+		sqlite3_free (msg);
+		goto error;
+	    }
+      }
+    return 1;
+
+  error:
+    return 0;
+
+}
+
+GAIATOPO_DECLARE int
+gaiaTopoGeo_RemoveSmallFaces (GaiaTopologyAccessorPtr accessor, double min_area)
+{
+/* 
+/ attempting to remove all small faces from a Topology-Geometry 
+*/
+    struct gaia_topology *topo = (struct gaia_topology *) accessor;
+    sqlite3_stmt *stmt_rem = NULL;
+    sqlite3_stmt *stmt_face = NULL;
+    sqlite3_stmt *stmt_edge = NULL;
+    int ret;
+    char *sql;
+    char *table;
+    char *xtable;
+    int count;
+    if (topo == NULL)
+	return 0;
+
+/* preparing the SELECT Face query */
+    table = sqlite3_mprintf ("%s_face", topo->topology_name);
+    xtable = gaiaDoubleQuotedSql (table);
+    sqlite3_free (table);
+    sql = sqlite3_mprintf ("SELECT face_id FROM MAIN.\"%s\" WHERE face_id > 0 "
+			   "AND ST_Area(ST_GetFaceGeometry(%Q, face_id)) < ?",
+			   xtable, topo->topology_name);
+    free (xtable);
+    ret =
+	sqlite3_prepare_v2 (topo->db_handle, sql, strlen (sql), &stmt_face,
+			    NULL);
+    sqlite3_free (sql);
+    sql = NULL;
+    if (ret != SQLITE_OK)
+      {
+	  char *msg =
+	      sqlite3_mprintf ("TopoGeo_RemoveSmallFaces() error: \"%s\"",
+			       sqlite3_errmsg (topo->db_handle));
+	  gaiatopo_set_last_error_msg ((GaiaTopologyAccessorPtr) topo, msg);
+	  sqlite3_free (msg);
+	  goto error;
+      }
+
+/* preparing the SELECT Edge query */
+    table = sqlite3_mprintf ("%s_edge", topo->topology_name);
+    xtable = gaiaDoubleQuotedSql (table);
+    sqlite3_free (table);
+    sql =
+	sqlite3_mprintf ("SELECT edge_id FROM MAIN.\"%s\" WHERE right_face = ? "
+			 "OR left_face = ? ORDER BY ST_Length(geom) DESC",
+			 xtable);
+    free (xtable);
+    ret =
+	sqlite3_prepare_v2 (topo->db_handle, sql, strlen (sql), &stmt_edge,
+			    NULL);
+    sqlite3_free (sql);
+    sql = NULL;
+    if (ret != SQLITE_OK)
+      {
+	  char *msg =
+	      sqlite3_mprintf ("TopoGeo_RemoveSmallFaces() error: \"%s\"",
+			       sqlite3_errmsg (topo->db_handle));
+	  gaiatopo_set_last_error_msg ((GaiaTopologyAccessorPtr) topo, msg);
+	  sqlite3_free (msg);
+	  goto error;
+      }
+
+/* preparing the ST_RemEdgeNewFace() query */
+    sql =
+	sqlite3_mprintf ("SELECT ST_RemEdgeNewFace(%Q, ?)",
+			 topo->topology_name);
+    ret =
+	sqlite3_prepare_v2 (topo->db_handle, sql, strlen (sql), &stmt_rem,
+			    NULL);
+    sqlite3_free (sql);
+    sql = NULL;
+    if (ret != SQLITE_OK)
+      {
+	  char *msg =
+	      sqlite3_mprintf ("TopoGeo_RemoveSmallFaces() error: \"%s\"",
+			       sqlite3_errmsg (topo->db_handle));
+	  gaiatopo_set_last_error_msg ((GaiaTopologyAccessorPtr) topo, msg);
+	  sqlite3_free (msg);
+	  goto error;
+      }
+
+    count = 1;
+    while (count)
+      {
+	  sqlite3_reset (stmt_face);
+	  sqlite3_clear_bindings (stmt_face);
+	  sqlite3_bind_double (stmt_face, 1, min_area);
+	  count = 0;
+	  while (1)
+	    {
+		/* scrolling the result set rows */
+		ret = sqlite3_step (stmt_face);
+		if (ret == SQLITE_DONE)
+		    break;	/* end of result set */
+		if (ret == SQLITE_ROW)
+		  {
+		      sqlite3_int64 face_id =
+			  sqlite3_column_int64 (stmt_face, 0);
+		      if (do_remove_small_faces1
+			  (topo, face_id, stmt_edge, stmt_rem))
+			  goto error;
+		      count++;
+		  }
+		else
+		  {
+		      char *msg =
+			  sqlite3_mprintf
+			  ("TopoGeo_RemoveSmallFaces error: \"%s\"",
+			   sqlite3_errmsg (topo->db_handle));
+		      gaiatopo_set_last_error_msg ((GaiaTopologyAccessorPtr)
+						   topo, msg);
+		      sqlite3_free (msg);
+		      goto error;
+		  }
+	    }
+      }
+
+    sqlite3_finalize (stmt_face);
+    sqlite3_finalize (stmt_edge);
+    sqlite3_finalize (stmt_rem);
+    return 1;
+
+  error:
+    if (sql != NULL)
+	sqlite3_free (sql);
+    if (stmt_face != NULL)
+	sqlite3_finalize (stmt_face);
+    if (stmt_edge != NULL)
+	sqlite3_finalize (stmt_edge);
+    if (stmt_rem != NULL)
+	sqlite3_finalize (stmt_rem);
+    return 0;
+}
+
+GAIATOPO_DECLARE int
+gaiaTopoGeo_RemoveDanglingEdges (GaiaTopologyAccessorPtr accessor)
+{
+/* 
+/ attempting to remove all dangling edges from a Topology-Geometry 
+*/
+    struct gaia_topology *topo = (struct gaia_topology *) accessor;
+    int ret;
+    char *sql;
+    char *table;
+    char *xtable;
+    char *err_msg = NULL;
+    if (topo == NULL)
+	return 0;
+
+/* preparing the ST_RemEdgeNewFace() query */
+    table = sqlite3_mprintf ("%s_edge", topo->topology_name);
+    xtable = gaiaDoubleQuotedSql (table);
+    sqlite3_free (table);
+    sql =
+	sqlite3_mprintf
+	("SELECT ST_RemEdgeNewFace(%Q, edge_id) FROM MAIN.\"%s\" "
+	 "WHERE left_face = right_face", topo->topology_name, xtable);
+    free (xtable);
+    ret = sqlite3_exec (topo->db_handle, sql, NULL, NULL, &err_msg);
+    sqlite3_free (sql);
+    if (ret != SQLITE_OK)
+      {
+	  char *msg =
+	      sqlite3_mprintf ("TopoGeo_RemoveDanglingEdges error: \"%s\"",
+			       err_msg);
+	  gaiatopo_set_last_error_msg ((GaiaTopologyAccessorPtr) topo, msg);
+	  sqlite3_free (err_msg);
+	  sqlite3_free (msg);
+	  return 0;
+      }
+    return 1;
+}
+
+GAIATOPO_DECLARE int
+gaiaTopoGeo_RemoveDanglingNodes (GaiaTopologyAccessorPtr accessor)
+{
+/* 
+/ attempting to remove all dangling nodes from a Topology-Geometry 
+*/
+    struct gaia_topology *topo = (struct gaia_topology *) accessor;
+    int ret;
+    char *sql;
+    char *table;
+    char *xtable;
+    char *err_msg = NULL;
+    if (topo == NULL)
+	return 0;
+
+/* preparing the ST_RemIsoNode() query */
+    table = sqlite3_mprintf ("%s_node", topo->topology_name);
+    xtable = gaiaDoubleQuotedSql (table);
+    sqlite3_free (table);
+    sql =
+	sqlite3_mprintf ("SELECT ST_RemIsoNode(%Q, node_id) FROM MAIN.\"%s\" "
+			 "WHERE containing_face IS NOT NULL",
+			 topo->topology_name, xtable);
+    free (xtable);
+    ret = sqlite3_exec (topo->db_handle, sql, NULL, NULL, &err_msg);
+    sqlite3_free (sql);
+    if (ret != SQLITE_OK)
+      {
+	  char *msg =
+	      sqlite3_mprintf ("TopoGeo_RemoveDanglingNodes error: \"%s\"",
+			       err_msg);
+	  gaiatopo_set_last_error_msg ((GaiaTopologyAccessorPtr) topo, msg);
+	  sqlite3_free (err_msg);
+	  sqlite3_free (msg);
+	  return 0;
+      }
+    return 1;
 }
 
 GAIATOPO_DECLARE int
@@ -7423,6 +8783,7 @@ auxtopo_polygonize_face_edges (struct face_edges *list, const void *cache)
 /* attempting to reaggregrate Polygons from valid Edges */
     gaiaGeomCollPtr sparse;
     gaiaGeomCollPtr rearranged;
+    struct face_edge_item *fe;
 
     if (list->has_z)
 	sparse = gaiaAllocGeomCollXYZ ();
@@ -7430,7 +8791,7 @@ auxtopo_polygonize_face_edges (struct face_edges *list, const void *cache)
 	sparse = gaiaAllocGeomColl ();
     sparse->Srid = list->srid;
 
-    struct face_edge_item *fe = list->first_edge;
+    fe = list->first_edge;
     while (fe != NULL)
       {
 	  if (fe->count < 2)
@@ -7461,6 +8822,7 @@ auxtopo_polygonize_face_edges_generalize (struct face_edges * list,
     gaiaGeomCollPtr sparse;
     gaiaGeomCollPtr renoded;
     gaiaGeomCollPtr rearranged;
+    struct face_edge_item *fe;
 
     if (list->has_z)
 	sparse = gaiaAllocGeomCollXYZ ();
@@ -7468,7 +8830,7 @@ auxtopo_polygonize_face_edges_generalize (struct face_edges * list,
 	sparse = gaiaAllocGeomColl ();
     sparse->Srid = list->srid;
 
-    struct face_edge_item *fe = list->first_edge;
+    fe = list->first_edge;
     while (fe != NULL)
       {
 	  if (fe->count < 2)
@@ -7486,7 +8848,7 @@ auxtopo_polygonize_face_edges_generalize (struct face_edges * list,
 	    }
 	  fe = fe->next;
       }
-    renoded = gaiaNodeLines (sparse);
+    renoded = gaiaNodeLines (cache, sparse);
     gaiaFreeGeomColl (sparse);
     if (renoded == NULL)
 	return NULL;
@@ -7957,8 +9319,8 @@ auxtopo_create_features_sql (sqlite3 * db_handle, const char *db_prefix,
 		name = results[(i * columns) + 1];
 		type = results[(i * columns) + 2];
 		notnull = atoi (results[(i * columns) + 3]);
-		if (strcasecmp(name, "fid") == 0)
-		continue;
+		if (strcasecmp (name, "fid") == 0)
+		    continue;
 		if (is_geometry_column (db_handle, db_prefix, ref_table, name))
 		    continue;
 		if (ref_column != NULL)
@@ -8588,7 +9950,6 @@ gaiaTopoGeo_CreateTopoLayer (GaiaTopologyAccessorPtr accessor,
 	  char *msg =
 	      sqlite3_mprintf ("TopoGeo_CreateTopoLayer() error: \"%s\"",
 			       sqlite3_errmsg (topo->db_handle));
-	  sqlite3_free (errMsg);
 	  gaiatopo_set_last_error_msg (accessor, msg);
 	  sqlite3_free (msg);
 	  goto error;
@@ -8612,7 +9973,6 @@ gaiaTopoGeo_CreateTopoLayer (GaiaTopologyAccessorPtr accessor,
 	  char *msg =
 	      sqlite3_mprintf ("TopoGeo_CreateTopoLayer() error: \"%s\"",
 			       sqlite3_errmsg (topo->db_handle));
-	  sqlite3_free (errMsg);
 	  gaiatopo_set_last_error_msg (accessor, msg);
 	  sqlite3_free (msg);
 	  goto error;
@@ -8636,7 +9996,6 @@ gaiaTopoGeo_CreateTopoLayer (GaiaTopologyAccessorPtr accessor,
 	  char *msg =
 	      sqlite3_mprintf ("TopoGeo_CreateTopoLayer() error: \"%s\"",
 			       sqlite3_errmsg (topo->db_handle));
-	  sqlite3_free (errMsg);
 	  gaiatopo_set_last_error_msg (accessor, msg);
 	  sqlite3_free (msg);
 	  goto error;
@@ -9534,9 +10893,9 @@ do_eval_topo_geometry (struct gaia_topology *topo, sqlite3_stmt * stmt_rels,
     if (list->first_edge != NULL)
       {
 	  /* attempting to rearrange sparse lines into Polygons */
+	  gaiaGeomCollPtr rearranged;
 	  auxtopo_select_valid_face_edges (list);
-	  gaiaGeomCollPtr rearranged =
-	      auxtopo_polygonize_face_edges (list, topo->cache);
+	  rearranged = auxtopo_polygonize_face_edges (list, topo->cache);
 	  auxtopo_free_face_edges (list);
 	  if (rearranged != NULL)
 	    {
@@ -10504,4 +11863,4 @@ gaiaTopoGeo_InsertFeatureFromTopoLayer (GaiaTopologyAccessorPtr accessor,
     return 0;
 }
 
-#endif /* end TOPOLOGY conditionals */
+#endif /* end ENABLE_RTTOPO conditionals */
