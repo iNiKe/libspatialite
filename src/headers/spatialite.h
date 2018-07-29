@@ -222,6 +222,38 @@ extern "C"
     SPATIALITE_DECLARE void spatialite_finalize_topologies (const void *ptr);
 
 /**
+ Enables the BLOB-TinyPoint encoding
+ 
+ \param ptr the same memory pointer passed to the corresponding call to
+ spatialite_init_ex() and returned by spatialite_alloc_connection()
+ 
+ \sa disable_tiny_point, is_tiny_point_enabled
+*/
+    SPATIALITE_DECLARE void enable_tiny_point (const void *ptr);
+
+/**
+ Disables the BLOB-TinyPoint encoding
+ 
+ \param ptr the same memory pointer passed to the corresponding call to
+ spatialite_init_ex() and returned by spatialite_alloc_connection()
+ 
+ \sa disable_tiny_point, is_tiny_point_enabled
+*/
+    SPATIALITE_DECLARE void disable_tiny_point (const void *ptr);
+
+/**
+ Checks if the BLOB-TinyPoint encoding is enabled or not
+ 
+ \param ptr the same memory pointer passed to the corresponding call to
+ spatialite_init_ex() and returned by spatialite_alloc_connection()
+ 
+ \return 0 (FALSE) if not enabled, any other value (TRUE) if enabled
+ 
+ \sa enable_tiny_point, disable_tiny_point
+*/
+    SPATIALITE_DECLARE int is_tiny_point_enabled (const void *ptr);
+
+/**
  Dumps a full geometry-table into an external Shapefile
 
  \param sqlite handle to current DB connection
@@ -229,10 +261,12 @@ extern "C"
  \param column the name of the geometry column
  \param shp_path pathname of the Shapefile to be exported (no suffix) 
  \param charset a valid GNU ICONV charset to be used for DBF text strings
- \param geom_type "POINT", "LINESTRING", "POLYGON", "MULTIPOLYGON" or NULL
+ \param geom_type "POINT", "LINESTRING", "POLYGON", "MULTIPOINT" or NULL
  \param verbose if TRUE a short report is shown on stderr
  \param rows on completion will contain the total number of exported rows
  \param err_msg on completion will contain an error message (if any)
+ 
+ \sa dump_shapefile_ex
 
  \return 0 on failure, any other value on success
  */
@@ -241,6 +275,31 @@ extern "C"
 					   char *charset, char *geom_type,
 					   int verbose, int *rows,
 					   char *err_msg);
+
+/**
+ Dumps a full geometry-table into an external Shapefile
+
+ \param sqlite handle to current DB connection
+ \param table the name of the table to be exported
+ \param column the name of the geometry column
+ \param shp_path pathname of the Shapefile to be exported (no suffix) 
+ \param charset a valid GNU ICONV charset to be used for DBF text strings
+ \param geom_type "POINT", "LINESTRING", "POLYGON", "MULTIPOINT" or NULL
+ \param verbose if TRUE a short report is shown on stderr
+ \param rows on completion will contain the total number of exported rows
+ \param colname_case one between GAIA_DBF_COLNAME_LOWERCASE, 
+	GAIA_DBF_COLNAME_UPPERCASE or GAIA_DBF_COLNAME_CASE_IGNORE.
+ \param err_msg on completion will contain an error message (if any)
+ 
+ \sa dump_shapefile
+
+ \return 0 on failure, any other value on success
+ */
+    SPATIALITE_DECLARE int dump_shapefile_ex (sqlite3 * sqlite, char *table,
+					      char *column, char *shp_path,
+					      char *charset, char *geom_type,
+					      int verbose, int *rows,
+					      int colcase_name, char *err_msg);
 
 /**
  Loads an external Shapefile into a newly created table
@@ -260,7 +319,7 @@ extern "C"
 
  \return 0 on failure, any other value on success
 
- \sa load_shapefile_ex, load_shapefile_ex2
+ \sa load_shapefile_ex, load_shapefile_ex2, load_shapefile_ex3
 
  \note this function simply calls load_shapefile_ex by passing 
   implicit gype="AUTO" and pk_column=NULL arguments
@@ -297,7 +356,7 @@ extern "C"
 
  \return 0 on failure, any other value on success
 
- \sa load_shapefile, load_shapefile_ex2
+ \sa load_shapefile, load_shapefile_ex2, load_shapefile_ex3
 
  \note the Shapefile format doesn't supports any distinction between
   LINESTRINGs and MULTILINESTRINGs, or between POLYGONs and MULTIPOLYGONs;
@@ -342,7 +401,7 @@ extern "C"
 
  \return 0 on failure, any other value on success
 
- \sa load_shapefile, load_shapefile_ex
+ \sa load_shapefile, load_shapefile_ex, load_shapefile_ex3
 
  \note the Shapefile format doesn't supports any distinction between
   LINESTRINGs and MULTILINESTRINGs, or between POLYGONs and MULTIPOLYGONs;
@@ -363,6 +422,54 @@ extern "C"
 					       char *err_msg);
 
 /**
+ Loads an external Shapefile into a newly created table
+
+ \param sqlite handle to current DB connection
+ \param shp_path pathname of the Shapefile to be imported (no suffix) 
+ \param table the name of the table to be created
+ \param charset a valid GNU ICONV charset to be used for DBF text strings
+ \param srid the SRID to be set for Geometries
+ \param geo_column the name of the geometry column
+ \param gtype expected to be one of: "LINESTRING", "LINESTRINGZ", 
+  "LINESTRINGM", "LINESTRINGZM", "MULTILINESTRING", "MULTILINESTRINGZ",
+  "MULTILINESTRINGM", "MULTILINESTRINGZM", "POLYGON", "POLYGONZ", "POLYGONM", 
+  "POLYGONZM", "MULTIPOLYGON", "MULTIPOLYGONZ", "MULTIPOLYGONM", 
+  "MULTIPOLYGONZM" or "AUTO".
+ \param pk_column name of the Primary Key column; if NULL or mismatching
+ then "PK_UID" will be assumed by default.
+ \param coerce2d if TRUE any Geometry will be casted to 2D [XY]
+ \param compressed if TRUE compressed Geometries will be created
+ \param verbose if TRUE a short report is shown on stderr
+ \param spatial_index if TRUE an R*Tree Spatial Index will be created
+ \param text_dates is TRUE all DBF dates will be considered as TEXT
+ \param rows on completion will contain the total number of imported rows
+ \param colname_case one between GAIA_DBF_COLNAME_LOWERCASE, 
+	GAIA_DBF_COLNAME_UPPERCASE or GAIA_DBF_COLNAME_CASE_IGNORE.
+ \param err_msg on completion will contain an error message (if any)
+
+ \return 0 on failure, any other value on success
+
+ \sa load_shapefile, load_shapefile_ex, load_shapefile_ex2
+
+ \note the Shapefile format doesn't supports any distinction between
+  LINESTRINGs and MULTILINESTRINGs, or between POLYGONs and MULTIPOLYGONs;
+  as does not allows to clearly distinguish if the M-measure is required.
+ \n So a first preliminary scan of the Shapefile is required in order to
+  correctly identify the actual payload (gtype = "AUTO", default case).
+ \n By explicitly specifying some expected geometry type this first scan
+  will be skipped at all thus introducing a noticeable performance gain.
+ \n Anyway, declaring a mismatching geometry type will surely cause a failure.
+ */
+    SPATIALITE_DECLARE int load_shapefile_ex3 (sqlite3 * sqlite, char *shp_path,
+					       char *table, char *charset,
+					       int srid, char *geo_column,
+					       char *gtype, char *pk_column,
+					       int coerce2d, int compressed,
+					       int verbose, int spatial_index,
+					       int text_date, int *rows,
+					       int colname_case, char *err_msg);
+
+/**
  Loads an external DBF file into a newly created table
 
  \param sqlite handle to current DB connection
@@ -373,7 +480,7 @@ extern "C"
  \param rows on completion will contain the total number of actually exported rows
  \param err_msg on completion will contain an error message (if any)
 
- \sa load_dbf_ex, load_dbf_ex2
+ \sa load_dbf_ex, load_dbf_ex2, load_dbf_ex3
 
  \note this function simply calls load_dbf_ex by passing an
   implicit pk_column=NULL argument
@@ -397,7 +504,7 @@ extern "C"
  \param rows on completion will contain the total number of actually exported rows
  \param err_msg on completion will contain an error message (if any)
 
- \sa load_dbf, load_dbf_ex2
+ \sa load_dbf, load_dbf_ex2, load_dbf_ex3
 
  \return 0 on failure, any other value on success
  */
@@ -420,7 +527,7 @@ extern "C"
  \param rows on completion will contain the total number of imported rows
  \param err_msg on completion will contain an error message (if any)
 
- \sa load_dbf, load_dbf_ex
+ \sa load_dbf, load_dbf_ex, load_dbf_ex3
 
  \return 0 on failure, any other value on success
  */
@@ -431,6 +538,32 @@ extern "C"
 					 char *err_msg);
 
 /**
+ Loads an external DBF file into a newly created table
+
+ \param sqlite handle to current DB connection
+ \param dbf_path pathname of the DBF file to be imported
+ \param table the name of the table to be created
+ \param pk_column name of the Primary Key column; if NULL or mismatching
+ then "PK_UID" will be assumed by default.
+ \param charset a valid GNU ICONV charset to be used for DBF text strings
+ \param verbose if TRUE a short report is shown on stderr
+ \param text_dates is TRUE all DBF dates will be considered as TEXT
+ \param rows on completion will contain the total number of imported rows
+ \param colname_case one between GAIA_DBF_COLNAME_LOWERCASE, 
+	GAIA_DBF_COLNAME_UPPERCASE or GAIA_DBF_COLNAME_CASE_IGNORE.
+ \param err_msg on completion will contain an error message (if any)
+
+ \sa load_dbf, load_dbf_ex, load_dbf_ex2
+
+ \return 0 on failure, any other value on success
+ */
+    SPATIALITE_DECLARE int load_dbf_ex3 (sqlite3 * sqlite, char *dbf_path,
+					 char *table, char *pk_column,
+					 char *charset, int verbose,
+					 int text_date, int *rows,
+					 int colname_case, char *err_msg);
+
+/**
  Dumps a full table into an external DBF file
 
  \param sqlite handle to current DB connection
@@ -439,7 +572,7 @@ extern "C"
  \param charset a valid GNU ICONV charset to be used for DBF text strings
  \param err_msg on completion will contain an error message (if any)
  
- \sa dump_dbf_ex
+ \sa dump_dbf_ex, dump_dbf_ex2
 
  \return 0 on failure, any other value on success
  */
@@ -457,13 +590,34 @@ extern "C"
  \param rows on completion will contain the total number of exported rows
  \param err_msg on completion will contain an error message (if any)
  
- \sa dump_dbf
+ \sa dump_dbf, dump_dbf_ex2
 
  \return 0 on failure, any other value on success
  */
     SPATIALITE_DECLARE int dump_dbf_ex (sqlite3 * sqlite, char *table,
 					char *dbf_path, char *charset,
 					int *rows, char *err_msg);
+
+/**
+ Dumps a full table into an external DBF file
+
+ \param sqlite handle to current DB connection
+ \param table the name of the table to be exported
+ \param dbf_path pathname of the DBF to be exported 
+ \param charset a valid GNU ICONV charset to be used for DBF text strings
+ \param rows on completion will contain the total number of exported rows
+ \param colname_case one between GAIA_DBF_COLNAME_LOWERCASE, 
+	GAIA_DBF_COLNAME_UPPERCASE or GAIA_DBF_COLNAME_CASE_IGNORE.
+ \param err_msg on completion will contain an error message (if any)
+ 
+ \sa dump_dbf, dump_dbf_ex
+
+ \return 0 on failure, any other value on success
+ */
+    SPATIALITE_DECLARE int dump_dbf_ex2 (sqlite3 * sqlite, char *table,
+					 char *dbf_path, char *charset,
+					 int *rows, int colname_case,
+					 char *err_msg);
 
 /**
  Loads an external spreadsheet (.xls) file into a newly created table
@@ -853,7 +1007,7 @@ extern "C"
  \param transaction boolena; if set to TRUE will internally handle
  a SQL Transaction
  
- \sa elementary_geometries
+ \sa elementary_geometries_ex3
 
  \note if the input table contains some kind of complex Geometry
  (MULTIPOINT, MULTILINESTRING, MULTIPOLYGON or GEOMETRYCOLLECTION),
@@ -868,6 +1022,39 @@ extern "C"
 						       char *outTable,
 						       char *pKey,
 						       char *multiId, int *rows,
+						       int transaction);
+
+/**
+ Creates a derived table surely containing elementary Geometries
+
+ \param sqlite handle to current DB connection
+ \param inTable name of the input table 
+ \param geometry name of the Geometry column
+ \param outTable name of the output table to be created
+ \param pKey name of the Primary Key column in the output table
+ \param multiId name of the column identifying origins in the output table
+ \param options pointer to an Options list created by gaiaAuxClonerCreate()
+ \param rows on completion will contain the total number of inserted rows
+ \param transaction boolena; if set to TRUE will internally handle
+ a SQL Transaction
+ 
+ \sa elementary_geometries
+
+ \note if the input table contains some kind of complex Geometry
+ (MULTIPOINT, MULTILINESTRING, MULTIPOLYGON or GEOMETRYCOLLECTION),
+ then many rows are inserted into the output table: each single 
+ row will contain the same attributes and an elementaty Geometry.
+ All the rows created by expanding the same input row will expose
+ the same value in the "multiId" column.
+ */
+    SPATIALITE_DECLARE void elementary_geometries_ex3 (sqlite3 * sqlite,
+						       char *inTable,
+						       char *geometry,
+						       char *outTable,
+						       char *pKey,
+						       char *multiId,
+						       const void *options,
+						       int *rows,
 						       int transaction);
 
 /**
@@ -1014,7 +1201,8 @@ extern "C"
 
  \note you are responsible to destroy (before or after) any allocated
  VectorLayersList returned by gaiaGetVectorLayersList().
- \n If the table arg is NULL all VectorLayers defined within the DB will be reported;
+ \n If the table arg is NULL all VectorLayers defined within the DB will be reported
+  (and in this case all AttributeField Infos will be always suppressed);
   otherwise only a single Layer will be reported (if existing).
  \n By defining the geometry arg (not NULL) you can further restrict the returned report.
  \n When the mode arg is set to GAIA_VECTORS_LIST_OPTIMISTIC (default) then the returned infos
@@ -1514,6 +1702,133 @@ extern "C"
 				       const char *output_table,
 				       int transaction, int ram_tmp_store,
 				       char **message);
+
+/**
+  Will attempt to create the Routing Nodes columns for a spatial table
+  
+ \param db_handle handle to the current SQLite connection
+ \param cache a memory pointer returned by spatialite_alloc_connection()
+ \param prefix schema prefix identifying the target DB (could be 
+  eventually NULL)\n
+ \param table name of the table to be processed.
+ \param geom_column name of the table column containing Linestring Geometries
+ (could be eventually NULL).
+ \param from_column name of the table column where NodeFrom values 
+  will be stored.
+ \param to_column name of the column where ToFrom values 
+  will be stored.
+ 
+ \return 0 on failure, any other value on success
+ */
+    SPATIALITE_DECLARE int gaia_create_routing_nodes (sqlite3 * db_handle,
+						      const void *cache,
+						      const char *prefix,
+						      const char *table,
+						      const char *geom_column,
+						      const char *from_column,
+						      const char *to_column);
+
+/**
+  Will attempt to create a VirtualRouting from an input table
+  
+ \param db_handle handle to the current SQLite connection
+ \param cache a memory pointer returned by spatialite_alloc_connection()
+ \param routing_data_table name of the Routing Data Table to be created.
+ \param virtual_routing_table name of the VirtualRouting Table to be created.
+ \param input_table name of the input table to be processed.
+ \param from_column name of the input table column containing NodeFrom.
+ \param to_column name of the input table column containing NodeTo.
+ \param geom_column name of the input table column containing Linestring Geometries
+ (could be eventually NULL).
+ \param cost_column name of the input table column containing Cost values
+ (could be eventually NULL).
+ \param name_column name of the input table column containing RoadName
+ (could be eventually NULL).
+ \param a_star_enabled if set to TRUE the Routing Data Table will support
+ both Djiskra's Shortest Path and A* algorithms; if set to FALSE only
+ the Djiskra's algorithm will be supported.
+ \param bidirectional if set to TRUE all input arcs/links will be assumed
+ to be bidirectional (from-to and to-from); if set to FALSE all input
+ arcs/links will be assumed to be unidirectional (from-to only).
+ \param oneway_from name of the input table column containing OneWayFrom
+ (could be eventually NULL).
+ \param oneway_to name of the input table column containing OneWayTo
+ (could be eventually NULL).
+ \param overwrite if set to TRUE both the Routing Data Table and the
+ VirtualRouting Table will be dropped if already existing; if set to
+ FALSE an already existing Routing Data Table or VirtualRouting Table
+ will cause a fatal error.
+ 
+ \return 0 on failure, any other value on success
+ 
+ \note at least one between geom_column and cost_column shall not be NULL.
+ both oneway_from and oneway_to must be NULL or must contain a valid
+ column name; mixing a column name and a NULL will be considered a
+ fatal error.
+ */
+    SPATIALITE_DECLARE int gaia_create_routing (sqlite3 * db_handle,
+						const void *cache,
+						const char *routing_data_table,
+						const char
+						*virtual_routing_table,
+						const char *input_table,
+						const char *from_column,
+						const char *to_column,
+						const char *geom_column,
+						const char *cost_column,
+						const char *name_column,
+						int a_star_enabled,
+						int bidirectional,
+						const char *oneway_from,
+						const char *oneway_to,
+						int overwrite);
+
+/**
+  Will attempt to retrieve the Full Extent from an R*Tree (SpatiaLite)
+   
+ \param db_handle handle to the current SQLite connection
+ \param prefix schema prefix identifying the DB containing the R*Tree\n
+ "main" always identifies the main DB (primary, not Attached).
+ \param name the name of the R*Tree table
+ \param srid the intended SRID for the R*Tree
+ 
+ \sa gaiaGetGpkgRTreeFullExtent
+ 
+ \return a Rectangle Geometry corresponding to the Full Extent,\n
+ NULL on failure.
+ */
+    SPATIALITE_DECLARE gaiaGeomCollPtr gaiaGetRTreeFullExtent (sqlite3 *
+							       db_handle,
+							       const char
+							       *db_prefix,
+							       const char *name,
+							       int srid);
+
+/**
+  Will attempt to retrieve the Full Extent from an R*Tree (GeoPackage)
+   
+ \param db_handle handle to the current SQLite connection
+ \param prefix schema prefix identifying the DB containing the R*Tree\n
+ "main" always identifies the main DB (primary, not Attached).
+ \param name the name of the R*Tree table
+ \param srid the intended SRID for the R*Tree
+ 
+ \sa gaiaGetRTreeFullExtent
+ 
+ \return a Rectangle Geometry corresponding to the Full Extent,\n
+ NULL on failure.
+ */
+    SPATIALITE_DECLARE gaiaGeomCollPtr gaiaGetGpkgRTreeFullExtent (sqlite3 *
+								   db_handle,
+								   const char
+								   *db_prefix,
+								   const char
+								   *name,
+								   int srid);
+
+    SPATIALITE_DECLARE const char *gaia_create_routing_get_last_error (const
+								       void
+								       *cache);
 
     SPATIALITE_DECLARE int gaiaGPKG2Spatialite (sqlite3 * handle_in,
 						const char *gpkg_in_path,

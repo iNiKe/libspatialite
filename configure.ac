@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT(libspatialite, 4.4.0-RC1, a.furieri@lqt.it)
+AC_INIT(libspatialite, 5.0.0-beta0, a.furieri@lqt.it)
 AC_LANG(C)
 AC_CONFIG_MACRO_DIR([m4])
 
@@ -129,6 +129,7 @@ AC_CONFIG_FILES([Makefile \
 		src/topology/Makefile \
 		src/srsinit/Makefile \
 		src/srsinit/epsg_update/Makefile \
+		src/stored_procedures/Makefile \
 		src/connection_cache/Makefile \
 		src/connection_cache/generator/Makefile \
 		src/virtualtext/Makefile \
@@ -138,8 +139,11 @@ AC_CONFIG_FILES([Makefile \
 		test/sql_stmt_geos_tests/Makefile \
 		test/sql_stmt_geosadvanced_tests/Makefile \
 		test/sql_stmt_geopackage_tests/Makefile \
-		test/sql_stmt_gpkg_epsg_tests/Makefile \
+		test/sql_stmt_gpkg_epsg492_tests/Makefile \
+		test/sql_stmt_gpkg_epsg493_tests/Makefile \
 		test/sql_stmt_proj_tests/Makefile \
+		test/sql_stmt_proj492_tests/Makefile \
+		test/sql_stmt_proj493_tests/Makefile \
 		test/sql_stmt_mathsql_tests/Makefile \
 		test/sql_stmt_rtgeom_tests/Makefile \
 		test/sql_stmt_rttopo_tests/Makefile \
@@ -153,6 +157,13 @@ AC_CONFIG_FILES([Makefile \
 		test/sql_stmt_gpkgnocache_tests/Makefile \
 		test/sql_stmt_voronoj1_tests/Makefile \
 		test/sql_stmt_voronoj2_tests/Makefile \
+		test/sql_stmt_sequence_tests/Makefile \
+		test/sql_stmt_routing_tests/Makefile \
+		test/sql_stmt_logfile_tests/Makefile \
+		test/sql_stmt_iconv_tests/Makefile \
+		test/sql_stmt_point_geom/Makefile \
+		test/sql_stmt_tiny_point/Makefile \
+		test/sql_stmt_postgres_tests/Makefile \
 		examples/Makefile \
 		Doxyfile \
 		spatialite.pc])
@@ -356,7 +367,7 @@ if test x"$enable_geos" != "xno"; then
 	  [], [enable_rttopo=no])
   if test x"$enable_rttopo" != "xno"; then
 	  AC_CHECK_HEADERS(librttopo.h,, [AC_MSG_ERROR([cannot find librttopo.h, bailing out])])
-	  AC_SEARCH_LIBS(rtgeom_make_valid,rttopo,,AC_MSG_ERROR(['librttopo' is required but it doesn't seem to be installed on this system. You may need to try re-running configure with a --disable-rttopo parameter.]))
+	  AC_SEARCH_LIBS(rtt_AddLineNoFace,rttopo,,AC_MSG_ERROR(['librttopo' (>= v.1.1.0) is required but it doesn't seem to be installed on this system. You may need to try re-running configure with a --disable-rttopo parameter.]))
 	  AC_DEFINE(ENABLE_RTTOPO)
   fi
 else

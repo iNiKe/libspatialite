@@ -66,6 +66,10 @@ the terms of any one of the MPL, the GPL or the LGPL.
 #include <geos_c.h>
 #endif
 
+#ifndef OMIT_PROJ		/* only if PROJ is supported */
+#include <proj_api.h>
+#endif
+
 #ifdef _WIN32
 #include "fnmatch4win.h"
 #include "scandir4win.h"
@@ -288,6 +292,7 @@ do_one_case (struct db_conn *conn, const struct test_data *data,
 		  {
 		      /* we expected this */
 		      sqlite3_free (err_msg);
+		      sqlite3_free_table (results);
 		      return 0;
 		  }
 	    }
@@ -299,6 +304,7 @@ do_one_case (struct db_conn *conn, const struct test_data *data,
       {
 	  fprintf (stderr, "Unexpected error: bad result: %i/%i.\n", rows,
 		   columns);
+	  sqlite3_free_table (results);
 	  return -11;
       }
     for (i = 0; i < (data->expected_rows + 1) * data->expected_columns; ++i)
@@ -319,6 +325,7 @@ do_one_case (struct db_conn *conn, const struct test_data *data,
 		      fprintf (stderr, "Null value at %i.\n", i);
 		      fprintf (stderr, "Expected value was: %s\n",
 			       data->expected_results[i]);
+		      sqlite3_free_table (results);
 		      return -12;
 		  }
 	    }
@@ -327,6 +334,7 @@ do_one_case (struct db_conn *conn, const struct test_data *data,
 		fprintf (stderr, "zero length result at %i\n", i);
 		fprintf (stderr, "Expected value was    : %s|\n",
 			 data->expected_results[i]);
+		sqlite3_free_table (results);
 		return -13;
 	    }
 	  else if (strncmp
@@ -337,6 +345,7 @@ do_one_case (struct db_conn *conn, const struct test_data *data,
 			 results[i]);
 		fprintf (stderr, "Expected value was   : %s|\n",
 			 data->expected_results[i]);
+		sqlite3_free_table (results);
 		return -14;
 	    }
       }
@@ -508,12 +517,13 @@ run_subdir_test (const char *subdirname, struct db_conn *conn,
 
 	  cleanup_test_data (data);
 	  if (result != 0)
-	    {
-		return result;
-	    }
-	  free (namelist[i]);
+	      break;
       }
+/* cleaning up */
+    for (i = 0; i < n; ++i)
+	free (namelist[i]);
     free (namelist);
+
     return result;
 }
 
@@ -523,11 +533,31 @@ run_all_testcases (struct db_conn *conn, int load_extension, int legacy)
     int ret;
     int result = 0;
     const char *security_level;
+    int tiny_point = is_tiny_point_enabled (conn->cache);
 
     result = run_subdir_test ("sql_stmt_tests", conn, load_extension, 0);
     if (result != 0)
       {
 	  return result;
+      }
+
+    if (tiny_point)
+      {
+	  result =
+	      run_subdir_test ("sql_stmt_tiny_point", conn, load_extension, 0);
+	  if (result != 0)
+	    {
+		return result;
+	    }
+      }
+    else
+      {
+	  result =
+	      run_subdir_test ("sql_stmt_point_geom", conn, load_extension, 0);
+	  if (result != 0)
+	    {
+		return result;
+	    }
       }
 
     security_level = getenv ("SPATIALITE_SECURITY");
@@ -542,7 +572,65 @@ run_all_testcases (struct db_conn *conn, int load_extension, int legacy)
 	    {
 		return result;
 	    }
+	  if (!legacy)
+	    {
+		result =
+		    run_subdir_test ("sql_stmt_logfile_tests", conn,
+				     load_extension, 0);
+		if (result != 0)
+		  {
+		      return result;
+		  }
+	    }
       }
+
+    if (legacy)
+      {
+	  /* skipping Sequence tests in legacy mode */
+	  fprintf (stderr,
+		   "WARNING: skipping Sequence testcases in legacy mode !!!\n");
+	  goto skip_sequence;
+      }
+
+    result =
+	run_subdir_test ("sql_stmt_sequence_tests", conn, load_extension, 0);
+    if (result != 0)
+      {
+	  return result;
+      }
+  skip_sequence:
+
+    if (legacy)
+      {
+	  /* skipping Routing tests in legacy mode */
+	  fprintf (stderr,
+		   "WARNING: skipping CreateRouting testcases in legacy mode !!!\n");
+	  goto skip_routing;
+      }
+
+    result =
+	run_subdir_test ("sql_stmt_routing_tests", conn, load_extension, 0);
+    if (result != 0)
+      {
+	  return result;
+      }
+  skip_routing:
+
+    if (legacy)
+      {
+	  /* skipping PostgresL tests in legacy mode */
+	  fprintf (stderr,
+		   "WARNING: skipping Postgres testcases in legacy mode !!!\n");
+	  goto skip_postgres;
+      }
+
+    result =
+	run_subdir_test ("sql_stmt_postgres_tests", conn, load_extension, 0);
+    if (result != 0)
+      {
+	  return result;
+      }
+  skip_postgres:
 
 #ifndef OMIT_MATHSQL		/* only if MATHSQL is supported */
     result =
@@ -556,6 +644,12 @@ run_all_testcases (struct db_conn *conn, int load_extension, int legacy)
 #ifndef OMIT_EPSG		/* only if full EPSG is supported */
 #ifndef OMIT_PROJ		/* only if PROJ is supported */
     result = run_subdir_test ("sql_stmt_proj_tests", conn, load_extension, 0);
+    if (PJ_VERSION >= 493)
+	result =
+	    run_subdir_test ("sql_stmt_proj493_tests", conn, load_extension, 0);
+    else
+	result =
+	    run_subdir_test ("sql_stmt_proj492_tests", conn, load_extension, 0);
     if (result != 0)
       {
 	  return result;
@@ -682,7 +776,16 @@ run_all_testcases (struct db_conn *conn, int load_extension, int legacy)
 
 #endif /* end RTTOPO conditional */
 
+#ifndef OMIT_ICONV		/* only if ICONV is supported */
+    result = run_subdir_test ("sql_stmt_iconv_tests", conn, load_extension, 0);
+    if (result != 0)
+      {
+	  return result;
+      }
+#endif /* end ICONV */
+
 #ifdef ENABLE_LIBXML2		/* only if LIBXML2 is supported */
+#ifndef OMIT_ICONV		/* only if ICONV is supported */
     result =
 	run_subdir_test ("sql_stmt_libxml2_tests", conn, load_extension, 0);
     if (result != 0)
@@ -704,6 +807,7 @@ run_all_testcases (struct db_conn *conn, int load_extension, int legacy)
 	    }
       }
 
+#endif
 #endif /* end LIBXML2 conditional */
 
 #ifdef ENABLE_GEOPACKAGE	/* only if GeoPackage support is enabled */
@@ -717,9 +821,14 @@ run_all_testcases (struct db_conn *conn, int load_extension, int legacy)
 		return result;
 	    }
 #ifndef OMIT_EPSG		/* EPSG is supported */
-	  result =
-	      run_subdir_test ("sql_stmt_gpkg_epsg_tests", conn,
-			       load_extension, 1);
+	  if (PJ_VERSION >= 493)
+	      result =
+		  run_subdir_test ("sql_stmt_gpkg_epsg493_tests", conn,
+				   load_extension, 1);
+	  else
+	      result =
+		  run_subdir_test ("sql_stmt_gpkg_epsg492_tests", conn,
+				   load_extension, 1);
 	  if (result != 0)
 	    {
 		return result;
@@ -765,13 +874,13 @@ run_all_testcases (struct db_conn *conn, int load_extension, int legacy)
 		return result;
 	    }
       }
-      
+
 #ifdef ENABLE_GEOPACKAGE	/* only if GeoPackage support is enabled */
     if (legacy)
       {
 	  result =
-	      run_subdir_test ("sql_stmt_gpkgnocache_tests", conn, load_extension,
-			       0);
+	      run_subdir_test ("sql_stmt_gpkgnocache_tests", conn,
+			       load_extension, 0);
 	  if (result != 0)
 	    {
 		return result;
@@ -780,7 +889,8 @@ run_all_testcases (struct db_conn *conn, int load_extension, int legacy)
     else
       {
 	  result =
-	      run_subdir_test ("sql_stmt_gpkgcache_tests", conn, load_extension, 0);
+	      run_subdir_test ("sql_stmt_gpkgcache_tests", conn, load_extension,
+			       0);
 	  if (result != 0)
 	    {
 		return result;
@@ -842,6 +952,28 @@ main (int argc, char *argv[])
     close_connection (&conn);
     spatialite_cleanup_ex (conn.cache);
     conn.cache = NULL;
+
+    if (result == 0)
+      {
+	  /* testing again by enabling the TinyPoint encoding */
+	  fprintf (stderr,
+		   "\n****************** testing again by enabling the TinyPoint encoding\n\n");
+	  cache = spatialite_alloc_connection ();
+	  conn.cache = cache;
+	  /* enabling TinyPoint */
+	  enable_tiny_point (cache);
+	  if (argc == 1)
+	    {
+		result = run_all_testcases (&conn, 0, 0);
+	    }
+	  else
+	    {
+		result = run_specified_testcases (argc, argv, &conn, 0);
+	    }
+	  close_connection (&conn);
+	  spatialite_cleanup_ex (conn.cache);
+	  conn.cache = NULL;
+      }
 
     if (result == 0)
       {

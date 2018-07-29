@@ -122,7 +122,7 @@ extern "C"
 
  \return the pointer to newly created Geometry object: NULL on failure.
 
- \sa gaiaTransform_r, gaiaFreeGeomColl
+ \sa gaiaTransform_r, gaiaTransformXY, gaiaFreeGeomColl
 
  \note you are responsible to destroy (before or after) any allocated Geometry,  this including any Geometry returned by gaiaGeometryTransform()\n
  not reentrant and thread unsafe.
@@ -146,7 +146,7 @@ extern "C"
 
  \return the pointer to newly created Geometry object: NULL on failure.
 
- \sa gaiaTransform, gaiaFreeGeomColl
+ \sa gaiaTransform, gaiaTransformXY_r, gaiaFreeGeomColl
 
  \note you are responsible to destroy (before or after) any allocated Geometry,  this including any Geometry returned by gaiaGeometryTransform()\n
  reentrant and thread-safe.
@@ -157,6 +157,63 @@ extern "C"
 						     gaiaGeomCollPtr org,
 						     char *proj_from,
 						     char *proj_to);
+
+/**
+ Tansforms a Geometry object into a different Reference System
+ [aka Reprojection]
+ This is a special "flavor" of gaiaTransform() just considering X and Y coordinates;
+ Z and M values will be left untouched.
+ Mainly intended as a workaround possibily useful when facing partially 
+ broken PROJ.4 definitions.
+
+ \param org pointer to input Geometry object.
+ \param proj_from geodetic parameters string [EPSG format] qualifying the
+ input Reference System
+ \param proj_to geodetic parameters string [EPSG format] qualifying the
+ output Reference System
+
+ \return the pointer to newly created Geometry object: NULL on failure.
+
+ \sa gaiaTransformXY_r, gaiaTransform, gaiaFreeGeomColl
+
+ \note you are responsible to destroy (before or after) any allocated Geometry,  this including any Geometry returned by gaiaGeometryTransform()\n
+ not reentrant and thread unsafe.
+
+ \remark \b PROJ.4 support required
+ */
+    GAIAGEO_DECLARE gaiaGeomCollPtr gaiaTransformXY (gaiaGeomCollPtr org,
+						     char *proj_from,
+						     char *proj_to);
+
+/**
+ Tansforms a Geometry object into a different Reference System
+ [aka Reprojection]
+ This is a special "flavor" of gaiaTransform_r() just considering X and Y coordinates;
+ Z and M values will be left untouched.
+ Mainly intended as a workaround possibily useful when facing partially 
+ broken PROJ.4 definitions.
+
+ \param p_cache a memory pointer returned by spatialite_alloc_connection()
+ \param org pointer to input Geometry object.
+ \param proj_from geodetic parameters string [EPSG format] qualifying the
+ input Reference System
+ \param proj_to geodetic parameters string [EPSG format] qualifying the
+ output Reference System
+
+ \return the pointer to newly created Geometry object: NULL on failure.
+
+ \sa gaiaTransformXY, gaiaTransform_r, gaiaFreeGeomColl
+
+ \note you are responsible to destroy (before or after) any allocated Geometry,  this including any Geometry returned by gaiaGeometryTransform()\n
+ reentrant and thread-safe.
+
+ \remark \b PROJ.4 support required
+ */
+    GAIAGEO_DECLARE gaiaGeomCollPtr gaiaTransformXY_r (const void *p_cache,
+						       gaiaGeomCollPtr org,
+						       char *proj_from,
+						       char *proj_to);
+
 
 #endif				/* end including PROJ.4 */
 
@@ -904,9 +961,10 @@ extern "C"
 
  \remark \b GEOS support required.
  */
-    GAIAGEO_DECLARE gaiaGeomCollPtr gaiaIsValidDetailEx_r (const void *p_cache,
-							   gaiaGeomCollPtr geom,
-							   int esri_flag);
+    GAIAGEO_DECLARE gaiaGeomCollPtr gaiaIsValidDetailEx_r (const void
+							   *p_cache,
+							   gaiaGeomCollPtr
+							   geom, int esri_flag);
 
 /**
  Checks if a Geometry object represents an OGC Valid Geometry
@@ -1619,10 +1677,10 @@ extern "C"
 
  \return 0 if false: any other value if true
  
- \sa gaiaGeomCollRelate_r,
+ \sa gaiaGeomCollRelate_r, gaiaGeomCollRelateBoundaryNodeRule,
  gaiaGeomCollEquals, gaiaGeomCollDisjoint, gaiaGeomCollIntersects, 
  gaiaGeomCollOverlaps, gaiaGeomCollCrosses, gaiaGeomCollContains,
- gaiaGeomCollWithin, gaiaGeomCollRelate
+ gaiaGeomCollWithin, gaiaIntersectionMatrixPatternMatch
 
  \note not reentrant and thread unsafe.
 
@@ -1642,10 +1700,10 @@ extern "C"
 
  \return 0 if false: any other value if true
  
- \sa gaiaGeomCollRelate,
+ \sa gaiaGeomCollRelate, gaiaGeomCollRelateBoundaryNodeRule_r,
  gaiaGeomCollEquals, gaiaGeomCollDisjoint, gaiaGeomCollIntersects, 
  gaiaGeomCollOverlaps, gaiaGeomCollCrosses, gaiaGeomCollContains,
- gaiaGeomCollWithin, gaiaGeomCollRelate
+ gaiaGeomCollWithin, gaiaIntersectionMatrixPatternMatch
 
  \note reentrant and thread-safe.
 
@@ -1655,6 +1713,107 @@ extern "C"
 					      gaiaGeomCollPtr geom1,
 					      gaiaGeomCollPtr geom2,
 					      const char *pattern);
+
+/**
+ Spatial relationship evalution: Relate Boundary Node Rule
+
+ \param p_cache a memory pointer returned by spatialite_alloc_connection()
+ \param geom1 the first Geometry object to be evaluated
+ \param geom2 the second Geometry object to be evaluated
+ \param mode can be one of: 1=OGC/MOD2 (default); 2=Endpoint;
+ 3=MultivalentEndpoint; 4=MonovalentEndpoint
+
+ \return a DE-9IM intersection matrix; or NULL on invalid geometries.
+ 
+ \sa gaiaGeomCollRelate, gaiaGeomCollRelateBoundaryNodeRule_r,
+ gaiaGeomCollEquals, gaiaGeomCollDisjoint, gaiaGeomCollIntersects, 
+ gaiaGeomCollOverlaps, gaiaGeomCollCrosses, gaiaGeomCollContains,
+ gaiaGeomCollWithin, gaiaIntersectionMatrixPatternMatch
+
+ \note you are responsible to destroy (before or after) the intesection
+ matrix returned by gaiaGeomGeollRelateBoundaryNodeRule()\n
+ not reentrant and thread unsafe.
+
+ \remark \b GEOS support required.
+ */
+    GAIAGEO_DECLARE char *gaiaGeomCollRelateBoundaryNodeRule (gaiaGeomCollPtr
+							      geom1,
+							      gaiaGeomCollPtr
+							      geom2, int mode);
+
+/**
+ Spatial relationship evalution: Relate Boundary Node Rule
+
+ \param p_cache a memory pointer returned by spatialite_alloc_connection()
+ \param geom1 the first Geometry object to be evaluated
+ \param geom2 the second Geometry object to be evaluated
+ \param mode can be one of: 1=OGC/MOD2 (default); 2=Endpoint;
+ 3=MultivalentEndpoint; 4=MonovalentEndpoint
+
+ \return a DE-9IM intersection matrix; or NULL on invalid geometries.
+ 
+ \sa gaiaGeomCollRelate_r, gaiaGeomCollRelateBoundaryNodeRule,
+ gaiaGeomCollEquals, gaiaGeomCollDisjoint, gaiaGeomCollIntersects, 
+ gaiaGeomCollOverlaps, gaiaGeomCollCrosses, gaiaGeomCollContains,
+ gaiaGeomCollWithin, gaiaIntersectionMatrixPatternMatch
+
+ \note you are responsible to destroy (before or after) the intesection
+ matrix returned by gaiaGeomGeollRelateBoundaryNodeRule()\n
+ reentrant and thread-safe.
+
+ \remark \b GEOS support required.
+ */
+    GAIAGEO_DECLARE char *gaiaGeomCollRelateBoundaryNodeRule_r (const void
+								*p_cache,
+								gaiaGeomCollPtr
+								geom1,
+								gaiaGeomCollPtr
+								geom2,
+								int mode);
+
+/**
+ Spatial relationship evalution: comparing two intersection matrices
+
+ \param p_cache a memory pointer returned by spatialite_alloc_connection()
+ \param matrix first intersection matrix [DE-9IM] to be compared
+ \param pattern second intersection matrix [DE-9IM] to be compared\n
+ (reference pattern)
+
+ \return 0 if false: any other value if true; -1 on invalid args
+ 
+ \sa gaiaGeomCollRelateBoundaryNodeRule, gaiaIntersectionMatrixPatternMatch_r
+
+ \note not reentrant and thread unsafe.
+
+ \remark \b GEOS support required.
+ */
+    GAIAGEO_DECLARE int gaiaIntersectionMatrixPatternMatch (const char
+							    *matrix,
+							    const char
+							    *pattern);
+
+/**
+ Spatial relationship evalution: comparing two intersection matrices
+
+ \param p_cache a memory pointer returned by spatialite_alloc_connection()
+ \param matrix first intersection matrix [DE-9IM] to be compared
+ \param pattern second intersection matrix [DE-9IM] to be compared\n
+ (reference pattern)
+
+ \return 0 if false: any other value if true; -1 on invalid args
+ 
+ \sa gaiaGeomCollRelateBoundaryNodeRule, gaiaIntersectionMatrixPatternMatch
+
+ \note reentrant and thread-safe.
+
+ \remark \b GEOS support required.
+ */
+    GAIAGEO_DECLARE int gaiaIntersectionMatrixPatternMatch_r (const void
+							      *p_cache,
+							      const char
+							      *matrix,
+							      const char
+							      *pattern);
 
 /**
  Calculates the maximum distance intercurring between two Geometry objects
@@ -1792,7 +1951,8 @@ extern "C"
  \remark \b GEOS support required.
  */
     GAIAGEO_DECLARE gaiaGeomCollPtr gaiaGeometryUnion_r (const void *p_cache,
-							 gaiaGeomCollPtr geom1,
+							 gaiaGeomCollPtr
+							 geom1,
 							 gaiaGeomCollPtr geom2);
 
 /**
@@ -2006,8 +2166,8 @@ extern "C"
  \remark \b GEOS support required.
  */
     GAIAGEO_DECLARE int gaiaGeomCollCentroid_r (const void *p_cache,
-						gaiaGeomCollPtr geom, double *x,
-						double *y);
+						gaiaGeomCollPtr geom,
+						double *x, double *y);
 
 /**
  Spatial operator: PointOnSurface
@@ -2024,8 +2184,8 @@ extern "C"
 
  \remark \b GEOS support required.
  */
-    GAIAGEO_DECLARE int gaiaGetPointOnSurface (gaiaGeomCollPtr geom, double *x,
-					       double *y);
+    GAIAGEO_DECLARE int gaiaGetPointOnSurface (gaiaGeomCollPtr geom,
+					       double *x, double *y);
 
 /**
  Spatial operator: PointOnSurface
@@ -2065,7 +2225,8 @@ extern "C"
 
  \remark \b GEOS support required.
  */
-    GAIAGEO_DECLARE gaiaGeomCollPtr gaiaGeomCollSimplify (gaiaGeomCollPtr geom,
+    GAIAGEO_DECLARE gaiaGeomCollPtr gaiaGeomCollSimplify (gaiaGeomCollPtr
+							  geom,
 							  double tolerance);
 
 /**
@@ -2087,7 +2248,8 @@ extern "C"
 
  \remark \b GEOS support required.
  */
-    GAIAGEO_DECLARE gaiaGeomCollPtr gaiaGeomCollSimplify_r (const void *p_cache,
+    GAIAGEO_DECLARE gaiaGeomCollPtr gaiaGeomCollSimplify_r (const void
+							    *p_cache,
 							    gaiaGeomCollPtr
 							    geom,
 							    double tolerance);
@@ -2220,8 +2382,8 @@ extern "C"
  \remark \b GEOS support required.
  */
     GAIAGEO_DECLARE gaiaGeomCollPtr gaiaGeomCollBuffer_r (const void *p_cache,
-							  gaiaGeomCollPtr geom,
-							  double radius,
+							  gaiaGeomCollPtr
+							  geom, double radius,
 							  int points);
 
 #ifndef DOXYGEN_SHOULD_IGNORE_THIS
@@ -2292,7 +2454,8 @@ extern "C"
  \remark \b GEOS-ADVANCED support required.
  */
     GAIAGEO_DECLARE gaiaGeomCollPtr gaiaOffsetCurve (gaiaGeomCollPtr geom,
-						     double radius, int points,
+						     double radius,
+						     int points,
 						     int left_right);
 
 /**
@@ -2344,7 +2507,8 @@ extern "C"
 
  \remark \b GEOS-ADVANCED support required.
  */
-    GAIAGEO_DECLARE gaiaGeomCollPtr gaiaSingleSidedBuffer (gaiaGeomCollPtr geom,
+    GAIAGEO_DECLARE gaiaGeomCollPtr gaiaSingleSidedBuffer (gaiaGeomCollPtr
+							   geom,
 							   double radius,
 							   int points,
 							   int left_right);
@@ -2544,7 +2708,8 @@ extern "C"
 
  \remark \b GEOS-ADVANCED support required.
  */
-    GAIAGEO_DECLARE gaiaGeomCollPtr gaiaLineSubstring (gaiaGeomCollPtr ln_geom,
+    GAIAGEO_DECLARE gaiaGeomCollPtr gaiaLineSubstring (gaiaGeomCollPtr
+						       ln_geom,
 						       double start_fraction,
 						       double end_fraction);
 
@@ -2573,7 +2738,8 @@ extern "C"
     GAIAGEO_DECLARE gaiaGeomCollPtr gaiaLineSubstring_r (const void *p_cache,
 							 gaiaGeomCollPtr
 							 ln_geom,
-							 double start_fraction,
+							 double
+							 start_fraction,
 							 double end_fraction);
 
 /**
@@ -2725,7 +2891,8 @@ extern "C"
 
  \remark \b GEOS-ADVANCED support required.
  */
-    GAIAGEO_DECLARE gaiaGeomCollPtr gaiaLinesCutAtNodes (gaiaGeomCollPtr geom1,
+    GAIAGEO_DECLARE gaiaGeomCollPtr gaiaLinesCutAtNodes (gaiaGeomCollPtr
+							 geom1,
 							 gaiaGeomCollPtr geom2);
 
 /**
@@ -2948,8 +3115,9 @@ extern "C"
  \param origin_x the X ccordinate identifying the Grid Origin.
  \param origin_y the Y coordinate identifiying the Grid Origin.
  \param size the Grid cell-side size.
- \param only_edges if non-zero will return a MULTILINESTRING, otherwise it will
-  return a MULTIPOLYGON containing square POLYGONs.
+ \param mode any positive value will return a MULTILINESTRING, any will
+  return a MULTIPOINT; zero will return a MULTIPOLYGON containing 
+  square POLYGONs.
  
  \return the pointer to newly created Geometry object: NULL on failure.
  \n this function will always return a MultiPolygon 
@@ -2965,8 +3133,7 @@ extern "C"
     GAIAGEO_DECLARE gaiaGeomCollPtr gaiaSquareGrid (gaiaGeomCollPtr geom,
 						    double origin_x,
 						    double origin_y,
-						    double size,
-						    int only_edges);
+						    double size, int mode);
 
 /**
  Utility function: SquareGrid
@@ -2976,8 +3143,9 @@ extern "C"
  \param origin_x the X ccordinate identifying the Grid Origin.
  \param origin_y the Y coordinate identifiying the Grid Origin.
  \param size the Grid cell-side size.
- \param only_edges if non-zero will return a MULTILINESTRING, otherwise it will
-  return a MULTIPOLYGON containing square POLYGONs.
+ \param mode any positive value will return a MULTILINESTRING, any will
+  return a MULTIPOINT; zero will return a MULTIPOLYGON containing 
+  square POLYGONs.
  
  \return the pointer to newly created Geometry object: NULL on failure.
  \n this function will always return a MultiPolygon 
@@ -2994,8 +3162,7 @@ extern "C"
 						      gaiaGeomCollPtr geom,
 						      double origin_x,
 						      double origin_y,
-						      double size,
-						      int only_edges);
+						      double size, int mode);
 
 /**
  Utility function: TriangularGrid
@@ -3004,8 +3171,9 @@ extern "C"
  \param origin_x the X ccordinate identifying the Grid Origin.
  \param origin_y the Y coordinate identifiying the Grid Origin.
  \param size the Grid cell-side size.
- \param only_edges if non-zero will return a MULTILINESTRING, otherwise it will
-  return a MULTIPOLYGON containing triangular POLYGONs.
+ \param mode any positive value will return a MULTILINESTRING, any will
+  return a MULTIPOINT; zero will return a MULTIPOLYGON containing 
+  triangular POLYGONs.
  
  \return the pointer to newly created Geometry object: NULL on failure.
  \n this function will always return a MultiPolygon 
@@ -3021,8 +3189,7 @@ extern "C"
     GAIAGEO_DECLARE gaiaGeomCollPtr gaiaTriangularGrid (gaiaGeomCollPtr geom,
 							double origin_x,
 							double origin_y,
-							double size,
-							int only_edges);
+							double size, int mode);
 
 /**
  Utility function: TriangularGrid
@@ -3032,8 +3199,9 @@ extern "C"
  \param origin_x the X ccordinate identifying the Grid Origin.
  \param origin_y the Y coordinate identifiying the Grid Origin.
  \param size the Grid cell-side size.
- \param only_edges if non-zero will return a MULTILINESTRING, otherwise it will
-  return a MULTIPOLYGON containing triangular POLYGONs.
+ \param mode any positive value will return a MULTILINESTRING, any will
+  return a MULTIPOINT; zero will return a MULTIPOLYGON containing 
+  riangular POLYGONs.
  
  \return the pointer to newly created Geometry object: NULL on failure.
  \n this function will always return a MultiPolygon 
@@ -3047,11 +3215,12 @@ extern "C"
 
  */
     GAIAGEO_DECLARE gaiaGeomCollPtr gaiaTriangularGrid_r (const void *p_cache,
-							  gaiaGeomCollPtr geom,
+							  gaiaGeomCollPtr
+							  geom,
 							  double origin_x,
 							  double origin_y,
 							  double size,
-							  int only_edges);
+							  int mode);
 
 /**
  Utility function: HexagonalGrid
@@ -3060,8 +3229,9 @@ extern "C"
  \param origin_x the X ccordinate identifying the Grid Origin.
  \param origin_y the Y coordinate identifiying the Grid Origin.
  \param size the Grid cell-side size.
- \param only_edges if non-zero will return a MULTILINESTRING, otherwise it will
-  return a MULTIPOLYGON containing hexagonal POLYGONs.
+ \param mode any positive value will return a MULTILINESTRING, any will
+  return a MULTIPOINT; zero will return a MULTIPOLYGON containing 
+  hexagonal POLYGONs.
  
  \return the pointer to newly created Geometry object: NULL on failure.
  \n this function will always return a MultiPolygon 
@@ -3077,8 +3247,7 @@ extern "C"
     GAIAGEO_DECLARE gaiaGeomCollPtr gaiaHexagonalGrid (gaiaGeomCollPtr geom,
 						       double origin_x,
 						       double origin_y,
-						       double size,
-						       int only_edges);
+						       double size, int mode);
 
 /**
  Utility function: HexagonalGrid
@@ -3088,8 +3257,9 @@ extern "C"
  \param origin_x the X ccordinate identifying the Grid Origin.
  \param origin_y the Y coordinate identifiying the Grid Origin.
  \param size the Grid cell-side size.
- \param only_edges if non-zero will return a MULTILINESTRING, otherwise it will
-  return a MULTIPOLYGON containing hexagonal POLYGONs.
+ \param mode any positive value will return a MULTILINESTRING, any will
+  return a MULTIPOINT; zero will return a MULTIPOLYGON containing 
+  hexagonal POLYGONs.
  
  \return the pointer to newly created Geometry object: NULL on failure.
  \n this function will always return a MultiPolygon 
@@ -3106,8 +3276,7 @@ extern "C"
 							 gaiaGeomCollPtr geom,
 							 double origin_x,
 							 double origin_y,
-							 double size,
-							 int only_edges);
+							 double size, int mode);
 
 #endif				/* end GEOS advanced features */
 
@@ -3137,7 +3306,8 @@ extern "C"
  */
     GAIAGEO_DECLARE gaiaGeomCollPtr gaiaDelaunayTriangulation (gaiaGeomCollPtr
 							       geom,
-							       double tolerance,
+							       double
+							       tolerance,
 							       int only_edges);
 
 /**
@@ -3191,7 +3361,8 @@ extern "C"
  \remark \b GEOS-TRUNK support required.
  */
     GAIAGEO_DECLARE gaiaGeomCollPtr gaiaVoronojDiagram (gaiaGeomCollPtr geom,
-							double extra_frame_size,
+							double
+							extra_frame_size,
 							double tolerance,
 							int only_edges);
 
@@ -3217,7 +3388,8 @@ extern "C"
  \remark \b GEOS-TRUNK support required.
  */
     GAIAGEO_DECLARE gaiaGeomCollPtr gaiaVoronojDiagram_r (const void *p_cache,
-							  gaiaGeomCollPtr geom,
+							  gaiaGeomCollPtr
+							  geom,
 							  double
 							  extra_frame_size,
 							  double tolerance,
@@ -3411,7 +3583,8 @@ extern "C"
 
  \remark \b RTTOPO support required.
  */
-    GAIAGEO_DECLARE gaiaGeomCollPtr gaiaMakeValidDiscarded (const void *p_cache,
+    GAIAGEO_DECLARE gaiaGeomCollPtr gaiaMakeValidDiscarded (const void
+							    *p_cache,
 							    gaiaGeomCollPtr
 							    geom);
 
@@ -3457,8 +3630,9 @@ extern "C"
 
  \remark \b RTTOPO support required.
  */
-    GAIAGEO_DECLARE int gaiaAzimuth (const void *p_cache, double xa, double ya,
-				     double xb, double yb, double *azimuth);
+    GAIAGEO_DECLARE int gaiaAzimuth (const void *p_cache, double xa,
+				     double ya, double xb, double yb,
+				     double *azimuth);
 
 /**
  Utility function: EllipsoidAzimuth
@@ -3544,9 +3718,10 @@ extern "C"
 
  \remark \b RTTOPO support required.
  */
-    GAIAGEO_DECLARE char *gaiaAsX3D (const void *p_cache, gaiaGeomCollPtr geom,
-				     const char *srs, int precision,
-				     int options, const char *refid);
+    GAIAGEO_DECLARE char *gaiaAsX3D (const void *p_cache,
+				     gaiaGeomCollPtr geom, const char *srs,
+				     int precision, int options,
+				     const char *refid);
 
 /**
  Calculates the minimum 3D distance intercurring between two Geometry objects
@@ -3622,8 +3797,8 @@ extern "C"
 
  \remark \b RTTOPO support required.
  */
-    GAIAGEO_DECLARE int gaia3dLength (const void *p_cache, gaiaGeomCollPtr geom,
-				      double *length);
+    GAIAGEO_DECLARE int gaia3dLength (const void *p_cache,
+				      gaiaGeomCollPtr geom, double *length);
 
 /**
  Utility function: Split
@@ -3738,7 +3913,165 @@ extern "C"
     GAIAGEO_DECLARE gaiaGeomCollPtr gaiaNodeLines (const void *p_cache,
 						   gaiaGeomCollPtr input);
 
+/**
+ Converts a native binary Geometry into a compressed TWKB Geometry
+
+ \param p_cache a memory pointer returned by spatialite_alloc_connection()
+ \param geom the Geometry to be converted 
+ \param precision_xy how much precision (decimal digits) X and Y
+ \param precision_z how much precision (decimal digits) Z
+ \param precision_m how much precision (decimal digits) M
+ \param with_size including sizes into the TWKB
+ \param with_bbox including a BBOX into the TWKB
+ \param twkb on succesfull completion this pointer will reference the
+  TWKB geometry
+ \param size_twkb on succesfull completion this pointer will reference 
+ the size (in bytes) of the TWKB geometry
+
+ \return 0 on failure: any other value on success.
+
+ \sa gaiaFromTWKB
+
+ \note you are responsible to free (before or after) the TWKB geometry
+ created by gaiaToTWKB().
+
+ \remark \b RTTOPO support required.
+ */
+    GAIAGEO_DECLARE int gaiaToTWKB (const void *p_cache,
+				    gaiaGeomCollPtr geom,
+				    unsigned char precision_xy,
+				    unsigned char precision_z,
+				    unsigned char precision_m, int with_size,
+				    int with_bbox, unsigned char **twkb,
+				    int *size_twkb);
+
+/**
+ Converts a compressed TWKB Geometry into a native binary Geometry
+
+ \param p_cache a memory pointer returned by spatialite_alloc_connection()
+ \param twkb pointer to TWKB geometry
+ \param twkb_size size (in bytes) of the TWKB geometry
+ \param srid the SRID of the returned Geometry
+
+ \return the pointer to newly created Geometry object: NULL on failure.
+
+ \sa gaiaToTWKB
+
+ \note you are responsible to destroy the native geometry
+ returned by gaiaFromTWKB().
+
+ \remark \b RTTOPO support required.
+ */
+    GAIAGEO_DECLARE gaiaGeomCollPtr gaiaFromTWKB (const void *p_cache,
+						  const unsigned char *twkb,
+						  int twkb_size, int srid);
+
+/**
+ Converts a native binary Geometry into a GoogleMaps encoded PolyLine
+
+ \param p_cache a memory pointer returned by spatialite_alloc_connection()
+ \param geom the Geometry to be converted 
+ \param precision how much precision (decimal digits)
+ \param encoded on succesfull completion this pointer will reference the
+  GoogleMaps encoded PolyLine
+ \param len on succesfull completion this pointer will reference 
+ the length (in bytes) of the GoogleMaps encoded PolyLine
+
+ \return 0 on failure: any other value on success.
+
+ \sa gaiaLineFromEncodedPolyline
+
+ \note you are responsible to free (before or after) the TWKB geometry
+ created by gaiaToTWKB().
+
+ \remark \b RTTOPO support required.
+ */
+    GAIAGEO_DECLARE int gaiaAsEncodedPolyLine (const void *p_cache,
+					       gaiaGeomCollPtr geom,
+					       unsigned char precision,
+					       char **encoded, int *len);
+
+/**
+ Converts a GoogleMaps encoded PolyLine into a native binary Geometry (Linestring)
+
+ \param p_cache a memory pointer returned by spatialite_alloc_connection()
+ \param encoded pointer to GoogleMaps encoded PolyLine
+ \param precision how much precision (decimal digits)
+
+ \return the pointer to newly created Geometry object: NULL on failure.
+
+ \sa gaiaAsEncodedPolyLine
+
+ \note you are responsible to destroy the native geometry
+ returned by gaiaFromTWKB().
+
+ \remark \b RTTOPO support required.
+ */
+    GAIAGEO_DECLARE gaiaGeomCollPtr gaiaLineFromEncodedPolyline (const void
+								 *p_cache,
+								 const char
+								 *encoded,
+								 unsigned char
+								 precision);
+
 #endif				/* end RTTOPO support */
+
+/**
+ Utility function: DrapeLine
+
+ \param db_handle pointer to the current DB connection.
+ \param geom1 the first Geometry object (expected to be a 2D Linestring).
+ \param geom2 the second Geometry object (expected to be a 3D Linestring).
+ \param tolerance tolerance radius.
+ 
+ \return the pointer to newly created Geometry object: NULL on failure.
+ \n this function will return a Geometry of the Linestring type having 
+  all points defined by geom1 and dimensions as defined by geom2.
+  Missing Z and/or M coords will by recovered by corresponding points 
+  found in geom2 within the given tolerance radius.
+ \n both geom1 and geom2 must share the same SRID.
+
+ \sa gaiaFreeGeomColl, gaiaDrapeLineExceptions
+
+ \note you are responsible to destroy (before or after) any allocated Geometry,
+ this including any Geometry returned by gaiaDrapeLine()
+
+ */
+    GAIAGEO_DECLARE gaiaGeomCollPtr gaiaDrapeLine (sqlite3 * db_handle,
+						   gaiaGeomCollPtr geom1,
+						   gaiaGeomCollPtr geom2,
+						   double tolerance);
+
+/**
+ Utility function: DrapeLineExceptions
+
+ \param db_handle pointer to the current DB connection.
+ \param geom1 the first Geometry object (expected to be a 2D Linestring).
+ \param geom2 the second Geometry object (expected to be a 3D Linestring).
+ \param tolerance tolerance radius.
+ \param interpolated boolean: if TRUE all Vertices for whom Z (and/or M)
+ values had been succesfully interpolated will be considered as valid.
+ 
+ \return the pointer to newly created Geometry object: NULL on failure.
+ \n this function will return a Geometry of the MultiPoint type containing
+ all Vertices from geom1 lacking a corresponding Vertex in geom2, thus
+ leading to dubious Z and/or M coords.
+ \n both geom1 and geom2 must share the same SRID.
+
+ \sa gaiaFreeGeomColl, gaiaDrapeLine
+
+ \note you are responsible to destroy (before or after) any allocated Geometry,
+ this including any Geometry returned by gaiaDrapeLine()
+
+ */
+    GAIAGEO_DECLARE gaiaGeomCollPtr gaiaDrapeLineExceptions (sqlite3 *
+							     db_handle,
+							     gaiaGeomCollPtr
+							     geom1,
+							     gaiaGeomCollPtr
+							     geom2,
+							     double tolerance,
+							     int interpolated);
 
 #endif				/* end including GEOS */
 

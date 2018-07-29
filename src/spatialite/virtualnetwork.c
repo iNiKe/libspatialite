@@ -899,6 +899,8 @@ reset_solution (SolutionPtr solution)
 	gaiaFreeGeomColl (solution->Geometry);
     solution->FirstArc = NULL;
     solution->LastArc = NULL;
+    solution->FirstNode = NULL;
+    solution->LastNode = NULL;
     solution->From = NULL;
     solution->To = NULL;
     solution->MaxCost = 0.0;
@@ -1337,6 +1339,8 @@ build_solution (sqlite3 * handle, NetworkPtr graph, SolutionPtr solution,
 		pR = pR->Next;
 	    }
 	  /* creating the Shortest Path Geometry - LINESTRING */
+	  if (tot_pts < 2)
+	      return;
 	  ln = gaiaAllocLinestring (tot_pts);
 	  solution->Geometry = gaiaAllocGeomColl ();
 	  solution->Geometry->Srid = srid;
@@ -1443,6 +1447,7 @@ find_srid (sqlite3 * handle, NetworkPtr graph)
 			   "Lower(f_table_name) = Lower(%Q) AND Lower(f_geometry_column) = Lower(%Q)",
 			   graph->TableName, graph->GeometryColumn);
     ret = sqlite3_prepare_v2 (handle, sql, strlen (sql), &stmt, NULL);
+    sqlite3_free (sql);
     if (ret != SQLITE_OK)
 	return srid;
     while (1)

@@ -2166,6 +2166,7 @@ gaiaExifTagGetHumanReadable (const gaiaExifTagPtr tag, char *str, int len,
 		      break;
 		  case 11:
 		      human = "Shade";
+		      break;
 		  case 12:
 		      human = "Daylight fluorescent (D 5700 - 7100K)";
 		      break;
@@ -2174,6 +2175,7 @@ gaiaExifTagGetHumanReadable (const gaiaExifTagPtr tag, char *str, int len,
 		      break;
 		  case 14:
 		      human = "Cool white fluorescent (W 3900 - 4500K)";
+		      break;
 		  case 15:
 		      human = "White fluorescent (WW 3200 - 3700K)";
 		      break;
@@ -2362,6 +2364,7 @@ gaiaGuessBlobType (const unsigned char *blob, int size)
     int exif = 0;
     int exif_gps = 0;
     int geom = 1;
+    int tiny_point = 1;
     gaiaExifTagListPtr exif_list;
     gaiaExifTagPtr pT;
     unsigned char jpeg1_signature[2];
@@ -2539,17 +2542,43 @@ gaiaGuessBlobType (const unsigned char *blob, int size)
       {
 	  if (*(blob + 0) != GAIA_MARK_START)
 	      geom = 0;
+	  if (*(blob + 1) == GAIA_LITTLE_ENDIAN
+	      || *(blob + 1) == GAIA_BIG_ENDIAN)
+	      ;
+	  else
+	      geom = 0;
 	  if (*(blob + (size - 1)) != GAIA_MARK_END)
 	      geom = 0;
 	  if (*(blob + 38) != GAIA_MARK_MBR)
 	      geom = 0;
-	  if (*(blob + 1) == 0 || *(blob + 1) == 1)
-	      ;
-	  else
-	      geom = 0;
       }
     if (geom)
 	return GAIA_GEOMETRY_BLOB;
+
+/* testing for TinyPoint */
+    if (size < 24)
+	tiny_point = 0;
+    else
+      {
+	  if (*(blob + 0) != GAIA_MARK_START)
+	      tiny_point = 0;
+	  if (*(blob + 1) == GAIA_TINYPOINT_LITTLE_ENDIAN
+	      || *(blob + 1) == GAIA_TINYPOINT_BIG_ENDIAN)
+	      ;
+	  else
+	      tiny_point = 0;
+	  if (*(blob + 6) == GAIA_TINYPOINT_XY
+	      || *(blob + 6) == GAIA_TINYPOINT_XYZ
+	      || *(blob + 6) == GAIA_TINYPOINT_XYM
+	      || *(blob + 6) == GAIA_TINYPOINT_XYZM)
+	      ;
+	  else
+	      tiny_point = 0;
+	  if (*(blob + (size - 1)) != GAIA_MARK_END)
+	      tiny_point = 0;
+      }
+    if (tiny_point)
+	return GAIA_TINYPOINT_BLOB;
 
 #ifdef ENABLE_LIBXML2		/* LIBXML2 enabled: supporting XML documents */
 
@@ -2756,10 +2785,15 @@ gaiaGetGpsLatLong (const unsigned char *blob, int size, char *latlong,
 	      && long_degs != -DBL_MAX && long_mins != -DBL_MAX
 	      && long_secs != -DBL_MAX)
 	    {
-		sprintf (ll,
-			 "%c %1.2f %1.2f %1.2f / %c %1.2f %1.2f %1.2f",
-			 lat_ref, lat_degs, lat_mins, lat_secs, long_ref,
-			 long_degs, long_mins, long_secs);
+		int long_d = long_degs;
+		int long_m = long_mins;
+		int long_s = long_secs;
+		int lat_d = lat_degs;
+		int lat_m = lat_mins;
+		int lat_s = lat_secs;
+		sprintf (ll, "%02d°%02d′%02d″%c %03d°%02d′%02d″%c",
+			 lat_d, lat_m, lat_s, lat_ref, long_d, long_m, long_s,
+			 long_ref);
 		len = strlen (ll);
 		if (len < ll_size)
 		    strcpy (latlong, ll);

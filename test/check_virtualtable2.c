@@ -74,6 +74,17 @@ do_test (sqlite3 * db_handle)
 	  sqlite3_free (err_msg);
 	  return -2;
       }
+
+    ret =
+	sqlite3_exec (db_handle, "SELECT GetShapefileExtent('shapetest');",
+		      NULL, NULL, &err_msg);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "GetShapefileExtent() error: %s\n", err_msg);
+	  sqlite3_free (err_msg);
+	  return -222;
+      }
+
     ret =
 	sqlite3_get_table (db_handle,
 			   "SELECT RegisterVirtualGeometry('shapetest')",
@@ -839,7 +850,7 @@ do_test (sqlite3 * db_handle)
 		   rows, columns);
 	  return -99;
       }
-    if (strcmp (results[0], "PKUID") != 0)
+    if (strcmp (results[0], "pkuid") != 0)
       {
 	  fprintf (stderr, "Unexpected error: header uid bad result: %s.\n",
 		   results[0]);
@@ -1122,6 +1133,9 @@ do_test (sqlite3 * db_handle)
 	  sqlite3_close (db_handle);
 	  return -132;
       }
+#else
+    if (db_handle != NULL)
+	db_handle = NULL;	/* silencing stupid compiler warnings */
 #endif /* end ICONV conditional */
 
     return 0;
@@ -1135,9 +1149,6 @@ main (int argc, char *argv[])
     int ret;
     char *err_msg = NULL;
     void *cache = spatialite_alloc_connection ();
-
-    if (argc > 1 || argv[0] == NULL)
-	argc = 1;		/* silencing stupid compiler warnings */
 
 /* testing current style metadata layout >= v.4.0.0 */
     ret =
@@ -1216,6 +1227,9 @@ main (int argc, char *argv[])
       }
 
 #endif /* end ICONV conditional */
+
+    if (argc > 1 || argv[0] == NULL)
+	argc = 1;		/* silencing stupid compiler warnings */
 
     spatialite_shutdown ();
     return 0;

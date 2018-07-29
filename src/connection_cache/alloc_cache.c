@@ -47,7 +47,7 @@ the terms of any one of the MPL, the GPL or the LGPL.
 #include <string.h>
 
 
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(__MINGW32__)
 #include <windows.h>
 #else
 #include <pthread.h>
@@ -92,13 +92,17 @@ the terms of any one of the MPL, the GPL or the LGPL.
 #include "cache_aux_1.h"
 #endif /* end GEOS_REENTRANT */
 
+#ifdef _WIN32
+#define strcasecmp	_stricmp
+#endif /* not WIN32 */
+
 /* GLOBAL variables */
 extern char *gaia_geos_error_msg;
 extern char *gaia_geos_warning_msg;
 
 /* GLOBAL semaphores */
 int gaia_already_initialized = 0;
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(__MINGW32__)
 static CRITICAL_SECTION gaia_cache_semaphore;
 #else
 static pthread_mutex_t gaia_cache_semaphore = PTHREAD_MUTEX_INITIALIZER;
@@ -232,6 +236,7 @@ conn_rttopo_warning (const char *fmt, va_list ap, void *userdata)
       {
 	  if (strlen (msg) > 0)
 	    {
+		/* disabled so to stop endless warnings caused by topo-tolerance */
 		if (cache->silent_mode == 0)
 		    spatialite_e ("RTTOPO warning: %s\n", msg);
 		len = strlen (msg);
@@ -340,26 +345,18 @@ invalidate (int i)
 }
 #endif /* END obsolete partially thread-safe mode */
 
-#ifdef GEOS_REENTRANT		/* reentrant (thread-safe) initialization */
-static void *
-spatialite_alloc_reentrant ()
+static void
+init_splite_internal_cache (struct splite_internal_cache *cache)
 {
-/* 
- * allocating and initializing an empty internal cache 
- * fully reentrant (thread-safe) version requiring GEOS >= 3.5.0
-*/
-    struct splite_internal_cache *cache = NULL;
+/* common initialization of the internal cache */
     gaiaOutBufferPtr out;
     int i;
+    const char *tinyPoint;
     struct splite_geos_cache_item *p;
     struct splite_xmlSchema_cache_item *p_xmlSchema;
-
-/* attempting to implicitly initialize the library */
-    spatialite_initialize ();
-
-    cache = malloc (sizeof (struct splite_internal_cache));
     if (cache == NULL)
-	goto done;
+	return;
+
     cache->magic1 = SPATIALITE_CACHE_MAGIC1;
     cache->magic2 = SPATIALITE_CACHE_MAGIC2;
     cache->gpkg_mode = 0;
@@ -369,6 +366,11 @@ spatialite_alloc_reentrant ()
     cache->PROJ_handle = NULL;
     cache->RTTOPO_handle = NULL;
     cache->cutterMessage = NULL;
+    cache->storedProcError = NULL;
+    cache->createRoutingError = NULL;
+    cache->SqlProcLogfile = NULL;
+    cache->SqlProcLog = NULL;
+    cache->SqlProcContinue = 1;
     cache->pool_index = -1;
     cache->gaia_geos_error_msg = NULL;
     cache->gaia_geos_warning_msg = NULL;
@@ -376,6 +378,13 @@ spatialite_alloc_reentrant ()
     cache->gaia_rttopo_error_msg = NULL;
     cache->gaia_rttopo_warning_msg = NULL;
     cache->silent_mode = 0;
+    cache->tinyPointEnabled = 0;
+    tinyPoint = getenv ("SPATIALITE_TINYPOINT");
+    if (tinyPoint == NULL)
+	;
+    else if (atoi (tinyPoint) != 0)
+	cache->tinyPointEnabled = 1;
+    cache->lastPostgreSqlError = NULL;
 /* initializing an empty linked list of Topologies */
     cache->firstTopology = NULL;
     cache->lastTopology = NULL;
@@ -387,6 +396,14 @@ spatialite_alloc_reentrant ()
     cache->next_network_savepoint = 0;
     cache->first_net_svpt = NULL;
     cache->last_net_svpt = NULL;
+/* initializing Sequences */
+    cache->first_seq = NULL;
+    cache->last_seq = NULL;
+    cache->ok_last_used_sequence = 0;
+    cache->last_used_sequence_val = 0;
+/* initializing SHP BBOXes */
+    cache->first_shp_extent = NULL;
+    cache->last_shp_extent = NULL;
 /* initializing the XML error buffers */
     out = malloc (sizeof (gaiaOutBuffer));
     gaiaOutBufferInitialize (out);
@@ -420,6 +437,25 @@ spatialite_alloc_reentrant ()
 	  p_xmlSchema->parserCtxt = NULL;
 	  p_xmlSchema->schema = NULL;
       }
+}
+
+#ifdef GEOS_REENTRANT		/* reentrant (thread-safe) initialization */
+static void *
+spatialite_alloc_reentrant ()
+{
+/* 
+ * allocating and initializing an empty internal cache 
+ * fully reentrant (thread-safe) version requiring GEOS >= 3.5.0
+*/
+    struct splite_internal_cache *cache = NULL;
+
+/* attempting to implicitly initialize the library */
+    spatialite_initialize ();
+
+    cache = malloc (sizeof (struct splite_internal_cache));
+    if (cache == NULL)
+	goto done;
+    init_splite_internal_cache (cache);
 
 /* initializing GEOS and PROJ.4 handles */
 
@@ -454,11 +490,7 @@ spatialite_alloc_connection ()
 #ifdef GEOS_REENTRANT		/* reentrant (thread-safe) initialization */
     return spatialite_alloc_reentrant ();
 #else /* end GEOS_REENTRANT */
-    gaiaOutBufferPtr out;
-    int i;
     struct splite_internal_cache *cache = NULL;
-    struct splite_geos_cache_item *p;
-    struct splite_xmlSchema_cache_item *p_xmlSchema;
     int pool_index;
 
 /* attempting to implicitly initialize the library */
@@ -478,64 +510,9 @@ spatialite_alloc_connection ()
 	  invalidate (pool_index);
 	  goto done;
       }
-    cache->magic1 = SPATIALITE_CACHE_MAGIC1;
-    cache->magic2 = SPATIALITE_CACHE_MAGIC2;
-    cache->gpkg_mode = 0;
-    cache->gpkg_amphibious_mode = 0;
-    cache->decimal_precision = -1;
-    cache->GEOS_handle = NULL;
-    cache->PROJ_handle = NULL;
-    cache->cutterMessage = NULL;
+    init_splite_internal_cache (cache);
     cache->pool_index = pool_index;
     confirm (pool_index, cache);
-    cache->gaia_geos_error_msg = NULL;
-    cache->gaia_geos_warning_msg = NULL;
-    cache->gaia_geosaux_error_msg = NULL;
-    cache->silent_mode = 0;
-/* initializing an empty linked list of Topologies */
-    cache->firstTopology = NULL;
-    cache->lastTopology = NULL;
-    cache->next_topo_savepoint = 0;
-    cache->first_topo_svpt = NULL;
-    cache->last_topo_svpt = NULL;
-    cache->firstNetwork = NULL;
-    cache->lastNetwork = NULL;
-    cache->next_network_savepoint = 0;
-    cache->first_net_svpt = NULL;
-    cache->last_net_svpt = NULL;
-/* initializing the XML error buffers */
-    out = malloc (sizeof (gaiaOutBuffer));
-    gaiaOutBufferInitialize (out);
-    cache->xmlParsingErrors = out;
-    out = malloc (sizeof (gaiaOutBuffer));
-    gaiaOutBufferInitialize (out);
-    cache->xmlSchemaValidationErrors = out;
-    out = malloc (sizeof (gaiaOutBuffer));
-    gaiaOutBufferInitialize (out);
-    cache->xmlXPathErrors = out;
-/* initializing the GEOS cache */
-    p = &(cache->cacheItem1);
-    memset (p->gaiaBlob, '\0', 64);
-    p->gaiaBlobSize = 0;
-    p->crc32 = 0;
-    p->geosGeom = NULL;
-    p->preparedGeosGeom = NULL;
-    p = &(cache->cacheItem2);
-    memset (p->gaiaBlob, '\0', 64);
-    p->gaiaBlobSize = 0;
-    p->crc32 = 0;
-    p->geosGeom = NULL;
-    p->preparedGeosGeom = NULL;
-    for (i = 0; i < MAX_XMLSCHEMA_CACHE; i++)
-      {
-	  /* initializing the XmlSchema cache */
-	  p_xmlSchema = &(cache->xmlSchemaCache[i]);
-	  p_xmlSchema->timestamp = 0;
-	  p_xmlSchema->schemaURI = NULL;
-	  p_xmlSchema->schemaDoc = NULL;
-	  p_xmlSchema->parserCtxt = NULL;
-	  p_xmlSchema->schema = NULL;
-      }
 
 #include "cache_aux_3.h"
 
@@ -603,6 +580,121 @@ spatialite_finalize_topologies (const void *ptr)
 #endif /* end RTTOPO conditionals */
 }
 
+static void
+free_sequences (struct splite_internal_cache *cache)
+{
+/* freeing all Sequences */
+    gaiaSequencePtr pS;
+    gaiaSequencePtr pSn;
+
+    pS = cache->first_seq;
+    while (pS != NULL)
+      {
+	  pSn = pS->next;
+	  if (pS->seq_name != NULL)
+	      free (pS->seq_name);
+	  free (pS);
+	  pS = pSn;
+      }
+}
+
+static void
+free_shp_extents (struct splite_internal_cache *cache)
+{
+/* freeing all SHP BBOXes */
+    struct splite_shp_extent *pS;
+    struct splite_shp_extent *pSn;
+
+    pS = cache->first_shp_extent;
+    while (pS != NULL)
+      {
+	  pSn = pS->next;
+	  if (pS->table != NULL)
+	      free (pS->table);
+	  free (pS);
+	  pS = pSn;
+      }
+}
+
+SPATIALITE_PRIVATE void
+add_shp_extent (const char *table, double minx,
+		double miny, double maxx,
+		double maxy, int srid, const void *p_cache)
+{
+/* adding a Shapefile Full Extent */
+    struct splite_internal_cache *cache =
+	(struct splite_internal_cache *) p_cache;
+    struct splite_shp_extent *shp = malloc (sizeof (struct splite_shp_extent));
+    int len = strlen (table);
+    shp->table = malloc (len + 1);
+    strcpy (shp->table, table);
+    shp->minx = minx;
+    shp->miny = miny;
+    shp->maxx = maxx;
+    shp->maxy = maxy;
+    shp->srid = srid;
+    shp->prev = cache->last_shp_extent;
+    shp->next = NULL;
+    if (cache->first_shp_extent == NULL)
+	cache->first_shp_extent = shp;
+    if (cache->last_shp_extent != NULL)
+	cache->last_shp_extent->next = shp;
+    cache->last_shp_extent = shp;
+}
+
+SPATIALITE_PRIVATE void
+remove_shp_extent (const char *table, const void *p_cache)
+{
+/* adding a Shapefile Full Extent */
+    struct splite_internal_cache *cache =
+	(struct splite_internal_cache *) p_cache;
+    struct splite_shp_extent *shp_n;
+    struct splite_shp_extent *shp = cache->first_shp_extent;
+    while (shp != NULL)
+      {
+	  shp_n = shp->next;
+	  if (strcasecmp (shp->table, table) == 0)
+	    {
+		if (shp->table != NULL)
+		    free (shp->table);
+		if (shp->next != NULL)
+		    shp->next->prev = shp->prev;
+		if (shp->prev != NULL)
+		    shp->prev->next = shp->next;
+		if (cache->first_shp_extent == shp)
+		    cache->first_shp_extent = shp->next;
+		if (cache->last_shp_extent == shp)
+		    cache->last_shp_extent = shp->prev;
+		free (shp);
+	    }
+	  shp = shp_n;
+      }
+}
+
+SPATIALITE_PRIVATE int
+get_shp_extent (const char *table, double *minx, double *miny, double *maxx,
+		double *maxy, int *srid, const void *p_cache)
+{
+/* retrieving a Shapefile Full Extent */
+    struct splite_internal_cache *cache =
+	(struct splite_internal_cache *) p_cache;
+    struct splite_shp_extent *shp = cache->first_shp_extent;
+    while (shp != NULL)
+      {
+	  if (strcasecmp (shp->table, table) == 0)
+	    {
+		*minx = shp->minx;
+		*miny = shp->miny;
+		*maxx = shp->maxx;
+		*maxy = shp->maxy;
+		*srid = shp->srid;
+		return 1;
+	    }
+	  shp = shp->next;
+      }
+    return 0;
+}
+
 SPATIALITE_PRIVATE void
 free_internal_cache (struct splite_internal_cache *cache)
 {
@@ -627,7 +719,7 @@ free_internal_cache (struct splite_internal_cache *cache)
     handle = cache->GEOS_handle;
     if (handle != NULL)
 #ifdef GEOS_REENTRANT		/* reentrant (thread-safe) initialization */
-    GEOS_finish_r(handle);
+	GEOS_finish_r (handle);
 #else /* end GEOS_REENTRANT */
 	finishGEOS_r (handle);
 #endif
@@ -639,12 +731,6 @@ free_internal_cache (struct splite_internal_cache *cache)
     if (cache->PROJ_handle != NULL)
 	pj_ctx_free (cache->PROJ_handle);
     cache->PROJ_handle = NULL;
-#endif
-
-#ifdef ENABLE_RTTOPO
-    if (cache->RTTOPO_handle != NULL)
-	rtgeom_finish (cache->RTTOPO_handle);
-    cache->RTTOPO_handle = NULL;
 #endif
 
 /* freeing GEOS error buffers */
@@ -683,11 +769,34 @@ free_internal_cache (struct splite_internal_cache *cache)
       }
 #endif
 
+    if (cache->lastPostgreSqlError != NULL)
+	sqlite3_free (cache->lastPostgreSqlError);
+
     if (cache->cutterMessage != NULL)
 	sqlite3_free (cache->cutterMessage);
     cache->cutterMessage = NULL;
+    if (cache->createRoutingError != NULL)
+	free (cache->createRoutingError);
+    cache->createRoutingError = NULL;
+    if (cache->storedProcError != NULL)
+	free (cache->storedProcError);
+    cache->storedProcError = NULL;
+    if (cache->SqlProcLogfile != NULL)
+	free (cache->SqlProcLogfile);
+    cache->SqlProcLogfile = NULL;
+    if (cache->SqlProcLog != NULL)
+	fclose (cache->SqlProcLog);
+    cache->SqlProcLog = NULL;
+    free_sequences (cache);
+    free_shp_extents (cache);
 
     spatialite_finalize_topologies (cache);
+
+#ifdef ENABLE_RTTOPO
+    if (cache->RTTOPO_handle != NULL)
+	rtgeom_finish (cache->RTTOPO_handle);
+    cache->RTTOPO_handle = NULL;
+#endif
 
 #ifndef GEOS_REENTRANT		/* only partially thread-safe mode */
 /* releasing the connection pool object */
@@ -987,7 +1096,7 @@ gaiaCriticalPointFromGEOSmsg_r (const void *p_cache)
 SPATIALITE_PRIVATE void
 splite_cache_semaphore_lock (void)
 {
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(__MINGW32__)
     EnterCriticalSection (&gaia_cache_semaphore);
 #else
     pthread_mutex_lock (&gaia_cache_semaphore);
@@ -997,7 +1106,7 @@ splite_cache_semaphore_lock (void)
 SPATIALITE_PRIVATE void
 splite_cache_semaphore_unlock (void)
 {
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(__MINGW32__)
     LeaveCriticalSection (&gaia_cache_semaphore);
 #else
     pthread_mutex_trylock (&gaia_cache_semaphore);
@@ -1012,7 +1121,7 @@ spatialite_initialize (void)
     if (gaia_already_initialized)
 	return;
 
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(__MINGW32__)
     InitializeCriticalSection (&gaia_cache_semaphore);
 #endif
 
@@ -1033,7 +1142,7 @@ spatialite_shutdown (void)
     if (!gaia_already_initialized)
 	return;
 
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(__MINGW32__)
     DeleteCriticalSection (&gaia_cache_semaphore);
 #endif
 
@@ -1079,4 +1188,46 @@ spatialite_set_verbose_mode (const void *p_cache)
 	|| cache->magic2 != SPATIALITE_CACHE_MAGIC2)
 	return;
     cache->silent_mode = 0;
+}
+
+SPATIALITE_DECLARE void
+enable_tiny_point (const void *p_cache)
+{
+/* Enabling the BLOB-TinyPoint encoding */
+    struct splite_internal_cache *cache =
+	(struct splite_internal_cache *) p_cache;
+    if (cache == NULL)
+	return;
+    if (cache->magic1 != SPATIALITE_CACHE_MAGIC1
+	|| cache->magic2 != SPATIALITE_CACHE_MAGIC2)
+	return;
+    cache->tinyPointEnabled = 1;
+}
+
+SPATIALITE_DECLARE void
+disable_tiny_point (const void *p_cache)
+{
+/* Disabling the BLOB-TinyPoint encoding */
+    struct splite_internal_cache *cache =
+	(struct splite_internal_cache *) p_cache;
+    if (cache == NULL)
+	return;
+    if (cache->magic1 != SPATIALITE_CACHE_MAGIC1
+	|| cache->magic2 != SPATIALITE_CACHE_MAGIC2)
+	return;
+    cache->tinyPointEnabled = 0;
+}
+
+SPATIALITE_DECLARE int
+is_tiny_point_enabled (const void *p_cache)
+{
+/* Checking if the BLOB-TinyPoint encoding is enabled or not */
+    struct splite_internal_cache *cache =
+	(struct splite_internal_cache *) p_cache;
+    if (cache == NULL)
+	return 0;
+    if (cache->magic1 != SPATIALITE_CACHE_MAGIC1
+	|| cache->magic2 != SPATIALITE_CACHE_MAGIC2)
+	return 0;
+    return cache->tinyPointEnabled;
 }

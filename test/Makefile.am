@@ -4,6 +4,7 @@ check_PROGRAMS = check_endian \
 		check_version \
 		check_init \
 		check_init2 \
+		check_init_full \
 		check_geom_aux \
 		check_geometry_cols \
 		check_create \
@@ -58,11 +59,17 @@ check_PROGRAMS = check_endian \
 		check_cutter \
 		check_topology2d \
 		check_topology3d \
+		check_toponoface2d \
 		check_topoplus \
+		check_toposnap \
 		check_network2d \
 		check_network3d \
 		check_network_log \
-		check_virtualknn
+		check_virtualknn \
+		check_sequence \
+		check_stored_proc \
+		check_wms \
+		routing_test
 		
 if ENABLE_GEOPACKAGE
 check_PROGRAMS += \
@@ -123,6 +130,7 @@ EXTRA_DIST = fnmatch_impl4win.h \
 	test-legacy-3.0.1.sqlite \
 	test-invalid.sqlite \
 	test_geos.sqlite \
+	elba-sezcen.sqlite \
 	shp/new-caledonia/buildings.dbf \
 	shp/new-caledonia/buildings.prj \
 	shp/new-caledonia/buildings.shp \
@@ -194,15 +202,22 @@ EXTRA_DIST = fnmatch_impl4win.h \
 	gpkg_test_broken.gpkg gpkg_test_extrasrid.gpkg \
 	elba-pg.shp elba-pg.shx elba-pg.dbf \
 	elba-ln.shp elba-ln.shx elba-ln.dbf \
-	Gpx-sample.gpx 000323485.gpx
+	Gpx-sample.gpx 000323485.gpx \
+	sqlproc_sample.txt sqlproc_logfile.txt \
+	sqlproc_error.txt orbetello.sqlite
 
 SUBDIRS = sql_stmt_geosadvanced_tests sql_stmt_geos_tests \
 	sql_stmt_libxml2_tests sql_stmt_rtgeom_tests \
 	sql_stmt_mathsql_tests sql_stmt_proj_tests \
+	sql_stmt_proj492_tests sql_stmt_proj493_tests \
 	sql_stmt_security_tests sql_stmt_tests \
 	sql_stmt_xmlsec_tests sql_stmt_geopackage_tests \
 	sql_stmt_freexl_tests sql_stmt_cache_tests \
 	sql_stmt_nocache_tests sql_stmt_voronoj1_tests \
-	sql_stmt_voronoj2_tests sql_stmt_gpkg_epsg_tests \
+	sql_stmt_voronoj2_tests \
+	sql_stmt_gpkg_epsg492_tests sql_stmt_gpkg_epsg493_tests \
 	sql_stmt_rttopo_tests sql_stmt_gpkgcache_tests \
-	sql_stmt_gpkgnocache_tests
+	sql_stmt_gpkgnocache_tests sql_stmt_sequence_tests \
+	sql_stmt_routing_tests sql_stmt_logfile_tests \
+	sql_stmt_iconv_tests sql_stmt_point_geom \
+	sql_stmt_tiny_point sql_stmt_postgres_tests

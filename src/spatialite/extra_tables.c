@@ -895,14 +895,18 @@ create_raster_coverages (sqlite3 * sqlite)
 	"section_paths INTEGER NOT NULL,\n"
 	"section_md5 INTEGER NOT NULL,\n"
 	"section_summary INTEGER NOT NULL,\n"
-	"is_queryable INTEGER,\n"
+	"is_queryable INTEGER NOT NULL,\n"
 	"red_band_index INTEGER,\n"
 	"green_band_index INTEGER,\n"
 	"blue_band_index INTEGER,\n"
 	"nir_band_index INTEGER,\n"
 	"enable_auto_ndvi INTEGER,\n"
+	"copyright TEXT NOT NULL DEFAULT '*** unknown ***',\n"
+	"license INTEGER NOT NULL DEFAULT 0,\n"
 	"CONSTRAINT fk_rc_srs FOREIGN KEY (srid) "
-	"REFERENCES spatial_ref_sys (srid))";
+	"REFERENCES spatial_ref_sys (srid),\n"
+	"CONSTRAINT fk_rc_lic FOREIGN KEY (license) "
+	"REFERENCES data_licenses (id))";
     ret = sqlite3_exec (sqlite, sql, NULL, NULL, &err_msg);
     if (ret != SQLITE_OK)
       {
@@ -1787,7 +1791,7 @@ create_raster_coverages (sqlite3 * sqlite)
 	"BEFORE UPDATE ON 'raster_coverages'\nFOR EACH ROW BEGIN\n"
 	"SELECT RAISE(ABORT, 'update on raster_coverages violates constraint: "
 	"attempting to change the definition of an already populated Coverage')\n"
-	"WHERE IsPopulatedCoverage(OLD.coverage_name) = 1 AND "
+	"WHERE IsPopulatedCoverage(NULL, OLD.coverage_name) = 1 AND "
 	"((OLD.sample_type <> NEW.sample_type) AND (OLD.pixel_type <> NEW.sample_type) "
 	"OR (OLD.num_bands <> NEW.num_bands) OR (OLD.compression <> NEW.compression) "
 	"OR (OLD.quality <> NEW.quality) OR (OLD.tile_width <> NEW.tile_width) "
@@ -1805,7 +1809,7 @@ create_raster_coverages (sqlite3 * sqlite)
 	"BEFORE DELETE ON 'raster_coverages'\nFOR EACH ROW BEGIN\n"
 	"SELECT RAISE(ABORT, 'delete on raster_coverages violates constraint: "
 	"attempting to delete the definition of an already populated Coverage')\n"
-	"WHERE IsPopulatedCoverage(OLD.coverage_name) = 1;\nEND";
+	"WHERE IsPopulatedCoverage(NULL, OLD.coverage_name) = 1;\nEND";
     ret = sqlite3_exec (sqlite, sql, NULL, NULL, &err_msg);
     if (ret != SQLITE_OK)
       {
@@ -2031,7 +2035,8 @@ createRasterCoveragesTable (void *p_sqlite)
 }
 
 static int
-check_if_coverage_exists (sqlite3 * sqlite, const char *coverage)
+check_if_coverage_exists (sqlite3 * sqlite, const char *db_prefix,
+			  const char *coverage)
 {
 /* checking if a Coverage table already exists */
     int exists = 0;
@@ -2042,9 +2047,16 @@ check_if_coverage_exists (sqlite3 * sqlite, const char *coverage)
     int rows;
     int columns;
     int i;
+    char *xdb_prefix;
+
+    if (db_prefix == NULL)
+	db_prefix = "MAIN";
+    xdb_prefix = gaiaDoubleQuotedSql (db_prefix);
     sql_statement =
-	sqlite3_mprintf ("SELECT name FROM sqlite_master WHERE type = 'table' "
-			 "AND Upper(name) = Upper(%Q)", coverage);
+	sqlite3_mprintf
+	("SELECT name FROM \"%s\".sqlite_master WHERE type = 'table' "
+	 "AND Upper(name) = Upper(%Q)", xdb_prefix, coverage);
+    free (xdb_prefix);
     ret =
 	sqlite3_get_table (sqlite, sql_statement, &results, &rows, &columns,
 			   &errMsg);
@@ -2061,10 +2073,12 @@ check_if_coverage_exists (sqlite3 * sqlite, const char *coverage)
 }
 
 SPATIALITE_PRIVATE int
-checkPopulatedCoverage (void *p_sqlite, const char *coverage_name)
+checkPopulatedCoverage (void *p_sqlite, const char *db_prefix,
+			const char *coverage_name)
 {
 /* checking if a Coverage table is already populated */
     int is_populated = 0;
+    char *xdb_prefix;
     char *xname;
     char *xxname;
     char *sql_statement;
@@ -2075,16 +2089,22 @@ checkPopulatedCoverage (void *p_sqlite, const char *coverage_name)
     int columns;
     int i;
     sqlite3 *sqlite = p_sqlite;
+
     xname = sqlite3_mprintf ("%s_tile_data", coverage_name);
-    if (!check_if_coverage_exists (sqlite, xname))
+    if (!check_if_coverage_exists (sqlite, db_prefix, xname))
       {
 	  sqlite3_free (xname);
 	  return 0;
       }
+    if (db_prefix == NULL)
+	db_prefix = "MAIN";
+    xdb_prefix = gaiaDoubleQuotedSql (db_prefix);
     xxname = gaiaDoubleQuotedSql (xname);
     sqlite3_free (xname);
     sql_statement =
-	sqlite3_mprintf ("SELECT ROWID FROM \"%s\" LIMIT 10", xxname);
+	sqlite3_mprintf ("SELECT ROWID FROM \"%s\".\"%s\" LIMIT 10", xdb_prefix,
+			 xxname);
+    free (xdb_prefix);
     free (xxname);
     ret =
 	sqlite3_get_table (sqlite, sql_statement, &results, &rows, &columns,
@@ -2222,8 +2242,14 @@ create_vector_coverages (sqlite3 * sqlite)
     char *err_msg = NULL;
     sql = "CREATE TABLE vector_coverages (\n"
 	"coverage_name TEXT NOT NULL PRIMARY KEY,\n"
-	"f_table_name TEXT NOT NULL,\n"
-	"f_geometry_column TEXT NOT NULL,\n"
+	"f_table_name TEXT,\n"
+	"f_geometry_column TEXT,\n"
+	"view_name TEXT,\n"
+	"view_geometry TEXT,\n"
+	"virt_name TEXT,\n"
+	"virt_geometry TEXT,\n"
+	"topology_name TEXT,\n"
+	"network_name TEXT,\n"
 	"geo_minx DOUBLE,\n"
 	"geo_miny DOUBLE,\n"
 	"geo_maxx DOUBLE,\n"
@@ -2234,10 +2260,21 @@ create_vector_coverages (sqlite3 * sqlite)
 	"extent_maxy DOUBLE,\n"
 	"title TEXT NOT NULL DEFAULT '*** missing Title ***',\n"
 	"abstract TEXT NOT NULL DEFAULT '*** missing Abstract ***',\n"
-	"is_queryable INTEGER,\n"
-	"CONSTRAINT fk_vector_coverages FOREIGN KEY (f_table_name, f_geometry_column) "
+	"is_queryable INTEGER NOT NULL,\n"
+	"is_editable INTEGER NOT NULL,\n"
+	"copyright TEXT NOT NULL DEFAULT '*** unknown ***',\n"
+	"license INTEGER NOT NULL DEFAULT 0,\n"
+	"CONSTRAINT fk_vc_gc FOREIGN KEY (f_table_name, f_geometry_column) "
 	"REFERENCES geometry_columns (f_table_name, f_geometry_column) "
-	"ON DELETE CASCADE)";
+	"ON DELETE CASCADE,\n"
+	"CONSTRAINT fk_vc_sv FOREIGN KEY (view_name, view_geometry) "
+	"REFERENCES views_geometry_columns (view_name, view_geometry) "
+	"ON DELETE CASCADE,\n"
+	"CONSTRAINT fk_vc_vt FOREIGN KEY (virt_name, virt_geometry) "
+	"REFERENCES virts_geometry_columns (virt_name, virt_geometry) "
+	"ON DELETE CASCADE,\n"
+	"CONSTRAINT fk_vc_lic FOREIGN KEY (license) "
+	"REFERENCES data_licenses (id))";
     ret = sqlite3_exec (sqlite, sql, NULL, NULL, &err_msg);
     if (ret != SQLITE_OK)
       {
@@ -2355,27 +2392,69 @@ create_vector_coverages (sqlite3 * sqlite)
 
 /* creating the vector_coverages_ref_sys view */
     sql = "CREATE VIEW vector_coverages_ref_sys AS\n"
-	"SELECT v.coverage_name AS coverage_name, v.title AS title, "
-	"v.abstract AS abstract, v.is_queryable AS is_queryable, "
-	"v.geo_minx AS geo_minx, "
-	"v.geo_miny AS geo_miny, v.geo_maxx AS geo_maxx, "
-	"v.geo_maxy AS geo_may, v.extent_minx AS extent_minx, "
-	"v.extent_miny AS extent_miny, v.extent_maxx AS extent_maxx, "
-	"v.extent_maxy AS extent_maxy, s.srid AS srid, 1 AS native_srid, "
-	"s.auth_name AS auth_name, s.auth_srid AS auth_srid, "
+	"SELECT v.coverage_name AS coverage_name, v.title AS title, v.abstract AS abstract, "
+	"v.is_queryable AS is_queryable, v.geo_minx AS geo_minx, v.geo_miny AS geo_miny, "
+	"v.geo_maxx AS geo_maxx, v.geo_maxy AS geo_maxy, v.extent_minx AS extent_minx, "
+	"v.extent_miny AS extent_miny, v.extent_maxx AS extent_maxx, v.extent_maxy AS extent_maxy, "
+	"s.srid AS srid, 1 AS native_srid, s.auth_name AS auth_name, s.auth_srid AS auth_srid, "
 	"s.ref_sys_name AS ref_sys_name, s.proj4text AS proj4text\n"
 	"FROM vector_coverages AS v\n"
-	"JOIN geometry_columns AS x ON (v.f_table_name = x.f_table_name "
-	"AND v.f_geometry_column = x.f_geometry_column)\n"
+	"JOIN geometry_columns AS x ON (v.topology_name IS NULL AND v.network_name IS NULL AND "
+	"v.f_table_name IS NOT NULL AND v.f_geometry_column IS NOT NULL AND "
+	"v.f_table_name = x.f_table_name AND v.f_geometry_column = x.f_geometry_column)\n"
 	"LEFT JOIN spatial_ref_sys AS s ON (x.srid = s.srid)\n"
-	"UNION\nSELECT v.coverage_name AS coverage_name, v.title AS title, "
-	"v.abstract AS abstract, v.is_queryable AS is_queryable, "
-	"v.geo_minx AS geo_minx, "
-	"v.geo_miny AS geo_miny, v.geo_maxx AS geo_maxx, "
-	"v.geo_maxy AS geo_may, x.extent_minx AS extent_minx, "
-	"x.extent_miny AS extent_miny, x.extent_maxx AS extent_maxx, "
-	"x.extent_maxy AS extent_maxy, s.srid AS srid, 0 AS native_srid, "
-	"s.auth_name AS auth_name, s.auth_srid AS auth_srid, "
+	"UNION\n"
+	"SELECT v.coverage_name AS coverage_name, v.title AS title, v.abstract AS abstract, "
+	"v.is_queryable AS is_queryable, v.geo_minx AS geo_minx, v.geo_miny AS geo_miny, "
+	"v.geo_maxx AS geo_maxx, v.geo_maxy AS geo_maxy, v.extent_minx AS extent_minx, "
+	"v.extent_miny AS extent_miny, v.extent_maxx AS extent_maxx, v.extent_maxy AS extent_maxy, "
+	"s.srid AS srid, 1 AS native_srid, s.auth_name AS auth_name, s.auth_srid AS auth_srid, "
+	"s.ref_sys_name AS ref_sys_name, s.proj4text AS proj4text\n"
+	"FROM vector_coverages AS v\n"
+	"JOIN views_geometry_columns AS y ON (v.view_name IS NOT NULL AND "
+	"v.view_geometry IS NOT NULL AND v.view_name = y.view_name AND "
+	"v.view_geometry = y.view_geometry)\n"
+	"JOIN geometry_columns AS x ON (y.f_table_name = x.f_table_name AND "
+	"y.f_geometry_column = x.f_geometry_column)\n"
+	"LEFT JOIN spatial_ref_sys AS s ON (x.srid = s.srid)\n"
+	"UNION\n"
+	"SELECT v.coverage_name AS coverage_name, v.title AS title, v.abstract AS abstract, "
+	"v.is_queryable AS is_queryable, v.geo_minx AS geo_minx, v.geo_miny AS geo_miny, "
+	"v.geo_maxx AS geo_maxx, v.geo_maxy AS geo_maxy, v.extent_minx AS extent_minx, "
+	"v.extent_miny AS extent_miny, v.extent_maxx AS extent_maxx, v.extent_maxy AS extent_maxy, "
+	"s.srid AS srid, 1 AS native_srid, s.auth_name AS auth_name, s.auth_srid AS auth_srid, "
+	"s.ref_sys_name AS ref_sys_name, s.proj4text AS proj4text\n"
+	"FROM vector_coverages AS v\n"
+	"JOIN virts_geometry_columns AS x ON (v.virt_name IS NOT NULL "
+	"AND v.virt_geometry IS NOT NULL AND v.virt_name = x.virt_name "
+	"AND v.virt_geometry = x.virt_geometry)\n"
+	"LEFT JOIN spatial_ref_sys AS s ON (x.srid = s.srid)\n"
+	"UNION\n"
+	"SELECT v.coverage_name AS coverage_name, v.title AS title, v.abstract AS abstract, "
+	"v.is_queryable AS is_queryable, v.geo_minx AS geo_minx, v.geo_miny AS geo_miny, "
+	"v.geo_maxx AS geo_maxx, v.geo_maxy AS geo_maxy, v.extent_minx AS extent_minx, "
+	"v.extent_miny AS extent_miny, v.extent_maxx AS extent_maxx, v.extent_maxy AS extent_maxy, "
+	"s.srid AS srid, 1 AS native_srid, s.auth_name AS auth_name, s.auth_srid AS auth_srid, "
+	"s.ref_sys_name AS ref_sys_name, s.proj4text AS proj4text\n"
+	"FROM vector_coverages AS v\n"
+	"JOIN topologies AS x ON (v.topology_name IS NOT NULL AND v.topology_name = x.topology_name)\n"
+	"LEFT JOIN spatial_ref_sys AS s ON (x.srid = s.srid)\n"
+	"UNION\n"
+	"SELECT v.coverage_name AS coverage_name, v.title AS title, v.abstract AS abstract, "
+	"v.is_queryable AS is_queryable, v.geo_minx AS geo_minx, v.geo_miny AS geo_miny, "
+	"v.geo_maxx AS geo_maxx, v.geo_maxy AS geo_maxy, v.extent_minx AS extent_minx, "
+	"v.extent_miny AS extent_miny, v.extent_maxx AS extent_maxx, v.extent_maxy AS extent_maxy, "
+	"s.srid AS srid, 1 AS native_srid, s.auth_name AS auth_name, s.auth_srid AS auth_srid, "
+	"s.ref_sys_name AS ref_sys_name, s.proj4text AS proj4text\n"
+	"FROM vector_coverages AS v\n"
+	"JOIN networks AS x ON (v.network_name IS NOT NULL AND v.network_name = x.network_name)\n"
+	"LEFT JOIN spatial_ref_sys AS s ON (x.srid = s.srid)\n"
+	"UNION\n"
+	"SELECT v.coverage_name AS coverage_name, v.title AS title, v.abstract AS abstract, "
+	"v.is_queryable AS is_queryable, v.geo_minx AS geo_minx, v.geo_miny AS geo_miny, "
+	"v.geo_maxx AS geo_maxx, v.geo_maxy AS geo_maxy, x.extent_minx AS extent_minx, "
+	"x.extent_miny AS extent_miny, x.extent_maxx AS extent_maxx, x.extent_maxy AS extent_maxy, "
+	"s.srid AS srid, 0 AS native_srid, s.auth_name AS auth_name, s.auth_srid AS auth_srid, "
 	"s.ref_sys_name AS ref_sys_name, s.proj4text AS proj4text\n"
 	"FROM vector_coverages AS v\n"
 	"JOIN vector_coverages_srid AS x ON (v.coverage_name = x.coverage_name)\n"
@@ -2451,6 +2530,12 @@ createVectorCoveragesTable (void *p_sqlite)
     int ok_table;
     sqlite3 *sqlite = p_sqlite;
 
+#ifdef ENABLE_RTTOPO		/* only if RTTOPO is enabled */
+
+/* attempting to create Topologies and Networks tables */
+    do_create_topologies (sqlite);
+    do_create_networks (sqlite);
+
 /* checking if already defined */
     ok_table = check_vector_coverages (sqlite);
     if (ok_table)
@@ -2483,6 +2568,299 @@ createVectorCoveragesTable (void *p_sqlite)
 
 /* creating the main VectorCoverages table */
     if (!create_vector_coverages (sqlite))
+	goto error;
+    return 1;
+
+#else
+
+    spatialite_e
+	("CreateVectorCoveragesTable() error: libspatialite was built by disabling Topology\n");
+
+#endif /* end ENABLE_RTTOPO conditionals */
+
+  error:
+    return 0;
+}
+
+static int
+check_wms_getcapabilities (sqlite3 * sqlite)
+{
+/* checking if the "wms_getcapabilities" table already exists */
+    int exists = 0;
+    const char *sql_statement;
+    char *errMsg = NULL;
+    int ret;
+    char **results;
+    int rows;
+    int columns;
+    int i;
+    sql_statement = "SELECT name FROM sqlite_master WHERE type = 'table'"
+	"AND Upper(name) = Upper('wms_getcapabilities')";
+    ret =
+	sqlite3_get_table (sqlite, sql_statement, &results, &rows, &columns,
+			   &errMsg);
+    if (ret != SQLITE_OK)
+      {
+	  sqlite3_free (errMsg);
+	  return 0;
+      }
+    for (i = 1; i <= rows; i++)
+	exists = 1;
+    sqlite3_free_table (results);
+    return exists;
+}
+
+static int
+check_wms_getmap (sqlite3 * sqlite)
+{
+/* checking if the "wms_getmap" table already exists */
+    int exists = 0;
+    const char *sql_statement;
+    char *errMsg = NULL;
+    int ret;
+    char **results;
+    int rows;
+    int columns;
+    int i;
+    sql_statement = "SELECT name FROM sqlite_master WHERE type = 'table'"
+	"AND Upper(name) = Upper('wms_getmap')";
+    ret =
+	sqlite3_get_table (sqlite, sql_statement, &results, &rows, &columns,
+			   &errMsg);
+    if (ret != SQLITE_OK)
+      {
+	  sqlite3_free (errMsg);
+	  return 0;
+      }
+    for (i = 1; i <= rows; i++)
+	exists = 1;
+    sqlite3_free_table (results);
+    return exists;
+}
+
+static int
+check_wms_settings (sqlite3 * sqlite)
+{
+/* checking if the "wms_settings" table already exists */
+    int exists = 0;
+    const char *sql_statement;
+    char *errMsg = NULL;
+    int ret;
+    char **results;
+    int rows;
+    int columns;
+    int i;
+    sql_statement = "SELECT name FROM sqlite_master WHERE type = 'table'"
+	"AND Upper(name) = Upper('wms_settings')";
+    ret =
+	sqlite3_get_table (sqlite, sql_statement, &results, &rows, &columns,
+			   &errMsg);
+    if (ret != SQLITE_OK)
+      {
+	  sqlite3_free (errMsg);
+	  return 0;
+      }
+    for (i = 1; i <= rows; i++)
+	exists = 1;
+    sqlite3_free_table (results);
+    return exists;
+}
+
+static int
+check_wms_ref_sys (sqlite3 * sqlite)
+{
+/* checking if the "wms_ref_sys" table already exists */
+    int exists = 0;
+    const char *sql_statement;
+    char *errMsg = NULL;
+    int ret;
+    char **results;
+    int rows;
+    int columns;
+    int i;
+    sql_statement = "SELECT name FROM sqlite_master WHERE type = 'table'"
+	"AND Upper(name) = Upper('wms_ref_sys')";
+    ret =
+	sqlite3_get_table (sqlite, sql_statement, &results, &rows, &columns,
+			   &errMsg);
+    if (ret != SQLITE_OK)
+      {
+	  sqlite3_free (errMsg);
+	  return 0;
+      }
+    for (i = 1; i <= rows; i++)
+	exists = 1;
+    sqlite3_free_table (results);
+    return exists;
+}
+
+static int
+create_wms_tables (sqlite3 * sqlite)
+{
+/* creating the WMS support tables */
+    char *sql;
+    int ret;
+    char *err_msg = NULL;
+    sql = "CREATE TABLE wms_getcapabilities (\n"
+	"id INTEGER PRIMARY KEY AUTOINCREMENT,\n"
+	"url TEXT NOT NULL,\n"
+	"title TEXT NOT NULL DEFAULT '*** undefined ***',\n"
+	"abstract TEXT NOT NULL DEFAULT '*** undefined ***')";
+    ret = sqlite3_exec (sqlite, sql, NULL, NULL, &err_msg);
+    if (ret != SQLITE_OK)
+      {
+	  spatialite_e ("CREATE TABLE 'wms_getcapabilities' error: %s\n",
+			err_msg);
+	  sqlite3_free (err_msg);
+	  return 0;
+      }
+    sql =
+	"CREATE UNIQUE INDEX idx_wms_getcapabilities ON wms_getcapabilities (url)";
+    ret = sqlite3_exec (sqlite, sql, NULL, NULL, &err_msg);
+    if (ret != SQLITE_OK)
+      {
+	  spatialite_e ("CREATE INDEX 'idx_wms_getcapabilities' error: %s\n",
+			err_msg);
+	  sqlite3_free (err_msg);
+	  return 0;
+      }
+
+    sql = "CREATE TABLE wms_getmap (\n"
+	"id INTEGER PRIMARY KEY AUTOINCREMENT,\n"
+	"parent_id INTEGER NOT NULL,\n"
+	"url TEXT NOT NULL,\n"
+	"layer_name TEXT NOT NULL,\n"
+	"title TEXT NOT NULL DEFAULT '*** undefined ***',\n"
+	"abstract TEXT NOT NULL DEFAULT '*** undefined ***',\n"
+	"version TEXT NOT NULL,\n"
+	"srs TEXT NOT NULL,\n"
+	"format TEXT NOT NULL,\n"
+	"style TEXT NOT NULL,\n"
+	"transparent INTEGER NOT NULL CHECK (transparent IN (0, 1)),\n"
+	"flip_axes INTEGER NOT NULL CHECK (flip_axes IN (0, 1)),\n"
+	"is_queryable INTEGER NOT NULL CHECK (is_queryable IN (0, 1)),\n"
+	"getfeatureinfo_url TEXT,\n"
+	"bgcolor TEXT,\n"
+	"tiled INTEGER NOT NULL CHECK (tiled IN (0, 1)),\n"
+	"tile_width INTEGER NOT NULL CHECK (tile_width BETWEEN 256 AND 5000),\n"
+	"tile_height INTEGER NOT NULL CHECK (tile_width BETWEEN 256 AND 5000),\n"
+	"is_cached INTEGER NOT NULL CHECK (is_cached IN (0, 1)),\n"
+	"copyright TEXT NOT NULL DEFAULT '*** unknown ***',\n"
+	"license INTEGER NOT NULL DEFAULT 0,\n"
+	"CONSTRAINT fk_wms_getmap FOREIGN KEY (parent_id) "
+	"REFERENCES wms_getcapabilities (id) ON DELETE CASCADE,\n"
+	"CONSTRAINT fk_wms_lic FOREIGN KEY (license) "
+	"REFERENCES data_licenses (id))";
+    ret = sqlite3_exec (sqlite, sql, NULL, NULL, &err_msg);
+    if (ret != SQLITE_OK)
+      {
+	  spatialite_e ("CREATE TABLE 'wms_getmap' error: %s\n", err_msg);
+	  sqlite3_free (err_msg);
+	  return 0;
+      }
+    sql = "CREATE UNIQUE INDEX idx_wms_getmap ON wms_getmap (url, layer_name)";
+    ret = sqlite3_exec (sqlite, sql, NULL, NULL, &err_msg);
+    if (ret != SQLITE_OK)
+      {
+	  spatialite_e ("CREATE INDEX 'idx_wms_getmap' error: %s\n", err_msg);
+	  sqlite3_free (err_msg);
+	  return 0;
+      }
+
+    sql = "CREATE TABLE wms_settings (\n"
+	"id INTEGER PRIMARY KEY AUTOINCREMENT,\n"
+	"parent_id INTEGER NOT NULL,\n"
+	"key TEXT NOT NULL CHECK (Lower(key) IN ('version', 'format', 'style')),\n"
+	"value TEXT NOT NULL,\n"
+	"is_default INTEGER NOT NULL CHECK (is_default IN (0, 1)),\n"
+	"CONSTRAINT fk_wms_settings FOREIGN KEY (parent_id) "
+	"REFERENCES wms_getmap (id) ON DELETE CASCADE)";
+    ret = sqlite3_exec (sqlite, sql, NULL, NULL, &err_msg);
+    if (ret != SQLITE_OK)
+      {
+	  spatialite_e ("CREATE TABLE 'wms_settings' error: %s\n", err_msg);
+	  sqlite3_free (err_msg);
+	  return 0;
+      }
+    sql =
+	"CREATE UNIQUE INDEX idx_wms_settings ON wms_settings (parent_id, key, value)";
+    ret = sqlite3_exec (sqlite, sql, NULL, NULL, &err_msg);
+    if (ret != SQLITE_OK)
+      {
+	  spatialite_e ("CREATE INDEX 'idx_wms_settings' error: %s\n", err_msg);
+	  sqlite3_free (err_msg);
+	  return 0;
+      }
+
+    sql = "CREATE TABLE wms_ref_sys (\n"
+	"id INTEGER PRIMARY KEY AUTOINCREMENT,\n"
+	"parent_id INTEGER NOT NULL,\n"
+	"srs TEXT NOT NULL,\n"
+	"minx DOUBLE NOT NULL,\n"
+	"miny DOUBLE NOT NULL,\n"
+	"maxx DOUBLE NOT NULL,\n"
+	"maxy DOUBLE NOT NULL,\n"
+	"is_default INTEGER NOT NULL CHECK (is_default IN (0, 1)),\n"
+	"CONSTRAINT fk_wms_ref_sys FOREIGN KEY (parent_id) "
+	"REFERENCES wms_getmap (id) ON DELETE CASCADE)";
+    ret = sqlite3_exec (sqlite, sql, NULL, NULL, &err_msg);
+    if (ret != SQLITE_OK)
+      {
+	  spatialite_e ("CREATE TABLE 'wms_ref_sys' error: %s\n", err_msg);
+	  sqlite3_free (err_msg);
+	  return 0;
+      }
+    sql = "CREATE UNIQUE INDEX idx_wms_ref_sys ON wms_ref_sys (parent_id, srs)";
+    ret = sqlite3_exec (sqlite, sql, NULL, NULL, &err_msg);
+    if (ret != SQLITE_OK)
+      {
+	  spatialite_e ("CREATE INDEX 'idx_wms_ref_sys' error: %s\n", err_msg);
+	  sqlite3_free (err_msg);
+	  return 0;
+      }
+
+    return 1;
+}
+
+SPATIALITE_PRIVATE int
+createWMSTables (void *p_sqlite)
+{
+/* Creating all WMS support tables */
+    int ok_table;
+    sqlite3 *sqlite = p_sqlite;
+
+/* checking if already defined */
+    ok_table = check_wms_getcapabilities (sqlite);
+    if (ok_table)
+      {
+	  spatialite_e
+	      ("WMS_CreateTables() error: table 'wms_getcapabilities' already exists\n");
+	  goto error;
+      }
+    ok_table = check_wms_getmap (sqlite);
+    if (ok_table)
+      {
+	  spatialite_e
+	      ("WMS_CreateTables() error: table 'wms_getmap' already exists\n");
+	  goto error;
+      }
+    ok_table = check_wms_settings (sqlite);
+    if (ok_table)
+      {
+	  spatialite_e
+	      ("WMS_CreateTables() error: table 'wms_settings' already exists\n");
+	  goto error;
+      }
+    ok_table = check_wms_ref_sys (sqlite);
+    if (ok_table)
+      {
+	  spatialite_e
+	      ("WMS_CreateTables() error: table 'wms_ref_sys' already exists\n");
+	  goto error;
+      }
+
+/* creating the WMS support tables */
+    if (!create_wms_tables (sqlite))
 	goto error;
     return 1;
 
@@ -3755,9 +4133,11 @@ createStylingTables_ex (void *p_sqlite, int relaxed, int transaction)
 	  ok_table = check_styling_table (sqlite, *p_tbl, *p_view);
 	  if (ok_table)
 	    {
-		spatialite_e
-		    ("CreateStylingTables() error: table '%s' already exists\n",
-		     *p_tbl);
+		/*
+		   spatialite_e
+		   ("CreateStylingTables() error: table '%s' already exists\n",
+		   *p_tbl);
+		 */
 		goto error;
 	    }
 	  p_tbl++;
@@ -3771,12 +4151,17 @@ createStylingTables_ex (void *p_sqlite, int relaxed, int transaction)
 	  if (!create_raster_coverages (sqlite))
 	      goto error;
       }
+#ifdef ENABLE_RTTOPO		/* only if RTTOPO is enabled */
     if (!check_vector_coverages (sqlite))
       {
+	  /* creating both TOPOLOGIES and NETWORKS tables */
+	  do_create_topologies (sqlite);
+	  do_create_networks (sqlite);
 	  /* creating the main VectorCoverages table as well */
 	  if (!create_vector_coverages (sqlite))
 	      goto error;
       }
+#endif /* end TOPOLOGY conditionals */
     if (!create_external_graphics (sqlite))
 	goto error;
     if (!create_fonts (sqlite))
