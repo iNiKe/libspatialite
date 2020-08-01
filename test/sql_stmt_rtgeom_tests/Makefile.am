@@ -27,6 +27,53 @@ EXTRA_DIST = 3ddistance10.testcase \
 	3dmaxdistance7.testcase \
 	3dmaxdistance8.testcase \
 	3dmaxdistance9.testcase \
+	asencodedpolyline1.testcase \
+	asencodedpolyline2.testcase \
+	asencodedpolyline3.testcase \
+	asencodedpolyline4.testcase \
+	asencodedpolyline5.testcase \
+	asencodedpolyline6.testcase \
+	asencodedpolyline7.testcase \
+	asencodedpolyline8.testcase \
+	asencodedpolyline9.testcase \
+	asencodedpolyline10.testcase \
+	asencodedpolyline11.testcase \
+	asencodedpolyline12.testcase \
+	asencodedpolyline13.testcase \
+	asencodedpolyline14.testcase \
+	circularity10.testcase \
+	circularity11.testcase \
+	circularity12.testcase \
+	circularity13.testcase \
+	circularity14.testcase \
+	circularity15.testcase \
+	circularity16.testcase \
+	circularity17.testcase \
+	circularity18.testcase \
+	fromencodedpolyline1.testcase \
+	fromencodedpolyline2.testcase \
+	fromencodedpolyline3.testcase \
+	fromencodedpolyline4.testcase \
+	fromencodedpolyline5.testcase \
+	fromencodedpolyline6.testcase \
+	fromencodedpolyline7.testcase \
+	fromencodedpolyline8.testcase \
+	fromencodedpolyline9.testcase \
+	fromencodedpolyline10.testcase \
+	fromtwkb1.testcase \
+	fromtwkb2.testcase \
+	fromtwkb3.testcase \
+	fromtwkb4.testcase \
+	fromtwkb5.testcase \
+	fromtwkb6.testcase \
+	fromtwkb7.testcase \
+	fromtwkb8.testcase \
+	fromtwkb9.testcase \
+	fromtwkb10.testcase \
+	fromtwkb11.testcase \
+	fromtwkb12.testcase \
+	fromtwkb13.testcase \
+	fromtwkb14.testcase \
 	maxdistance10.testcase \
 	maxdistance1.testcase \
 	maxdistance2.testcase \
@@ -37,6 +84,23 @@ EXTRA_DIST = 3ddistance10.testcase \
 	maxdistance7.testcase \
 	maxdistance8.testcase \
 	maxdistance9.testcase \
+	snapsplit1.testcase \
+	snapsplit2.testcase \
+	snapsplit3.testcase \
+	snapsplit4.testcase \
+	snapsplit5.testcase \
+	snapsplit6.testcase \
+	snapsplit7.testcase \
+	snapsplit8.testcase \
+	snapsplit9.testcase \
+	snapsplit10.testcase \
+	snapsplit11.testcase \
+	snapsplit12.testcase \
+	snapsplit13.testcase \
+	snapsplit14.testcase \
+	snapsplit15.testcase \
+	snapsplit16.testcase \
+	snapsplit17.testcase \
 	st_asx3d10.testcase \
 	st_asx3d11.testcase \
 	st_asx3d12.testcase \
@@ -294,5 +358,34 @@ EXTRA_DIST = 3ddistance10.testcase \
 	st_self6.testcase \
 	st_self7.testcase \
 	st_self8.testcase \
-	st_self9.testcase
-
+	st_self9.testcase \
+	totwkb1.testcase \
+	totwkb2.testcase \
+	totwkb3.testcase \
+	totwkb4.testcase \
+	totwkb5.testcase \
+	totwkb6.testcase \
+	totwkb7.testcase \
+	totwkb8.testcase \
+	totwkb9.testcase \
+	totwkb10.testcase \
+	totwkb11.testcase \
+	totwkb12.testcase \
+	totwkb13.testcase \
+	totwkb14.testcase \
+	totwkb15.testcase \
+	totwkb16.testcase \
+	totwkb17.testcase \
+	totwkb18.testcase \
+	totwkb19.testcase \
+	totwkb20.testcase \
+	totwkb21.testcase \
+	totwkb22.testcase \
+	totwkb23.testcase \
+	totwkb24.testcase \
+	totwkb25.testcase \
+	totwkb26.testcase \
+	totwkb27.testcase \
+	totwkb28.testcase \
+	totwkb29.testcase \
+	totwkb30.testcase

@@ -2,7 +2,7 @@
 
  virtualXLc -- SQLite3 extension [VIRTUAL TABLE accessing .XLS]
 
- version 4.3, 2015 June 29
+ version 5.0, 2020 August 1
 
  Author: Sandro Furieri a.furieri@lqt.it
 
@@ -24,7 +24,7 @@ The Original Code is the SpatiaLite library
 
 The Initial Developer of the Original Code is Alessandro Furieri
  
-Portions created by the Initial Developer are Copyright (C) 2008-2015
+Portions created by the Initial Developer are Copyright (C) 2008-2020
 the Initial Developer. All Rights Reserved.
 
 Contributor(s):
@@ -693,7 +693,10 @@ vXL_eval_constraints (VirtualXLCursorPtr cursor)
 		      break;
 #ifdef HAVE_DECL_SQLITE_INDEX_CONSTRAINT_LIKE
 		  case SQLITE_INDEX_CONSTRAINT_LIKE:
-		      if (ret >= 0)
+		      ret =
+			  sqlite3_strlike (pC->txtValue, cell.value.text_value,
+					   0);
+		      if (ret == 0)
 			  ok = 1;
 		      break;
 #endif

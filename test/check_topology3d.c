@@ -51,6 +51,8 @@ the terms of any one of the MPL, the GPL or the LGPL.
 #include "sqlite3.h"
 #include "spatialite.h"
 
+#ifdef ENABLE_RTTOPO		/* only if RTTOPO is enabled */
+
 static int
 do_level6_tests (sqlite3 * handle, int *retcode)
 {
@@ -61,7 +63,7 @@ do_level6_tests (sqlite3 * handle, int *retcode)
 /* retrieving a Node by Point */
     ret =
 	sqlite3_exec (handle,
-		      "SELECT GetNodeByPoint('topo', MakePoint(152, 160), 0)",
+		      "SELECT GetNodeByPoint('topo', MakePointZ(152, 160, 1))",
 		      NULL, NULL, &err_msg);
     if (ret != SQLITE_OK)
       {
@@ -94,7 +96,7 @@ do_level6_tests (sqlite3 * handle, int *retcode)
 /* attempting to retrieve a Node by Point (not found) */
     ret =
 	sqlite3_exec (handle,
-		      "SELECT GetNodeByPoint('topo', MakePoint(1, 1), 0)",
+		      "SELECT GetNodeByPoint('topo', MakePoint(1, 1))",
 		      NULL, NULL, &err_msg);
     if (ret != SQLITE_OK)
       {
@@ -107,7 +109,7 @@ do_level6_tests (sqlite3 * handle, int *retcode)
 /* retrieving an Edge by Point */
     ret =
 	sqlite3_exec (handle,
-		      "SELECT GetEdgeByPoint('topo', MakePoint(154, 167), 0)",
+		      "SELECT GetEdgeByPoint('topo', MakePointZ(154, 167, 1))",
 		      NULL, NULL, &err_msg);
     if (ret != SQLITE_OK)
       {
@@ -140,7 +142,7 @@ do_level6_tests (sqlite3 * handle, int *retcode)
 /* attempting to retrieve an Edge by Point (not found) */
     ret =
 	sqlite3_exec (handle,
-		      "SELECT GetEdgeByPoint('topo', MakePoint(1, 1), 0)",
+		      "SELECT GetEdgeByPoint('topo', MakePoint(1, 1))",
 		      NULL, NULL, &err_msg);
     if (ret != SQLITE_OK)
       {
@@ -153,7 +155,7 @@ do_level6_tests (sqlite3 * handle, int *retcode)
 /* retrieving a Face by Point */
     ret =
 	sqlite3_exec (handle,
-		      "SELECT GetFaceByPoint('topo', MakePoint(153, 161), 0)",
+		      "SELECT GetFaceByPoint('topo', MakePoint(153, 161))",
 		      NULL, NULL, &err_msg);
     if (ret != SQLITE_OK)
       {
@@ -186,7 +188,7 @@ do_level6_tests (sqlite3 * handle, int *retcode)
 /* attempting to retrieve a Face by Point (not found) */
     ret =
 	sqlite3_exec (handle,
-		      "SELECT GetFaceByPoint('topo', MakePoint(1, 1), 0)",
+		      "SELECT GetFaceByPoint('topo', MakePointZ(1, 1, 1))",
 		      NULL, NULL, &err_msg);
     if (ret != SQLITE_OK)
       {
@@ -199,7 +201,7 @@ do_level6_tests (sqlite3 * handle, int *retcode)
 /* adding four Points */
     ret =
 	sqlite3_exec (handle,
-		      "SELECT TopoGeo_AddPoint('topo', MakePointZ(10, -10, 1, 4326), 0)",
+		      "SELECT TopoGeo_AddPoint('topo', MakePointZ(10, -10, 1, 4326))",
 		      NULL, NULL, &err_msg);
     if (ret != SQLITE_OK)
       {
@@ -210,7 +212,7 @@ do_level6_tests (sqlite3 * handle, int *retcode)
       }
     ret =
 	sqlite3_exec (handle,
-		      "SELECT TopoGeo_AddPoint('topo', MakePointZ(25, -10, 1, 4326), 0)",
+		      "SELECT TopoGeo_AddPoint('topo', MakePointZ(25, -10, 1, 4326))",
 		      NULL, NULL, &err_msg);
     if (ret != SQLITE_OK)
       {
@@ -221,7 +223,7 @@ do_level6_tests (sqlite3 * handle, int *retcode)
       }
     ret =
 	sqlite3_exec (handle,
-		      "SELECT TopoGeo_AddPoint('topo', MakePointZ(50, -10, 1, 4326), 0)",
+		      "SELECT TopoGeo_AddPoint('topo', MakePointZ(50, -10, 1, 4326))",
 		      NULL, NULL, &err_msg);
     if (ret != SQLITE_OK)
       {
@@ -232,7 +234,7 @@ do_level6_tests (sqlite3 * handle, int *retcode)
       }
     ret =
 	sqlite3_exec (handle,
-		      "SELECT TopoGeo_AddPoint('topo', MakePointZ(100, -10, 1, 4326), 0)",
+		      "SELECT TopoGeo_AddPoint('topo', MakePointZ(100, -10, 1, 4326))",
 		      NULL, NULL, &err_msg);
     if (ret != SQLITE_OK)
       {
@@ -245,7 +247,7 @@ do_level6_tests (sqlite3 * handle, int *retcode)
 /* adding four Linestrings */
     ret =
 	sqlite3_exec (handle,
-		      "SELECT TopoGeo_AddLineString('topo', GeomFromText('LINESTRINGZ(10 -10 1, 100 -10 1)', 4326), 0)",
+		      "SELECT TopoGeo_AddLineString('topo', GeomFromText('LINESTRINGZ(10 -10 1, 100 -10 1)', 4326))",
 		      NULL, NULL, &err_msg);
     if (ret != SQLITE_OK)
       {
@@ -256,7 +258,7 @@ do_level6_tests (sqlite3 * handle, int *retcode)
       }
     ret =
 	sqlite3_exec (handle,
-		      "SELECT TopoGeo_AddLineString('topo', GeomFromText('LINESTRINGZ(10 -25 1, 100 -25 1)', 4326), 0)",
+		      "SELECT TopoGeo_AddLineString('topo', GeomFromText('LINESTRINGZ(10 -25 1, 100 -25 1)', 4326))",
 		      NULL, NULL, &err_msg);
     if (ret != SQLITE_OK)
       {
@@ -267,7 +269,7 @@ do_level6_tests (sqlite3 * handle, int *retcode)
       }
     ret =
 	sqlite3_exec (handle,
-		      "SELECT TopoGeo_AddLineString('topo', GeomFromText('LINESTRINGZ(10 -50 1, 100 -50 1)', 4326), 0)",
+		      "SELECT TopoGeo_AddLineString('topo', GeomFromText('LINESTRINGZ(10 -50 1, 100 -50 1)', 4326))",
 		      NULL, NULL, &err_msg);
     if (ret != SQLITE_OK)
       {
@@ -278,7 +280,7 @@ do_level6_tests (sqlite3 * handle, int *retcode)
       }
     ret =
 	sqlite3_exec (handle,
-		      "SELECT TopoGeo_AddLineString('topo', GeomFromText('LINESTRINGZ(10 -100 1, 100 -100 1)', 4326), 0)",
+		      "SELECT TopoGeo_AddLineString('topo', GeomFromText('LINESTRINGZ(10 -100 1, 100 -100 1)', 4326))",
 		      NULL, NULL, &err_msg);
     if (ret != SQLITE_OK)
       {
@@ -2888,6 +2890,7 @@ do_level0_tests (sqlite3 * handle, int *retcode)
     return 1;
 }
 
+#endif
 
 int
 main (int argc, char *argv[])
@@ -2923,6 +2926,15 @@ main (int argc, char *argv[])
 	  goto end;
       }
 
+    ret = sqlite3_exec (handle, "PRAGMA foreign_keys=1", NULL, NULL, &err_msg);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "PRAGMA foreign_keys=1 error: %s\n", err_msg);
+	  sqlite3_free (err_msg);
+	  sqlite3_close (handle);
+	  return -2;
+      }
+
     ret =
 	sqlite3_exec (handle, "SELECT InitSpatialMetadata(1)", NULL, NULL,
 		      &err_msg);
@@ -2931,19 +2943,19 @@ main (int argc, char *argv[])
 	  fprintf (stderr, "InitSpatialMetadata() error: %s\n", err_msg);
 	  sqlite3_free (err_msg);
 	  sqlite3_close (handle);
-	  return -2;
+	  return -3;
       }
 
 /* creating a Topology 3D */
     ret =
-	sqlite3_exec (handle, "SELECT CreateTopology('topo', 4326, 0, 1)", NULL,
+	sqlite3_exec (handle, "SELECT CreateTopology('topo', 4326, 1, 0)", NULL,
 		      NULL, &err_msg);
     if (ret != SQLITE_OK)
       {
 	  fprintf (stderr, "CreateTopology() error: %s\n", err_msg);
 	  sqlite3_free (err_msg);
 	  sqlite3_close (handle);
-	  return -3;
+	  return -4;
       }
 
 /* basic tests: level 0 */
@@ -2983,7 +2995,7 @@ main (int argc, char *argv[])
 	  fprintf (stderr, "DropTopology() error: %s\n", err_msg);
 	  sqlite3_free (err_msg);
 	  sqlite3_close (handle);
-	  return -4;
+	  return -5;
       }
 
   end:
@@ -2992,6 +3004,9 @@ main (int argc, char *argv[])
     spatialite_cleanup_ex (cache);
 
 #endif /* end RTTOPO conditional */
+
+    if (argc > 1 || argv[0] == NULL)
+	argc = 1;		/* silencing stupid compiler warnings */
 
     spatialite_shutdown ();
     return retcode;

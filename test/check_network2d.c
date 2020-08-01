@@ -51,6 +51,72 @@ the terms of any one of the MPL, the GPL or the LGPL.
 #include "sqlite3.h"
 #include "spatialite.h"
 
+#ifdef ENABLE_RTTOPO		/* only if RTTOPO is enabled */
+
+static int
+do_level3_tests (sqlite3 * handle, int *retcode)
+{
+/* performing basic tests: level 3 */
+    int ret;
+    char *err_msg = NULL;
+
+/* testing RegisterTopoNetCoverage */
+    ret =
+	sqlite3_exec (handle,
+		      "SELECT CreateStylingTables(1)", NULL, NULL, &err_msg);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "CreateStylingTables() #1 error: %s\n", err_msg);
+	  sqlite3_free (err_msg);
+	  *retcode = -240;
+	  return 0;
+      }
+
+/* testing RegisterTopoNetCoverage - short form */
+    ret =
+	sqlite3_exec (handle,
+		      "SELECT SE_RegisterTopoNetCoverage('net', 'roads')",
+		      NULL, NULL, &err_msg);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "SE_RegisterTopoNetCoverage() #1 error: %s\n",
+		   err_msg);
+	  sqlite3_free (err_msg);
+	  *retcode = -241;
+	  return 0;
+      }
+
+/* testing UnRegisterVectorCoverage */
+    ret =
+	sqlite3_exec (handle,
+		      "SELECT SE_UnRegisterVectorCoverage('net')",
+		      NULL, NULL, &err_msg);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "SE_RegisterVectorCoverage() #1 error: %s\n",
+		   err_msg);
+	  sqlite3_free (err_msg);
+	  *retcode = -342;
+	  return 0;
+      }
+
+/* testing RegisterTopoNetCoverage - long form */
+    ret =
+	sqlite3_exec (handle,
+		      "SELECT SE_RegisterTopoNetCoverage('net', 'roads', 'title', 'abstract', 1, 1)",
+		      NULL, NULL, &err_msg);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "SE_RegisterTopoNetCoverage() #2 error: %s\n",
+		   err_msg);
+	  sqlite3_free (err_msg);
+	  *retcode = -241;
+	  return 0;
+      }
+
+    return 1;
+}
+
 static int
 do_level2_tests (sqlite3 * handle, int *retcode)
 {
@@ -2190,6 +2256,7 @@ do_level0_tests (sqlite3 * handle, int *retcode)
     return 1;
 }
 
+#endif
 
 int
 main (int argc, char *argv[])
@@ -2201,9 +2268,6 @@ main (int argc, char *argv[])
     sqlite3 *handle;
     char *err_msg = NULL;
     void *cache = spatialite_alloc_connection ();
-
-    if (argc > 1 || argv[0] == NULL)
-	argc = 1;		/* silencing stupid compiler warnings */
 
     ret =
 	sqlite3_open_v2 (":memory:", &handle,
@@ -2218,6 +2282,15 @@ main (int argc, char *argv[])
 
     spatialite_init_ex (handle, cache, 0);
 
+    ret = sqlite3_exec (handle, "PRAGMA foreign_keys=1", NULL, NULL, &err_msg);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "PRAGMA foreign_keys=1 error: %s\n", err_msg);
+	  sqlite3_free (err_msg);
+	  sqlite3_close (handle);
+	  return -2;
+      }
+
     ret =
 	sqlite3_exec (handle, "SELECT InitSpatialMetadata(1)", NULL, NULL,
 		      &err_msg);
@@ -2226,7 +2299,7 @@ main (int argc, char *argv[])
 	  fprintf (stderr, "InitSpatialMetadata() error: %s\n", err_msg);
 	  sqlite3_free (err_msg);
 	  sqlite3_close (handle);
-	  return -2;
+	  return -3;
       }
 
 /* creating a Network 2D */
@@ -2238,7 +2311,7 @@ main (int argc, char *argv[])
 	  fprintf (stderr, "CreateNetwork() error: %s\n", err_msg);
 	  sqlite3_free (err_msg);
 	  sqlite3_close (handle);
-	  return -3;
+	  return -4;
       }
 
 /* basic tests: level 0 */
@@ -2253,6 +2326,14 @@ main (int argc, char *argv[])
     if (!do_level2_tests (handle, &retcode))
 	goto end;
 
+#ifdef ENABLE_LIBXML2		/* only if LIBXML2 is supported */
+
+/* testing RegisterTopoGeoCoverage */
+    if (!do_level3_tests (handle, &retcode))
+	goto end;
+
+#endif
+
 /* dropping the Network 2D */
     ret =
 	sqlite3_exec (handle, "SELECT DropNetwork('roads')", NULL, NULL,
@@ -2262,7 +2343,7 @@ main (int argc, char *argv[])
 	  fprintf (stderr, "DropNetwork() error: %s\n", err_msg);
 	  sqlite3_free (err_msg);
 	  sqlite3_close (handle);
-	  return -4;
+	  return -5;
       }
 
   end:
@@ -2271,6 +2352,9 @@ main (int argc, char *argv[])
     spatialite_cleanup_ex (cache);
 
 #endif /* end RTTOPO conditional */
+
+    if (argc > 1 || argv[0] == NULL)
+	argc = 1;		/* silencing stupid compiler warnings */
 
     spatialite_shutdown ();
     return retcode;

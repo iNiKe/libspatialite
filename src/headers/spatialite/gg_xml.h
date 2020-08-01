@@ -1,7 +1,7 @@
 /*
  gg_xml.h -- Gaia common support for XML documents
   
- version 4.3, 2015 June 29
+ version 5.0, 2020 August 1
 
  Author: Sandro Furieri a.furieri@lqt.it
 
@@ -23,7 +23,7 @@ The Original Code is the SpatiaLite library
 
 The Initial Developer of the Original Code is Alessandro Furieri
  
-Portions created by the Initial Developer are Copyright (C) 2008-2015
+Portions created by the Initial Developer are Copyright (C) 2008-2020
 the Initial Developer. All Rights Reserved.
 
 Contributor(s):
@@ -108,6 +108,8 @@ extern "C"
 #define GAIA_XML_SVG			0x20
 /** XmlBLOB FLAG - GPX bitmask */
 #define GAIA_XML_GPX			0x08
+/** XmlBLOB FLAG - MapConfig bitmask */
+#define GAIA_XML_MAP_CONFIG		0x88
 
 
 /* function prototypes */
@@ -220,7 +222,7 @@ extern "C"
  \sa gaiaIsCompressedXmlBlob, gaiaIsSchemaValidatedXmlBlob, 
  gaiaIsIsoMetadataXmlBlob, gaiaIsSldSeVectorStyleXmlBlob, 
  gaiaIsSldSeRasterStyleXmlBlob, gaiaIsSldStyleXmlBlob,
- gaiaIsSvgXmlBlob, gaiaIsGpxXmlBlob
+ gaiaIsSvgXmlBlob, gaiaIsGpxXmlBlob, gaiaIsMapConfigXmlBlob
  */
     GAIAGEO_DECLARE int gaiaIsValidXmlBlob (const unsigned char *blob,
 					    int size);
@@ -236,7 +238,7 @@ extern "C"
  \sa gaiaIsValidXmlBlob, gaiaIsSchemaValidatedXmlBlob, 
  gaiaIsIsoMetadataXmlBlob, gaiaIsSldSeVectorStyleXmlBlob, 
  gaiaIsSldSeRasterStyleXmlBlob, gaiaIsSldStyleXmlBlob,
- gaiaIsSvgXmlBlob, gaiaIsGpxXmlBlob
+ gaiaIsSvgXmlBlob, gaiaIsGpxXmlBlob, gaiaIsMapConfigXmlBlob
  */
     GAIAGEO_DECLARE int gaiaIsCompressedXmlBlob (const unsigned char *blob,
 						 int size);
@@ -252,7 +254,7 @@ extern "C"
  \sa gaiaIsValidXmlBlob, gaiaIsSchemaValidatedXmlBlob, 
  gaiaIsCompressedXmlBlob, gaiaIsSldSeVectorStyleXmlBlob, 
  gaiaIsSldSeRasterStyleXmlBlob, gaiaIsSldStyleXmlBlob,
- gaiaIsSvgXmlBlob, gaiaIsGpxXmlBlob
+ gaiaIsSvgXmlBlob, gaiaIsGpxXmlBlob, gaiaIsMapConfigXmlBlob
  */
     GAIAGEO_DECLARE int gaiaIsIsoMetadataXmlBlob (const unsigned char *blob,
 						  int size);
@@ -285,7 +287,7 @@ extern "C"
  \sa gaiaIsValidXmlBlob, gaiaIsSchemaValidatedXmlBlob, 
  gaiaIsCompressedXmlBlob, gaiaIsIsoMetadataXmlBlob, 
  gaiaIsSldSeVectorStyleXmlBlob, gaiaIsSldStyleXmlBlob,
- gaiaIsSvgXmlBlob, gaiaIsGpxXmlBlob
+ gaiaIsSvgXmlBlob, gaiaIsGpxXmlBlob, gaiaIsMapConfigXmlBlob
  */
     GAIAGEO_DECLARE int gaiaIsSldSeRasterStyleXmlBlob (const unsigned char
 						       *blob, int size);
@@ -302,10 +304,27 @@ extern "C"
  \sa gaiaIsValidXmlBlob, gaiaIsSchemaValidatedXmlBlob, 
  gaiaIsCompressedXmlBlob, gaiaIsIsoMetadataXmlBlob, 
  gaiaIsSldSeVectorStyleXmlBlob, gaiaIsSldSeRasterXmlBlob,
- gaiaIsSvgXmlBlob, gaiaIsGpxXmlBlob
+ gaiaIsSvgXmlBlob, gaiaIsGpxXmlBlob, gaiaIsMapConfigXmlBlob
  */
     GAIAGEO_DECLARE int gaiaIsSldStyleXmlBlob (const unsigned char
 					       *blob, int size);
+
+/**
+ Checks if a valid XmlBLOB buffer does contain a MapConfig or not
+
+ \param blob pointer to the XmlBLOB buffer.
+ \param size XmlBLOB's size (in bytes).
+
+ \return TRUE or FALSE if the BLOB actually is a valid XmlBLOB of the
+ MapConfig type; -1 in any other case.
+
+ \sa gaiaIsValidXmlBlob, gaiaIsSchemaValidatedXmlBlob, 
+ gaiaIsCompressedXmlBlob, gaiaIsIsoMetadataXmlBlob, 
+ gaiaIsSldSeVectorStyleXmlBlob, gaiaIsSldSeRasterXmlBlob,
+ gaiaIsSvgXmlBlob, gaiaIsGpxXmlBlob, gaiaIsSldStyleXmlBlob
+ */
+    GAIAGEO_DECLARE int gaiaIsMapConfigXmlBlob (const unsigned char
+						*blob, int size);
 
 /**
  Checks if a valid XmlBLOB buffer does contain an SVG Symbol or not
@@ -318,7 +337,7 @@ extern "C"
  \sa gaiaIsValidXmlBlob, gaiaIsSchemaValidatedXmlBlob, 
  gaiaIsCompressedXmlBlob, gaiaIsIsoMetadataXmlBlob, 
  gaiaIsSldSeVectorStyleXmlBlob, gaiaIsSldStyleXmlBlob,
- gaiaIsSldSeRasterStyleXmlBlob, gaiaIsGpxXmlBlob
+ gaiaIsSldSeRasterStyleXmlBlob, gaiaIsGpxXmlBlob, gaiaIsMapConfigXmlBlob
  */
     GAIAGEO_DECLARE int gaiaIsSvgXmlBlob (const unsigned char *blob, int size);
 
@@ -333,7 +352,7 @@ extern "C"
  \sa gaiaIsValidXmlBlob, gaiaIsSchemaValidatedXmlBlob, 
  gaiaIsCompressedXmlBlob, gaiaIsIsoMetadataXmlBlob, 
  gaiaIsSldSeVectorStyleXmlBlob, gaiaIsSldStyleXmlBlob,
- gaiaIsSldSeRasterStyleXmlBlob, gaiaIsSvgXmlBlob
+ gaiaIsSldSeRasterStyleXmlBlob, gaiaIsSvgXmlBlob, gaiaIsMapConfigXmlBlob
  */
     GAIAGEO_DECLARE int gaiaIsGpxXmlBlob (const unsigned char *blob, int size);
 
@@ -370,10 +389,10 @@ extern "C"
  \sa gaiaIsValidXmlBlob, gaiaIsSvgXmlBlob, 
  gaiaIsCompressedXmlBlob, gaiaIsIsoMetadataXmlBlob, 
  gaiaIsSldSeVectorStyleXmlBlob, gaiaIsSldSeRasterStyleXmlBlob,
- gaiaIsSldStyleXmlBlob 
+ gaiaIsSldStyleXmlBlob, gaiaIsMapConfigXmlBlob 
  */
-    GAIAGEO_DECLARE int gaiaIsSchemaValidatedXmlBlob (const unsigned char *blob,
-						      int size);
+    GAIAGEO_DECLARE int gaiaIsSchemaValidatedXmlBlob (const unsigned char
+						      *blob, int size);
 
 /**
  Return the XMLDocument size (in bytes) from a valid XmlBLOB buffer
@@ -420,8 +439,8 @@ extern "C"
  so you are responsible to free() it before or after.
  */
     GAIAGEO_DECLARE char *gaiaXmlGetInternalSchemaURI (const void *p_cache,
-						       const unsigned char *xml,
-						       int xml_len);
+						       const unsigned char
+						       *xml, int xml_len);
 
 /**
  Return the FileIdentifier from a valid XmlBLOB buffer
@@ -476,7 +495,8 @@ extern "C"
  */
     GAIAGEO_DECLARE int gaiaXmlBlobSetFileId (const void *p_cache,
 					      const unsigned char *blob,
-					      int size, const char *identifier,
+					      int size,
+					      const char *identifier,
 					      unsigned char **new_blob,
 					      int *new_size);
 
@@ -527,7 +547,8 @@ extern "C"
  */
     GAIAGEO_DECLARE int gaiaXmlBlobAddFileId (const void *p_cache,
 					      const unsigned char *blob,
-					      int size, const char *identifier,
+					      int size,
+					      const char *identifier,
 					      const char *ns_id,
 					      const char *uri_id,
 					      const char *ns_charstr,
@@ -656,8 +677,9 @@ extern "C"
  \note the returned Geometry corresponds to dynamically allocated memory:
  so you are responsible to free() it before or after.
  */
-    GAIAGEO_DECLARE gaiaGeomCollPtr gaiaXmlBlobMLineFromGPX (const unsigned char
-							     *blob, int size,
+    GAIAGEO_DECLARE gaiaGeomCollPtr gaiaXmlBlobMLineFromGPX (const unsigned
+							     char *blob,
+							     int size,
 							     sqlite3 *
 							     db_handle);
 

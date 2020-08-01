@@ -2,7 +2,7 @@
 
  gaia_auxnet.c -- implementation of the Topology-Network module methods
     
- version 4.3, 2015 August 12
+ version 5.0, 2020 August 1
 
  Author: Sandro Furieri a.furieri@lqt.it
 
@@ -24,7 +24,7 @@ The Original Code is the SpatiaLite library
 
 The Initial Developer of the Original Code is Alessandro Furieri
  
-Portions created by the Initial Developer are Copyright (C) 2015
+Portions created by the Initial Developer are Copyright (C) 2015-2020
 the Initial Developer. All Rights Reserved.
 
 Contributor(s): 
@@ -93,13 +93,129 @@ free_internal_cache_networks (void *firstNetwork)
       }
 }
 
-static int
-do_create_networks (sqlite3 * handle)
+SPATIALITE_PRIVATE void
+drop_networks_triggers (void *sqlite_handle)
+{
+/* dropping all "networks" triggers */
+    char *sql;
+    int ret;
+    char *err_msg = NULL;
+    char **results;
+    int rows;
+    int columns;
+    int i;
+    sqlite3 *sqlite = (sqlite3 *) sqlite_handle;
+
+/* checking for existing tables */
+    sql =
+	"SELECT name FROM sqlite_master WHERE type = 'trigger' AND tbl_name = 'networks'";
+    ret = sqlite3_get_table (sqlite, sql, &results, &rows, &columns, &err_msg);
+    if (ret != SQLITE_OK)
+      {
+	  spatialite_e ("SQL error: %s\n", err_msg);
+	  sqlite3_free (err_msg);
+	  return;
+      }
+    for (i = 1; i <= rows; i++)
+      {
+	  const char *name = results[(i * columns) + 0];
+	  sql = sqlite3_mprintf ("DROP TRIGGER %s", name);
+	  ret = sqlite3_exec (sqlite, sql, NULL, NULL, &err_msg);
+	  if (ret != SQLITE_OK)
+	    {
+		spatialite_e ("SQL error: %s\n", err_msg);
+		sqlite3_free (err_msg);
+		return;
+	    }
+	  sqlite3_free (sql);
+      }
+    sqlite3_free_table (results);
+}
+
+SPATIALITE_PRIVATE int
+do_create_networks_triggers (void *sqlite_handle)
+{
+/* attempting to create the Networks triggers */
+    const char *sql;
+    char *err_msg = NULL;
+    int ret;
+    char **results;
+    int rows;
+    int columns;
+    int i;
+    sqlite3 *handle = (sqlite3 *) sqlite_handle;
+    int ok_networks = 0;
+
+/* checking for existing networks */
+    sql =
+	"SELECT tbl_name FROM sqlite_master WHERE type = 'table' AND tbl_name = 'networks'";
+    ret = sqlite3_get_table (handle, sql, &results, &rows, &columns, &err_msg);
+    if (ret != SQLITE_OK)
+      {
+	  spatialite_e ("SQL error: %s\n", err_msg);
+	  sqlite3_free (err_msg);
+	  return 0;
+      }
+    for (i = 1; i <= rows; i++)
+      {
+	  const char *name = results[(i * columns) + 0];
+	  if (strcasecmp (name, "networks") == 0)
+	      ok_networks = 1;
+      }
+    sqlite3_free_table (results);
+
+    if (ok_networks)
+      {
+	  /* creating Networks triggers */
+	  sql = "CREATE TRIGGER IF NOT EXISTS network_name_insert\n"
+	      "BEFORE INSERT ON 'networks'\nFOR EACH ROW BEGIN\n"
+	      "SELECT RAISE(ABORT,'insert on networks violates constraint: "
+	      "network_name value must not contain a single quote')\n"
+	      "WHERE NEW.network_name LIKE ('%''%');\n"
+	      "SELECT RAISE(ABORT,'insert on networks violates constraint: "
+	      "network_name value must not contain a double quote')\n"
+	      "WHERE NEW.network_name LIKE ('%\"%');\n"
+	      "SELECT RAISE(ABORT,'insert on networks violates constraint: "
+	      "network_name value must be lower case')\n"
+	      "WHERE NEW.network_name <> lower(NEW.network_name);\nEND";
+	  ret = sqlite3_exec (handle, sql, NULL, NULL, &err_msg);
+	  if (ret != SQLITE_OK)
+	    {
+		spatialite_e ("SQL error: %s\n", err_msg);
+		sqlite3_free (err_msg);
+		return 0;
+	    }
+	  sql = "CREATE TRIGGER IF NOT EXISTS network_name_update\n"
+	      "BEFORE UPDATE OF 'network_name' ON 'networks'\nFOR EACH ROW BEGIN\n"
+	      "SELECT RAISE(ABORT,'update on networks violates constraint: "
+	      "network_name value must not contain a single quote')\n"
+	      "WHERE NEW.network_name LIKE ('%''%');\n"
+	      "SELECT RAISE(ABORT,'update on networks violates constraint: "
+	      "network_name value must not contain a double quote')\n"
+	      "WHERE NEW.network_name LIKE ('%\"%');\n"
+	      "SELECT RAISE(ABORT,'update on networks violates constraint: "
+	      "network_name value must be lower case')\n"
+	      "WHERE NEW.network_name <> lower(NEW.network_name);\nEND";
+	  ret = sqlite3_exec (handle, sql, NULL, NULL, &err_msg);
+	  if (ret != SQLITE_OK)
+	    {
+		spatialite_e ("SQL error: %s\n", err_msg);
+		sqlite3_free (err_msg);
+		return 0;
+	    }
+      }
+
+    return 1;
+}
+
+SPATIALITE_PRIVATE int
+do_create_networks (void *sqlite_handle)
 {
 /* attempting to create the Networks table (if not already existing) */
     const char *sql;
     char *err_msg = NULL;
     int ret;
+    sqlite3 *handle = (sqlite3 *) sqlite_handle;
 
     sql = "CREATE TABLE IF NOT EXISTS networks (\n"
 	"\tnetwork_name TEXT NOT NULL PRIMARY KEY,\n"
@@ -119,44 +235,8 @@ do_create_networks (sqlite3 * handle)
 	  return 0;
       }
 
-/* creating Networks triggers */
-    sql = "CREATE TRIGGER IF NOT EXISTS network_name_insert\n"
-	"BEFORE INSERT ON 'networks'\nFOR EACH ROW BEGIN\n"
-	"SELECT RAISE(ABORT,'insert on networks violates constraint: "
-	"network_name value must not contain a single quote')\n"
-	"WHERE NEW.network_name LIKE ('%''%');\n"
-	"SELECT RAISE(ABORT,'insert on networks violates constraint: "
-	"network_name value must not contain a double quote')\n"
-	"WHERE NEW.network_name LIKE ('%\"%');\n"
-	"SELECT RAISE(ABORT,'insert on networks violates constraint: "
-	"network_name value must be lower case')\n"
-	"WHERE NEW.network_name <> lower(NEW.network_name);\nEND";
-    ret = sqlite3_exec (handle, sql, NULL, NULL, &err_msg);
-    if (ret != SQLITE_OK)
-      {
-	  spatialite_e ("SQL error: %s\n", err_msg);
-	  sqlite3_free (err_msg);
-	  return 0;
-      }
-    sql = "CREATE TRIGGER IF NOT EXISTS network_name_update\n"
-	"BEFORE UPDATE OF 'network_name' ON 'networks'\nFOR EACH ROW BEGIN\n"
-	"SELECT RAISE(ABORT,'update on networks violates constraint: "
-	"network_name value must not contain a single quote')\n"
-	"WHERE NEW.network_name LIKE ('%''%');\n"
-	"SELECT RAISE(ABORT,'update on networks violates constraint: "
-	"network_name value must not contain a double quote')\n"
-	"WHERE NEW.network_name LIKE ('%\"%');\n"
-	"SELECT RAISE(ABORT,'update on networks violates constraint: "
-	"network_name value must be lower case')\n"
-	"WHERE NEW.network_name <> lower(NEW.network_name);\nEND";
-    ret = sqlite3_exec (handle, sql, NULL, NULL, &err_msg);
-    if (ret != SQLITE_OK)
-      {
-	  spatialite_e ("SQL error: %s\n", err_msg);
-	  sqlite3_free (err_msg);
-	  return 0;
-      }
-
+    if (!do_create_networks_triggers (handle))
+	return 0;
     return 1;
 }
 
@@ -1451,11 +1531,6 @@ gaiaNetworkDrop (sqlite3 * handle, const char *network_name)
 /* attempting to drop an already existing Network */
     int ret;
     char *sql;
-    int i;
-    char **results;
-    int rows;
-    int columns;
-    int count = 1;
 
 /* creating the Networks table (just in case) */
     if (!do_create_networks (handle))
@@ -1482,28 +1557,6 @@ gaiaNetworkDrop (sqlite3 * handle, const char *network_name)
     sqlite3_free (sql);
     if (ret != SQLITE_OK)
 	goto error;
-
-/* counting how many Networks are still there */
-    sql = sqlite3_mprintf ("SELECT Count(*) FROM MAIN.networks");
-    ret = sqlite3_get_table (handle, sql, &results, &rows, &columns, NULL);
-    sqlite3_free (sql);
-    if (ret != SQLITE_OK)
-	return 1;
-    if (rows < 1)
-	;
-    else
-      {
-	  for (i = 1; i <= rows; i++)
-	      count = atoi (results[(i * columns) + 0]);
-      }
-    sqlite3_free_table (results);
-    if (count == 0)
-      {
-	  /* attempting to drop the master "networks" table */
-	  sql = sqlite3_mprintf ("DROP TABLE MAIN.networks");
-	  ret = sqlite3_exec (handle, sql, NULL, NULL, NULL);
-	  sqlite3_free (sql);
-      }
 
     return 1;
 
@@ -3177,6 +3230,218 @@ gaiaTopoNetUpdateSeeds (GaiaNetworkAccessorPtr accessor, int incremental_mode)
     return 1;
 }
 
+static gaiaGeomCollPtr
+do_interpolate_middlepoint (gaiaGeomCollPtr geom)
+{
+/* building a three-point segment */
+    gaiaGeomCollPtr newg;
+    gaiaLinestringPtr old_ln;
+    gaiaLinestringPtr new_ln;
+    double x0;
+    double y0;
+    double z0;
+    double x1;
+    double y1;
+    double z1;
+    double mx;
+    double my;
+    double mz;
+
+    if (geom == NULL)
+	return NULL;
+    if (geom->FirstPoint != NULL || geom->FirstPolygon != NULL)
+	return NULL;
+    if (geom->FirstLinestring != geom->LastLinestring)
+	return NULL;
+    old_ln = geom->FirstLinestring;
+    if (old_ln == NULL)
+	return NULL;
+    if (old_ln->Points != 2)
+	return NULL;
+
+    if (geom->DimensionModel == GAIA_XY_Z)
+      {
+	  gaiaGetPointXYZ (old_ln->Coords, 0, &x0, &y0, &z0);
+	  gaiaGetPointXYZ (old_ln->Coords, 1, &x1, &y1, &z1);
+	  newg = gaiaAllocGeomCollXYZ ();
+      }
+    else
+      {
+	  gaiaGetPoint (old_ln->Coords, 0, &x0, &y0);
+	  gaiaGetPoint (old_ln->Coords, 1, &x1, &y1);
+	  newg = gaiaAllocGeomColl ();
+      }
+    newg->Srid = geom->Srid;
+
+    if (x0 > x1)
+	mx = x1 + ((x0 - x1) / 2.0);
+    else
+	mx = x0 + ((x1 - x0) / 2.0);
+    if (y0 > y1)
+	my = y1 + ((y0 - y1) / 2.0);
+    else
+	my = y0 + ((y1 - y0) / 2.0);
+    if (geom->DimensionModel == GAIA_XY_Z)
+      {
+	  if (z0 > z1)
+	      mz = z1 + ((z0 - z1) / 2.0);
+	  else
+	      mz = z0 + ((z1 - z0) / 2.0);
+      }
+
+    new_ln = gaiaAddLinestringToGeomColl (newg, 3);
+    if (newg->DimensionModel == GAIA_XY_Z)
+      {
+	  gaiaSetPointXYZ (new_ln->Coords, 0, x0, y0, z0);
+	  gaiaSetPointXYZ (new_ln->Coords, 1, mx, my, mz);
+	  gaiaSetPointXYZ (new_ln->Coords, 2, x1, y1, z1);
+      }
+    else
+      {
+	  gaiaSetPoint (new_ln->Coords, 0, x0, y0);
+	  gaiaSetPoint (new_ln->Coords, 1, mx, my);
+	  gaiaSetPoint (new_ln->Coords, 2, x1, y1);
+      }
+
+    return newg;
+}
+
+GAIANET_DECLARE int
+gaiaTopoNet_DisambiguateSegmentLinks (GaiaNetworkAccessorPtr accessor)
+{
+/*
+/ Ensures that all Links on a Topology-Network will have not less
+/ than three vertices; for all Links found beign simple two-points 
+/ segments a third intermediate point will be interpolated.
+*/
+    struct gaia_network *net = (struct gaia_network *) accessor;
+    int ret;
+    char *sql;
+    char *link;
+    char *xlink;
+    sqlite3_stmt *stmt_in = NULL;
+    sqlite3_stmt *stmt_out = NULL;
+    int count = 0;
+    if (net == NULL)
+	return -1;
+
+/* preparing the SQL query identifying all two-points Links */
+    link = sqlite3_mprintf ("%s_link", net->network_name);
+    xlink = gaiaDoubleQuotedSql (link);
+    sqlite3_free (link);
+    sql =
+	sqlite3_mprintf
+	("SELECT link_id, geometry FROM \"%s\" WHERE ST_NumPoints(geometry) = 2 "
+	 "ORDER BY link_id", xlink);
+    free (xlink);
+    ret =
+	sqlite3_prepare_v2 (net->db_handle, sql, strlen (sql), &stmt_in, NULL);
+    sqlite3_free (sql);
+    if (ret != SQLITE_OK)
+      {
+	  char *msg =
+	      sqlite3_mprintf ("TopoNet_DisambiguateSegmentLinks error: \"%s\"",
+			       sqlite3_errmsg (net->db_handle));
+	  gaianet_set_last_error_msg (accessor, msg);
+	  sqlite3_free (msg);
+	  goto error;
+      }
+
+/* preparing the UPDATE SQL query */
+    sql =
+	sqlite3_mprintf ("SELECT ST_ChangeLinkGeom(%Q, ?, ?)",
+			 net->network_name);
+    ret =
+	sqlite3_prepare_v2 (net->db_handle, sql, strlen (sql), &stmt_out, NULL);
+    sqlite3_free (sql);
+    if (ret != SQLITE_OK)
+      {
+	  char *msg =
+	      sqlite3_mprintf ("TopoNet_DisambiguateSegmentLinks error: \"%s\"",
+			       sqlite3_errmsg (net->db_handle));
+	  gaianet_set_last_error_msg (accessor, msg);
+	  sqlite3_free (msg);
+	  goto error;
+      }
+
+    while (1)
+      {
+	  /* scrolling the result set rows */
+	  ret = sqlite3_step (stmt_in);
+	  if (ret == SQLITE_DONE)
+	      break;		/* end of result set */
+	  if (ret == SQLITE_ROW)
+	    {
+		sqlite3_int64 link_id = sqlite3_column_int64 (stmt_in, 0);
+		if (sqlite3_column_type (stmt_in, 1) == SQLITE_BLOB)
+		  {
+		      const unsigned char *blob =
+			  sqlite3_column_blob (stmt_in, 1);
+		      int blob_sz = sqlite3_column_bytes (stmt_in, 1);
+		      gaiaGeomCollPtr geom =
+			  gaiaFromSpatiaLiteBlobWkb (blob, blob_sz);
+		      if (geom != NULL)
+			{
+			    gaiaGeomCollPtr newg =
+				do_interpolate_middlepoint (geom);
+			    gaiaFreeGeomColl (geom);
+			    if (newg != NULL)
+			      {
+				  unsigned char *outblob = NULL;
+				  int outblob_size = 0;
+				  sqlite3_reset (stmt_out);
+				  sqlite3_clear_bindings (stmt_out);
+				  sqlite3_bind_int64 (stmt_out, 1, link_id);
+				  gaiaToSpatiaLiteBlobWkb (newg, &outblob,
+							   &outblob_size);
+				  gaiaFreeGeomColl (newg);
+				  if (blob == NULL)
+				      continue;
+				  else
+				      sqlite3_bind_blob (stmt_out, 2, outblob,
+							 outblob_size, free);
+				  /* updating the Links table */
+				  ret = sqlite3_step (stmt_out);
+				  if (ret == SQLITE_DONE || ret == SQLITE_ROW)
+				      count++;
+				  else
+				    {
+					char *msg =
+					    sqlite3_mprintf
+					    ("TopoNet_DisambiguateSegmentLinks() error: \"%s\"",
+					     sqlite3_errmsg (net->db_handle));
+					gaianet_set_last_error_msg ((GaiaNetworkAccessorPtr) net, msg);
+					sqlite3_free (msg);
+					goto error;
+				    }
+			      }
+			}
+		  }
+	    }
+	  else
+	    {
+		char *msg =
+		    sqlite3_mprintf
+		    ("TopoNet_DisambiguateSegmentLinks error: \"%s\"",
+		     sqlite3_errmsg (net->db_handle));
+		gaianet_set_last_error_msg (accessor, msg);
+		sqlite3_free (msg);
+		goto error;
+	    }
+      }
+
+    sqlite3_finalize (stmt_in);
+    sqlite3_finalize (stmt_out);
+    return count;
+
+  error:
+    if (stmt_out != NULL)
+	sqlite3_finalize (stmt_in);
+    if (stmt_out != NULL)
+	sqlite3_finalize (stmt_out);
+    return -1;
+}
+
 static void
 do_eval_toponet_point (struct gaia_network *net, gaiaGeomCollPtr result,
 		       gaiaGeomCollPtr reference, sqlite3_stmt * stmt_node)
@@ -3458,12 +3723,14 @@ do_eval_toponet_seeds (struct gaia_network *net, sqlite3_stmt * stmt_ref,
 				  unsigned char *p_blob;
 				  int n_bytes;
 				  int gpkg_mode = 0;
+				  int tiny_point = 0;
 				  if (net->cache != NULL)
 				    {
 					struct splite_internal_cache *cache =
 					    (struct splite_internal_cache
 					     *) (net->cache);
 					gpkg_mode = cache->gpkg_mode;
+					tiny_point = cache->tinyPointEnabled;
 				    }
 				  result =
 				      do_eval_toponet_geom (net, geom,
@@ -3474,10 +3741,11 @@ do_eval_toponet_seeds (struct gaia_network *net, sqlite3_stmt * stmt_ref,
 				  gaiaFreeGeomColl (geom);
 				  if (result != NULL)
 				    {
-					gaiaToSpatiaLiteBlobWkbEx (result,
-								   &p_blob,
-								   &n_bytes,
-								   gpkg_mode);
+					gaiaToSpatiaLiteBlobWkbEx2 (result,
+								    &p_blob,
+								    &n_bytes,
+								    gpkg_mode,
+								    tiny_point);
 					gaiaFreeGeomColl (result);
 					sqlite3_bind_blob (stmt_ins, icol + 1,
 							   p_blob, n_bytes,
@@ -3839,6 +4107,392 @@ gaiaTopoNet_ToGeoTable (GaiaNetworkAccessorPtr accessor,
     return gaiaTopoNet_ToGeoTableGeneralize (accessor, db_prefix, ref_table,
 					     ref_column, out_table, -1.0,
 					     with_spatial_index);
+}
+
+static int
+find_linelink_matches (struct gaia_network *network,
+		       sqlite3_stmt * stmt_ref, sqlite3_stmt * stmt_ins,
+		       sqlite3_int64 link_id, const unsigned char *blob,
+		       int blob_sz)
+{
+/* retrieving LineLink relationships */
+    int ret;
+    int count = 0;
+    char direction[2];
+    strcpy (direction, "?");
+
+    sqlite3_reset (stmt_ref);
+    sqlite3_clear_bindings (stmt_ref);
+    sqlite3_bind_int64 (stmt_ref, 1, link_id);
+
+    while (1)
+      {
+	  /* scrolling the result set rows - Spatial Relationships */
+	  ret = sqlite3_step (stmt_ref);
+	  if (ret == SQLITE_DONE)
+	      break;		/* end of result set */
+	  if (ret == SQLITE_ROW)
+	    {
+		sqlite3_int64 rowid = sqlite3_column_int64 (stmt_ref, 0);
+
+		if (sqlite3_column_type (stmt_ref, 1) == SQLITE_BLOB)
+		  {
+		      /* testing directions */
+		      gaiaGeomCollPtr geom_link = NULL;
+		      gaiaGeomCollPtr geom_line = NULL;
+		      const unsigned char *blob2 =
+			  sqlite3_column_blob (stmt_ref, 1);
+		      int blob2_sz = sqlite3_column_bytes (stmt_ref, 1);
+		      geom_link = gaiaFromSpatiaLiteBlobWkb (blob, blob_sz);
+		      geom_line = gaiaFromSpatiaLiteBlobWkb (blob2, blob2_sz);
+		      if (geom_link != NULL && geom_line != NULL)
+			  gaia_do_check_direction (geom_link, geom_line,
+						   direction);
+		      if (geom_link != NULL)
+			  gaiaFreeGeomColl (geom_link);
+		      if (geom_line != NULL)
+			  gaiaFreeGeomColl (geom_line);
+		  }
+
+		sqlite3_reset (stmt_ins);
+		sqlite3_clear_bindings (stmt_ins);
+		sqlite3_bind_int64 (stmt_ins, 1, link_id);
+		sqlite3_bind_int64 (stmt_ins, 2, rowid);
+		sqlite3_bind_text (stmt_ins, 3, direction, 1, SQLITE_STATIC);
+		/* inserting a row into the output table */
+		ret = sqlite3_step (stmt_ins);
+		if (ret == SQLITE_DONE || ret == SQLITE_ROW)
+		    count++;
+		else
+		  {
+		      char *msg =
+			  sqlite3_mprintf ("LineLinksList error: \"%s\"",
+					   sqlite3_errmsg (network->db_handle));
+		      gaianet_set_last_error_msg ((GaiaNetworkAccessorPtr)
+						  network, msg);
+		      sqlite3_free (msg);
+		      return 0;
+		  }
+	    }
+	  else
+	    {
+		char *msg = sqlite3_mprintf ("LineLinksList error: \"%s\"",
+					     sqlite3_errmsg
+					     (network->db_handle));
+		gaianet_set_last_error_msg ((GaiaNetworkAccessorPtr) network,
+					    msg);
+		sqlite3_free (msg);
+		return 0;
+	    }
+      }
+
+    if (count == 0)
+      {
+	  /* unrelated Link */
+	  sqlite3_reset (stmt_ins);
+	  sqlite3_clear_bindings (stmt_ins);
+	  sqlite3_bind_int64 (stmt_ins, 1, link_id);
+	  sqlite3_bind_null (stmt_ins, 2);
+	  sqlite3_bind_null (stmt_ins, 3);
+	  /* inserting a row into the output table */
+	  ret = sqlite3_step (stmt_ins);
+	  if (ret == SQLITE_DONE || ret == SQLITE_ROW)
+	      ;
+	  else
+	    {
+		char *msg = sqlite3_mprintf ("LineLinksList error: \"%s\"",
+					     sqlite3_errmsg
+					     (network->db_handle));
+		gaianet_set_last_error_msg ((GaiaNetworkAccessorPtr) network,
+					    msg);
+		sqlite3_free (msg);
+		return 0;
+	    }
+      }
+    return 1;
+}
+
+static int
+insert_linelink_reverse (struct gaia_network *network, sqlite3_stmt * stmt_ins,
+			 sqlite3_int64 polygon_id)
+{
+/* found a mismatching RefLinestring - inserting into the output table */
+    int ret;
+
+    sqlite3_reset (stmt_ins);
+    sqlite3_clear_bindings (stmt_ins);
+    sqlite3_bind_null (stmt_ins, 1);
+    sqlite3_bind_int64 (stmt_ins, 2, polygon_id);
+    sqlite3_bind_null (stmt_ins, 3);
+    /* inserting a row into the output table */
+    ret = sqlite3_step (stmt_ins);
+    if (ret == SQLITE_DONE || ret == SQLITE_ROW)
+	;
+    else
+      {
+	  char *msg = sqlite3_mprintf ("LineLinksList error: \"%s\"",
+				       sqlite3_errmsg (network->db_handle));
+	  gaianet_set_last_error_msg ((GaiaNetworkAccessorPtr) network, msg);
+	  sqlite3_free (msg);
+	  return 0;
+      }
+    return 1;
+}
+
+GAIANET_DECLARE int
+gaiaTopoNet_LineLinksList (GaiaNetworkAccessorPtr accessor,
+			   const char *db_prefix, const char *ref_table,
+			   const char *ref_column, const char *out_table)
+{
+/* creating and populating a new Table reporting about Links/Linestring correspondencies */
+    struct gaia_network *network = (struct gaia_network *) accessor;
+    sqlite3_stmt *stmt_links = NULL;
+    sqlite3_stmt *stmt_ref = NULL;
+    sqlite3_stmt *stmt_rev = NULL;
+    sqlite3_stmt *stmt_ins = NULL;
+    int ret;
+    char *sql;
+    char *table;
+    char *idx_name;
+    char *xtable;
+    char *xprefix;
+    char *xcolumn;
+    char *xidx_name;
+    char *rtree_name;
+    char *seeds;
+    char *xseeds;
+    int ref_has_spatial_index = 0;
+    if (network == NULL)
+	return 0;
+
+/* attempting to build the output table */
+    xtable = gaiaDoubleQuotedSql (out_table);
+    sql = sqlite3_mprintf ("CREATE TABLE main.\"%s\" (\n"
+			   "\tid INTEGER PRIMARY KEY AUTOINCREMENT,\n"
+			   "\tlink_id INTEGER,\n"
+			   "\tref_rowid INTEGER,\n"
+			   "\tdirection TEXT)", xtable);
+    free (xtable);
+    ret = sqlite3_exec (network->db_handle, sql, NULL, NULL, NULL);
+    sqlite3_free (sql);
+    if (ret != SQLITE_OK)
+      {
+	  char *msg = sqlite3_mprintf ("LineLinksList error: \"%s\"",
+				       sqlite3_errmsg (network->db_handle));
+	  gaianet_set_last_error_msg (accessor, msg);
+	  sqlite3_free (msg);
+	  goto error;
+      }
+    idx_name = sqlite3_mprintf ("idx_%s_link_id", out_table);
+    xidx_name = gaiaDoubleQuotedSql (idx_name);
+    sqlite3_free (idx_name);
+    xtable = gaiaDoubleQuotedSql (out_table);
+    sql =
+	sqlite3_mprintf
+	("CREATE INDEX main.\"%s\" ON \"%s\" (link_id, ref_rowid)", xidx_name,
+	 xtable);
+    free (xidx_name);
+    free (xtable);
+    ret = sqlite3_exec (network->db_handle, sql, NULL, NULL, NULL);
+    sqlite3_free (sql);
+    if (ret != SQLITE_OK)
+      {
+	  char *msg = sqlite3_mprintf ("LineLinksList error: \"%s\"",
+				       sqlite3_errmsg (network->db_handle));
+	  gaianet_set_last_error_msg (accessor, msg);
+	  sqlite3_free (msg);
+	  goto error;
+      }
+
+/* building the Links SQL statement */
+    table = sqlite3_mprintf ("%s_link", network->network_name);
+    xtable = gaiaDoubleQuotedSql (table);
+    sqlite3_free (table);
+    sql = sqlite3_mprintf ("SELECT link_id, geometry FROM main.\"%s\"", xtable);
+    free (xtable);
+    ret =
+	sqlite3_prepare_v2 (network->db_handle, sql, strlen (sql), &stmt_links,
+			    NULL);
+    sqlite3_free (sql);
+    if (ret != SQLITE_OK)
+      {
+	  char *msg = sqlite3_mprintf ("LineLinksList error: \"%s\"",
+				       sqlite3_errmsg (network->db_handle));
+	  gaianet_set_last_error_msg (accessor, msg);
+	  sqlite3_free (msg);
+	  goto error;
+      }
+
+/* building the RefTable SQL statement */
+    seeds = sqlite3_mprintf ("%s_seeds", network->network_name);
+    rtree_name = sqlite3_mprintf ("DB=%s.%s", db_prefix, ref_table);
+    ref_has_spatial_index =
+	gaia_check_spatial_index (network->db_handle, db_prefix, ref_table,
+				  ref_column);
+    xprefix = gaiaDoubleQuotedSql (db_prefix);
+    xtable = gaiaDoubleQuotedSql (ref_table);
+    xcolumn = gaiaDoubleQuotedSql (ref_column);
+    xseeds = gaiaDoubleQuotedSql (seeds);
+    if (ref_has_spatial_index)
+	sql =
+	    sqlite3_mprintf
+	    ("SELECT r.rowid, r.\"%s\" FROM MAIN.\"%s\" AS s, \"%s\".\"%s\" AS r "
+	     "WHERE ST_Intersects(r.\"%s\", s.geometry) == 1 AND s.link_id = ? "
+	     "AND r.rowid IN (SELECT rowid FROM SpatialIndex WHERE f_table_name = %Q "
+	     "AND f_geometry_column = %Q AND search_frame = s.geometry)",
+	     xcolumn, xseeds, xprefix, xtable, xcolumn, rtree_name, xcolumn);
+    else
+	sql =
+	    sqlite3_mprintf
+	    ("SELECT r.rowid, r.\"%s\" FROM MAIN.\"%s\" AS s, \"%s\".\"%s\" AS r "
+	     "WHERE  ST_Intersects(r.\"%s\", s.geometry) == 1 AND s.link_id = ?",
+	     xcolumn, xseeds, xprefix, xtable, xcolumn);
+    free (xprefix);
+    free (xtable);
+    free (xcolumn);
+    free (xseeds);
+    sqlite3_free (rtree_name);
+    sqlite3_free (seeds);
+    ret =
+	sqlite3_prepare_v2 (network->db_handle, sql, strlen (sql), &stmt_ref,
+			    NULL);
+    sqlite3_free (sql);
+    if (ret != SQLITE_OK)
+      {
+	  char *msg = sqlite3_mprintf ("LineLinksList error: \"%s\"",
+				       sqlite3_errmsg (network->db_handle));
+	  gaianet_set_last_error_msg (accessor, msg);
+	  sqlite3_free (msg);
+	  goto error;
+      }
+
+/* building the Reverse RefTable SQL statement */
+    seeds = sqlite3_mprintf ("%s_seeds", network->network_name);
+    rtree_name = sqlite3_mprintf ("DB=%s.%s", db_prefix, ref_table);
+    xprefix = gaiaDoubleQuotedSql (db_prefix);
+    xtable = gaiaDoubleQuotedSql (ref_table);
+    xcolumn = gaiaDoubleQuotedSql (ref_column);
+    xseeds = gaiaDoubleQuotedSql (seeds);
+    sql = sqlite3_mprintf ("SELECT r.rowid FROM \"%s\".\"%s\" AS r "
+			   "LEFT JOIN MAIN.\"%s\" AS s ON (ST_Intersects(r.\"%s\", s.geometry) = 1 "
+			   "AND s.link_id IS NOT NULL AND s.rowid IN (SELECT rowid FROM SpatialIndex "
+			   "WHERE f_table_name = %Q AND search_frame = r.\"%s\")) "
+			   "WHERE s.link_id IS NULL", xprefix, xtable, xseeds,
+			   xcolumn, rtree_name, xcolumn);
+    free (xprefix);
+    free (xtable);
+    free (xcolumn);
+    free (xseeds);
+    sqlite3_free (rtree_name);
+    sqlite3_free (seeds);
+    ret =
+	sqlite3_prepare_v2 (network->db_handle, sql, strlen (sql), &stmt_rev,
+			    NULL);
+    sqlite3_free (sql);
+    if (ret != SQLITE_OK)
+      {
+	  char *msg = sqlite3_mprintf ("PolyFacesList error: \"%s\"",
+				       sqlite3_errmsg (network->db_handle));
+	  gaianet_set_last_error_msg (accessor, msg);
+	  sqlite3_free (msg);
+	  goto error;
+      }
+
+/* building the Insert SQL statement */
+    xtable = gaiaDoubleQuotedSql (out_table);
+    sql = sqlite3_mprintf ("INSERT INTO main.\"%s\" (id, link_id, ref_rowid, "
+			   "direction) VALUES (NULL, ?, ?, ?)", xtable);
+    free (xtable);
+    ret =
+	sqlite3_prepare_v2 (network->db_handle, sql, strlen (sql), &stmt_ins,
+			    NULL);
+    sqlite3_free (sql);
+    if (ret != SQLITE_OK)
+      {
+	  char *msg = sqlite3_mprintf ("LineLinksList error: \"%s\"",
+				       sqlite3_errmsg (network->db_handle));
+	  gaianet_set_last_error_msg (accessor, msg);
+	  sqlite3_free (msg);
+	  goto error;
+      }
+
+    while (1)
+      {
+	  /* scrolling the result set rows - Links */
+	  ret = sqlite3_step (stmt_links);
+	  if (ret == SQLITE_DONE)
+	      break;		/* end of result set */
+	  if (ret == SQLITE_ROW)
+	    {
+		sqlite3_int64 link_id = sqlite3_column_int64 (stmt_links, 0);
+		if (sqlite3_column_type (stmt_links, 1) == SQLITE_BLOB)
+		  {
+		      if (!find_linelink_matches
+			  (network, stmt_ref, stmt_ins, link_id,
+			   sqlite3_column_blob (stmt_links, 1),
+			   sqlite3_column_bytes (stmt_links, 1)))
+			  goto error;
+		  }
+		else
+		  {
+		      char *msg =
+			  sqlite3_mprintf
+			  ("LineLinksList error: Link not a BLOB value");
+		      gaianet_set_last_error_msg (accessor, msg);
+		      sqlite3_free (msg);
+		      goto error;
+		  }
+	    }
+	  else
+	    {
+		char *msg = sqlite3_mprintf ("LineLinksList error: \"%s\"",
+					     sqlite3_errmsg
+					     (network->db_handle));
+		gaianet_set_last_error_msg (accessor, msg);
+		sqlite3_free (msg);
+		goto error;
+	    }
+      }
+
+    while (1)
+      {
+	  /* scrolling the Reverse result set rows - Linestrings */
+	  ret = sqlite3_step (stmt_rev);
+	  if (ret == SQLITE_DONE)
+	      break;		/* end of result set */
+	  if (ret == SQLITE_ROW)
+	    {
+		sqlite3_int64 line_id = sqlite3_column_int64 (stmt_rev, 0);
+		if (!insert_linelink_reverse (network, stmt_ins, line_id))
+		    goto error;
+	    }
+	  else
+	    {
+		char *msg = sqlite3_mprintf ("LineLinksList error: \"%s\"",
+					     sqlite3_errmsg
+					     (network->db_handle));
+		gaianet_set_last_error_msg (accessor, msg);
+		sqlite3_free (msg);
+		goto error;
+	    }
+      }
+
+    sqlite3_finalize (stmt_links);
+    sqlite3_finalize (stmt_ref);
+    sqlite3_finalize (stmt_rev);
+    sqlite3_finalize (stmt_ins);
+    return 1;
+
+  error:
+    if (stmt_links != NULL)
+	sqlite3_finalize (stmt_links);
+    if (stmt_ref != NULL)
+	sqlite3_finalize (stmt_ref);
+    if (stmt_rev != NULL)
+	sqlite3_finalize (stmt_rev);
+    if (stmt_ins != NULL)
+	sqlite3_finalize (stmt_ins);
+    return 0;
 }
 
 #endif /* end RTTOPO conditionals */

@@ -2,7 +2,7 @@
  lwn_network_private.h -- private members and methods
  Topology-Network abstract multi-backend interface
   
- version 4.3, 2015 August 13
+ version 5.0, 2020 August 1
 
  Author: Sandro Furieri a.furieri@lqt.it
 
@@ -24,7 +24,7 @@ The Original Code is the SpatiaLite library
 
 The Initial Developer of the Original Code is Alessandro Furieri
  
-Portions created by the Initial Developer are Copyright (C) 2015
+Portions created by the Initial Developer are Copyright (C) 2015-2020
 the Initial Developer. All Rights Reserved.
 
 Contributor(s):
@@ -55,7 +55,7 @@ the terms of any one of the MPL, the GPL or the LGPL.
 
 struct LWN_BE_IFACE_T
 {
-	const RTCTX* ctx;
+    const RTCTX *ctx;
     const LWN_BE_DATA *data;
     const LWN_BE_CALLBACKS *cb;
     char *errorMsg;

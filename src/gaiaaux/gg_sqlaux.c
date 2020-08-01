@@ -2,7 +2,7 @@
 
  gg_sqlaux.c -- SQL ancillary functions
 
- version 4.3, 2015 June 29
+ version 5.0, 2020 August 1
 
  Author: Sandro Furieri a.furieri@lqt.it
 
@@ -24,7 +24,7 @@ The Original Code is the SpatiaLite library
 
 The Initial Developer of the Original Code is Alessandro Furieri
  
-Portions created by the Initial Developer are Copyright (C) 2008-2015
+Portions created by the Initial Developer are Copyright (C) 2008-2020
 the Initial Developer. All Rights Reserved.
 
 Contributor(s):
@@ -1149,6 +1149,13 @@ GAIAAUX_DECLARE char *
 gaiaConvertToDMS (double longitude, double latitude)
 {
 /* formatting a DMS string */
+    return gaiaConvertToDMS (longitude, latitude);
+}
+
+GAIAAUX_DECLARE char *
+gaiaConvertToDMSex (double longitude, double latitude, int decimal_digits)
+{
+/* formatting a DMS string */
     char *dms0;
     char *dms;
     char long_prefix = 'E';
@@ -1156,11 +1163,17 @@ gaiaConvertToDMS (double longitude, double latitude)
     int long_d;
     int long_m;
     int long_s;
+    double long_s_dbl;
     int lat_d;
     int lat_m;
     int lat_s;
+    double lat_s_dbl;
     double val;
     int len;
+    if (decimal_digits < 0)
+	decimal_digits = 0;
+    if (decimal_digits > 8)
+	decimal_digits = 8;
     if (longitude < -180.0 || longitude > 180.0)
 	return NULL;
     if (latitude < -90.0 || latitude > 90.0)
@@ -1179,6 +1192,7 @@ gaiaConvertToDMS (double longitude, double latitude)
     val = 60.0 * (longitude - (double) long_d);
     long_m = (int) floor (val);
     val = 60.0 * (val - (double) long_m);
+    long_s_dbl = val;
     long_s = (int) floor (val);
     if ((val - (double) long_s) > 0.5)
 	long_s++;
@@ -1187,18 +1201,33 @@ gaiaConvertToDMS (double longitude, double latitude)
     lat_m = (int) floor (val);
     val = 60.0 * (val - (double) lat_m);
     lat_s = (int) floor (val);
+    lat_s_dbl = val;
     if ((val - (double) lat_s) > 0.5)
 	lat_s++;
-    dms0 =
-	sqlite3_mprintf ("%02d°%02d′%02d″%c %03d°%02d′%02d″%c", lat_d,
-			 lat_m, lat_s, lat_prefix, long_d, long_m, long_s,
-			 long_prefix);
+    if (decimal_digits == 0)
+	dms0 =
+	    sqlite3_mprintf ("%02d°%02d′%02d″%c %03d°%02d′%02d″%c",
+			     lat_d, lat_m, lat_s, lat_prefix, long_d, long_m,
+			     long_s, long_prefix);
+    else
+      {
+	  char format[256];
+	  sprintf (format,
+		   "%%02d°%%02d′%%0%d.%df″%%c %%03d°%%02d′%%0%d.%df″%%c",
+		   decimal_digits + 3, decimal_digits, decimal_digits + 3,
+		   decimal_digits);
+	  dms0 =
+	      sqlite3_mprintf (format, lat_d, lat_m, lat_s_dbl, lat_prefix,
+			       long_d, long_m, long_s_dbl, long_prefix);
+      }
     len = strlen (dms0);
     dms = malloc (len + 1);
     strcpy (dms, dms0);
     sqlite3_free (dms0);
     return dms;
 }
+
+#if OMIT_ICONV == 0		/* ICONV is absolutely required */
 
 /*********************************************************************
 /
@@ -1220,18 +1249,24 @@ url_to_hex (char code)
 }
 
 GAIAAUX_DECLARE char *
-gaiaEncodeURL (const char *url)
+gaiaEncodeURL (const char *url, const char *out_charset)
 {
 /* encoding some URL */
     char *encoded = NULL;
-    const char *in = url;
+    const char *in;
+    char *utf8_url = NULL;
     char *out;
     int len;
     if (url == NULL)
 	return NULL;
+
+    utf8_url = url_fromUtf8 (url, out_charset);
+    if (utf8_url == NULL)
+	return NULL;
     len = strlen (url);
     if (len == 0)
 	return NULL;
+    in = utf8_url;
 
     encoded = malloc ((len * 3) + 1);
     out = encoded;
@@ -1240,8 +1275,6 @@ gaiaEncodeURL (const char *url)
 	  if (isalnum (*in) || *in == '-' || *in == '_' || *in == '.'
 	      || *in == '~')
 	      *out++ = *in;
-	  else if (*in == ' ')
-	      *out++ = '+';
 	  else
 	    {
 		*out++ = '%';
@@ -1251,6 +1284,7 @@ gaiaEncodeURL (const char *url)
 	  in++;
       }
     *out = '\0';
+    free (utf8_url);
     return encoded;
 }
 
@@ -1261,10 +1295,11 @@ url_from_hex (char ch)
 }
 
 GAIAAUX_DECLARE char *
-gaiaDecodeURL (const char *encoded)
+gaiaDecodeURL (const char *encoded, const char *in_charset)
 {
 /* decoding some URL */
     char *url = NULL;
+    char *utf8_url = NULL;
     const char *in = encoded;
     char *out;
     int len;
@@ -1295,8 +1330,12 @@ gaiaDecodeURL (const char *encoded)
 	  in++;
       }
     *out = '\0';
-    return url;
+    utf8_url = url_toUtf8 (url, in_charset);
+    free (url);
+    return utf8_url;
 }
+
+#endif /* ICONV enabled/disabled */
 
 GAIAAUX_DECLARE char *
 gaiaDirNameFromPath (const char *path)
@@ -1434,4 +1473,39 @@ gaiaFileExtFromPath (const char *path)
     name = malloc (len + 1);
     strcpy (name, path + pos + 1);
     return name;
+}
+
+GAIAAUX_DECLARE char *
+gaiaRemoveExtraSpaces (const char *string)
+{
+/* removing all repeated whitespaces from a string */
+    int len;
+    char *clean;
+    char *p;
+    int i;
+    int space = 0;
+
+    if (string == NULL)
+	return NULL;
+
+    len = strlen (string);
+    clean = malloc (len + 1);
+    p = clean;
+    for (i = 0; i < len; i++)
+      {
+	  int sp = 0;
+	  if (string[i] == ' ' || string[i] == '\t')
+	      sp = 1;
+	  else
+	      sp = 0;
+	  if (space && sp)
+	      continue;
+	  *p++ = string[i];
+	  if (sp)
+	      space = 1;
+	  else
+	      space = 0;
+      }
+    *p = '\0';
+    return clean;
 }

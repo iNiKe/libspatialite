@@ -1,7 +1,7 @@
 /*
  lwn_network.h -- Topology-Network abstract multi-backend interface
   
- version 4.3, 2015 August 12
+ version 5.0, 2020 August 1
 
  Author: Sandro Furieri a.furieri@lqt.it
 
@@ -23,7 +23,7 @@ The Original Code is the SpatiaLite library
 
 The Initial Developer of the Original Code is Alessandro Furieri
  
-Portions created by the Initial Developer are Copyright (C) 2015
+Portions created by the Initial Developer are Copyright (C) 2015-2020
 the Initial Developer. All Rights Reserved.
 
 Contributor(s):
@@ -490,7 +490,8 @@ typedef struct LWN_BE_CALLBACKS_T
  * @param ctx librtgeom context, create with rtgeom_init
  * @param data Backend data, passed as first parameter to all callback functions
  */
-LWN_BE_IFACE *lwn_CreateBackendIface (const RTCTX* ctx, const LWN_BE_DATA * data);
+LWN_BE_IFACE *lwn_CreateBackendIface (const RTCTX * ctx,
+				      const LWN_BE_DATA * data);
 
 /**
  * Register backend callbacks into the opaque iface handler

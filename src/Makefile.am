@@ -15,9 +15,10 @@ SUBDIRS = headers \
 	md5 \
 	control_points \
 	cutter \
-	topology
+	topology \
+	stored_procedures
 
-AM_CPPFLAGS = @CFLAGS@
+AM_CPPFLAGS = @CFLAGS@ @CPPFLAGS@
 AM_CPPFLAGS += -I$(top_srcdir)/src/headers
 AM_CPPFLAGS += -I$(top_srcdir)
 
@@ -41,6 +42,7 @@ libspatialite_la_LIBADD = ./gaiaaux/libgaiaaux.la \
 	./cutter/libcutter.la \
 	./topology/libtopology.la \
 	./srsinit/libsrsinit.la \
+	./stored_procedures/libstored_procedures.la \
 	./connection_cache/libconnection_cache.la \
 	./virtualtext/libvirtualtext.la \
 	./wfs/libwfs.la @LIBXML2_LIBS@
@@ -72,11 +74,12 @@ mod_spatialite_la_LIBADD = ./gaiaaux/gaiaaux.la \
 	./cutter/cutter.la \
 	./topology/topology.la \
 	./srsinit/srsinit.la \
+	./stored_procedures/stored_procedures.la \
 	./connection_cache/connection_cache.la \
 	./virtualtext/virtualtext.la \
 	./wfs/wfs.la @LIBXML2_LIBS@
 
-mod_spatialite_la_CPPFLAGS = @CFLAGS@
+mod_spatialite_la_CPPFLAGS = @CFLAGS@ @CPPFLAGS@
 mod_spatialite_la_CPPFLAGS += -I$(top_srcdir)/src/headers -I.
 mod_spatialite_la_CPPFLAGS += -DLOADABLE_EXTENSION
 mod_spatialite_la_LIBTOOLFLAGS = --tag=disable-static

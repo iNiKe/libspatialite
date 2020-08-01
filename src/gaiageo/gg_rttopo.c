@@ -2,7 +2,7 @@
 
  gg_rttopo.c -- Gaia RTTOPO support
     
- version 4.5, 2016 April 18
+ version 5.0, 2020 August 1
 
  Author: Sandro Furieri a.furieri@lqt.it
 
@@ -24,7 +24,7 @@ The Original Code is the SpatiaLite library
 
 The Initial Developer of the Original Code is Alessandro Furieri
  
-Portions created by the Initial Developer are Copyright (C) 2012-2015
+Portions created by the Initial Developer are Copyright (C) 2012-2020
 the Initial Developer. All Rights Reserved.
 
 Contributor(s):
@@ -61,6 +61,7 @@ the current version depends on the newer RTTOPO support
 #include <stdio.h>
 #include <string.h>
 #include <float.h>
+#include <math.h>
 
 #if defined(_WIN32) && !defined(__MINGW32__)
 #include "config-msvc.h"
@@ -78,6 +79,12 @@ the current version depends on the newer RTTOPO support
 #ifdef ENABLE_RTTOPO		/* enabling RTTOPO support */
 
 #include <librttopo_geom.h>
+
+extern char *rtgeom_to_encoded_polyline (const RTCTX * ctx, const RTGEOM * geom,
+					 int precision);
+static RTGEOM *rtgeom_from_encoded_polyline (const RTCTX * ctx,
+					     const char *encodedpolyline,
+					     int precision);
 
 SPATIALITE_PRIVATE const char *
 splite_rttopo_version (void)
@@ -233,10 +240,12 @@ check_unclosed_ring (gaiaRingPtr rng)
     return 1;
 }
 
-static RTGEOM *
-toRTGeom (const RTCTX * ctx, const gaiaGeomCollPtr gaia)
+SPATIALITE_PRIVATE void *
+toRTGeom (const void *pctx, const void *pgaia)
 {
 /* converting a GAIA Geometry into a RTGEOM Geometry */
+    const RTCTX *ctx = (const RTCTX *) pctx;
+    const gaiaGeomCollPtr gaia = (const gaiaGeomCollPtr) pgaia;
     int pts = 0;
     int lns = 0;
     int pgs = 0;
@@ -1184,12 +1193,14 @@ fromRTGeomIncremental (const RTCTX * ctx, gaiaGeomCollPtr gaia,
     return gaia;
 }
 
-static gaiaGeomCollPtr
-fromRTGeom (const RTCTX * ctx, const RTGEOM * rtgeom, const int dimension_model,
+SPATIALITE_PRIVATE void *
+fromRTGeom (const void *pctx, const void *prtgeom, const int dimension_model,
 	    const int declared_type)
 {
 /* converting a RTGEOM Geometry into a GAIA Geometry */
     gaiaGeomCollPtr gaia = NULL;
+    const RTCTX *ctx = (const RTCTX *) pctx;
+    const RTGEOM *rtgeom = (const RTGEOM *) prtgeom;
 
     if (rtgeom == NULL)
 	return NULL;
@@ -2609,5 +2620,308 @@ gaiaNodeLines (const void *p_cache, gaiaGeomCollPtr geom)
   done:
     return result;
 }
+
+GAIAGEO_DECLARE gaiaGeomCollPtr
+gaiaSubdivide (const void *p_cache, gaiaGeomCollPtr geom, int max_vertices)
+{
+/* wrapping RTGEOM rtgeom_node */
+    const RTCTX *ctx = NULL;
+    struct splite_internal_cache *cache =
+	(struct splite_internal_cache *) p_cache;
+    RTGEOM *g1;
+    RTCOLLECTION *g2;
+    gaiaGeomCollPtr result = NULL;
+    int i;
+
+    if (!geom)
+	return NULL;
+    if (cache == NULL)
+	return NULL;
+    if (cache->magic1 != SPATIALITE_CACHE_MAGIC1
+	|| cache->magic2 != SPATIALITE_CACHE_MAGIC2)
+	return NULL;
+    ctx = cache->RTTOPO_handle;
+    if (ctx == NULL)
+	return NULL;
+
+    g1 = toRTGeom (ctx, geom);
+    g2 = rtgeom_subdivide (ctx, g1, max_vertices);
+    if (!g2)
+      {
+	  rtgeom_free (ctx, g1);
+	  goto done;
+      }
+
+/* building the subdivided geometry to be returned */
+    if (geom->DimensionModel == GAIA_XY_Z)
+	result = gaiaAllocGeomCollXYZ ();
+    else if (geom->DimensionModel == GAIA_XY_M)
+	result = gaiaAllocGeomCollXYM ();
+    else if (geom->DimensionModel == GAIA_XY_Z_M)
+	result = gaiaAllocGeomCollXYZM ();
+    else
+	result = gaiaAllocGeomColl ();
+    for (i = 0; i < g2->ngeoms; i++)
+      {
+	  RTGEOM *g3 = *(g2->geoms + i);
+	  fromRTGeomIncremental (ctx, result, g3);
+      }
+    spatialite_init_geos ();
+    rtgeom_free (ctx, g1);
+    rtcollection_free (ctx, g2);
+    if (result == NULL)
+	goto done;
+    result->Srid = geom->Srid;
+
+  done:
+    return result;
+}
+
+GAIAGEO_DECLARE int
+gaiaToTWKB (const void *p_cache, gaiaGeomCollPtr geom,
+	    unsigned char precision_xy, unsigned char precision_z,
+	    unsigned char precision_m, int with_size, int with_bbox,
+	    unsigned char **twkb, int *size_twkb)
+{
+/* wrapping RTGEOM rtgeom_to_twkb */
+    const RTCTX *ctx = NULL;
+    struct splite_internal_cache *cache =
+	(struct splite_internal_cache *) p_cache;
+    unsigned char variant = 0;
+    RTGEOM *g;
+    unsigned char *p_twkb;
+    size_t twkb_size;
+
+    *twkb = NULL;
+    *size_twkb = 0;
+
+    if (!geom)
+	return 0;
+    if (cache == NULL)
+	return 0;
+    if (cache->magic1 != SPATIALITE_CACHE_MAGIC1
+	|| cache->magic2 != SPATIALITE_CACHE_MAGIC2)
+	return 0;
+    ctx = cache->RTTOPO_handle;
+    if (ctx == NULL)
+	return 0;
+
+    if (with_size)
+	variant |= TWKB_SIZE;
+    if (with_bbox)
+	variant |= TWKB_BBOX;
+
+    g = toRTGeom (ctx, geom);
+    p_twkb =
+	rtgeom_to_twkb (ctx, g, variant, precision_xy, precision_z, precision_m,
+			&twkb_size);
+    rtgeom_free (ctx, g);
+
+    if (p_twkb == NULL)
+	return 0;
+    *twkb = p_twkb;
+    *size_twkb = twkb_size;
+    return 1;
+}
+
+GAIAGEO_DECLARE gaiaGeomCollPtr
+gaiaFromTWKB (const void *p_cache, const unsigned char *twkb, int twkb_size,
+	      int srid)
+{
+/* wrapping RTGEOM rtgeom_from_twkb */
+    const RTCTX *ctx = NULL;
+    int dims = GAIA_XY_Z_M;
+    int type = GAIA_GEOMETRYCOLLECTION;
+    struct splite_internal_cache *cache =
+	(struct splite_internal_cache *) p_cache;
+    RTGEOM *g;
+    gaiaGeomCollPtr result;
+
+    if (twkb == NULL)
+	return NULL;
+    if (cache == NULL)
+	return NULL;
+    if (cache->magic1 != SPATIALITE_CACHE_MAGIC1
+	|| cache->magic2 != SPATIALITE_CACHE_MAGIC2)
+	return NULL;
+    ctx = cache->RTTOPO_handle;
+    if (ctx == NULL)
+	return NULL;
+
+    g = rtgeom_from_twkb (ctx, (unsigned char *) twkb, twkb_size, 0);
+    if (g == NULL)
+	return NULL;
+    if ((*(twkb + 0) & 0x01) == 0x01)
+	type = GAIA_POINT;
+    if ((*(twkb + 0) & 0x02) == 0x02)
+	type = GAIA_LINESTRING;
+    if ((*(twkb + 0) & 0x03) == 0x03)
+	type = GAIA_POLYGON;
+    if ((*(twkb + 0) & 0x04) == 0x04)
+	type = GAIA_MULTIPOINT;
+    if ((*(twkb + 0) & 0x05) == 0x05)
+	type = GAIA_MULTILINESTRING;
+    if ((*(twkb + 0) & 0x06) == 0x06)
+	type = GAIA_MULTIPOLYGON;
+    if ((*(twkb + 0) & 0x07) == 0x07)
+	type = GAIA_GEOMETRYCOLLECTION;
+    if ((*(twkb + 1) & 0x08) == 0x08)
+      {
+	  if ((*(twkb + 2) & 0x01) == 0x01)
+	      dims = GAIA_XY_Z;
+	  if ((*(twkb + 2) & 0x02) == 0x02)
+	      dims = GAIA_XY_M;
+	  if ((*(twkb + 2) & 0x03) == 0x03)
+	      dims = GAIA_XY_Z_M;
+      }
+    else
+	dims = GAIA_XY;
+    result = fromRTGeom (ctx, g, dims, type);
+    spatialite_init_geos ();
+    rtgeom_free (ctx, g);
+    if (result != NULL)
+	result->Srid = srid;
+    return result;
+}
+
+GAIAGEO_DECLARE int
+gaiaAsEncodedPolyLine (const void *p_cache, gaiaGeomCollPtr geom,
+		       unsigned char precision, char **encoded, int *len)
+{
+/* wrapping RTGEOM rtline_to_encoded_polyline */
+    const RTCTX *ctx = NULL;
+    struct splite_internal_cache *cache =
+	(struct splite_internal_cache *) p_cache;
+    RTGEOM *g;
+    char *p_encoded;
+
+    *encoded = NULL;
+    *len = 0;
+
+    if (!geom)
+	return 0;
+    if (cache == NULL)
+	return 0;
+    if (cache->magic1 != SPATIALITE_CACHE_MAGIC1
+	|| cache->magic2 != SPATIALITE_CACHE_MAGIC2)
+	return 0;
+    ctx = cache->RTTOPO_handle;
+    if (ctx == NULL)
+	return 0;
+
+    g = toRTGeom (ctx, geom);
+    p_encoded = rtgeom_to_encoded_polyline (ctx, g, precision);
+    rtgeom_free (ctx, g);
+
+    if (p_encoded == NULL)
+	return 0;
+    *encoded = p_encoded;
+    *len = strlen (p_encoded);
+    return 1;
+}
+
+GAIAGEO_DECLARE gaiaGeomCollPtr
+gaiaLineFromEncodedPolyline (const void *p_cache, const char *encoded,
+			     unsigned char precision)
+{
+/* wrapping RTGEOM rtline_from_encoded_polyline */
+    const RTCTX *ctx = NULL;
+    struct splite_internal_cache *cache =
+	(struct splite_internal_cache *) p_cache;
+    RTGEOM *g;
+    gaiaGeomCollPtr result;
+    int dims = GAIA_XY;
+    int type = GAIA_LINESTRING;
+
+    if (encoded == NULL)
+	return NULL;
+    if (cache == NULL)
+	return NULL;
+    if (cache->magic1 != SPATIALITE_CACHE_MAGIC1
+	|| cache->magic2 != SPATIALITE_CACHE_MAGIC2)
+	return NULL;
+    ctx = cache->RTTOPO_handle;
+    if (ctx == NULL)
+	return NULL;
+
+    g = rtgeom_from_encoded_polyline (ctx, encoded, precision);
+    if (g == NULL)
+	return NULL;
+    result = fromRTGeom (ctx, g, dims, type);
+    spatialite_init_geos ();
+    rtgeom_free (ctx, g);
+    if (result != NULL)
+	result->Srid = 4326;
+    return result;
+}
+
+static RTGEOM *
+rtgeom_from_encoded_polyline (const RTCTX * ctx, const char *encodedpolyline,
+			      int precision)
+{
+/*
+ * RTTOPO lacks an implementation of rtgeom_from_encoded_polyline
+ * 
+ * this simply is a rearranged version of the original code available
+ * on LWGOEM lwin_encoded_polyline.c
+ * 
+ * Copyright 2014 Kashif Rasul <kashif.rasul@gmail.com>
+ * 
+ * the original code was released under the terms of the GNU General 
+ * Public License as published by the Free Software Foundation, either
+ *  version 2 of the License, or (at your option) any later version.
+*/
+    RTGEOM *geom = NULL;
+    RTPOINTARRAY *pa = NULL;
+    int length = strlen (encodedpolyline);
+    int idx = 0;
+    double scale = pow (10, precision);
+
+    float latitude = 0.0f;
+    float longitude = 0.0f;
+
+    pa = ptarray_construct_empty (ctx, RT_FALSE, RT_FALSE, 1);
+
+    while (idx < length)
+      {
+	  RTPOINT4D pt;
+	  char byte = 0;
+
+	  int res = 0;
+	  char shift = 0;
+	  do
+	    {
+		byte = encodedpolyline[idx++] - 63;
+		res |= (byte & 0x1F) << shift;
+		shift += 5;
+	    }
+	  while (byte >= 0x20);
+	  float deltaLat = ((res & 1) ? ~(res >> 1) : (res >> 1));
+	  latitude += deltaLat;
+
+	  shift = 0;
+	  res = 0;
+	  do
+	    {
+		byte = encodedpolyline[idx++] - 63;
+		res |= (byte & 0x1F) << shift;
+		shift += 5;
+	    }
+	  while (byte >= 0x20);
+	  float deltaLon = ((res & 1) ? ~(res >> 1) : (res >> 1));
+	  longitude += deltaLon;
+
+	  pt.x = longitude / scale;
+	  pt.y = latitude / scale;
+	  pt.m = pt.z = 0.0;
+	  ptarray_append_point (ctx, pa, &pt, RT_FALSE);
+      }
+
+    geom = (RTGEOM *) rtline_construct (ctx, 4326, NULL, pa);
+    rtgeom_add_bbox (ctx, geom);
+
+    return geom;
+}
+
 
 #endif /* end enabling RTTOPO support */

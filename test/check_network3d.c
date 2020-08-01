@@ -51,6 +51,8 @@ the terms of any one of the MPL, the GPL or the LGPL.
 #include "sqlite3.h"
 #include "spatialite.h"
 
+#ifdef ENABLE_RTTOPO		/* only if RTTOPO is enabled */
+
 static int
 do_level2_tests (sqlite3 * handle, int *retcode)
 {
@@ -2190,6 +2192,7 @@ do_level0_tests (sqlite3 * handle, int *retcode)
     return 1;
 }
 
+#endif
 
 int
 main (int argc, char *argv[])
@@ -2201,9 +2204,6 @@ main (int argc, char *argv[])
     sqlite3 *handle;
     char *err_msg = NULL;
     void *cache = spatialite_alloc_connection ();
-
-    if (argc > 1 || argv[0] == NULL)
-	argc = 1;		/* silencing stupid compiler warnings */
 
     ret =
 	sqlite3_open_v2 (":memory:", &handle,
@@ -2218,6 +2218,15 @@ main (int argc, char *argv[])
 
     spatialite_init_ex (handle, cache, 0);
 
+    ret = sqlite3_exec (handle, "PRAGMA foreign_keys=1", NULL, NULL, &err_msg);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "PRAGMA foreign_keys=1 error: %s\n", err_msg);
+	  sqlite3_free (err_msg);
+	  sqlite3_close (handle);
+	  return -2;
+      }
+
     ret =
 	sqlite3_exec (handle, "SELECT InitSpatialMetadata(1)", NULL, NULL,
 		      &err_msg);
@@ -2226,7 +2235,7 @@ main (int argc, char *argv[])
 	  fprintf (stderr, "InitSpatialMetadata() error: %s\n", err_msg);
 	  sqlite3_free (err_msg);
 	  sqlite3_close (handle);
-	  return -2;
+	  return -3;
       }
 
 /* creating a Network 2D */
@@ -2238,7 +2247,7 @@ main (int argc, char *argv[])
 	  fprintf (stderr, "CreateNetwork() error: %s\n", err_msg);
 	  sqlite3_free (err_msg);
 	  sqlite3_close (handle);
-	  return -3;
+	  return -4;
       }
 
 /* basic tests: level 0 */
@@ -2262,7 +2271,7 @@ main (int argc, char *argv[])
 	  fprintf (stderr, "DropNetwork() error: %s\n", err_msg);
 	  sqlite3_free (err_msg);
 	  sqlite3_close (handle);
-	  return -4;
+	  return -5;
       }
 
   end:
@@ -2271,6 +2280,9 @@ main (int argc, char *argv[])
     spatialite_cleanup_ex (cache);
 
 #endif /* end RTTOPO conditional */
+
+    if (argc > 1 || argv[0] == NULL)
+	argc = 1;		/* silencing stupid compiler warnings */
 
     spatialite_shutdown ();
     return retcode;

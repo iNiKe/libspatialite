@@ -1,7 +1,7 @@
 /*
  topology_private.h -- Topology opaque definitions
   
- version 4.3, 2015 July 15
+ version 5.0, 2020 August 1
 
  Author: Sandro Furieri a.furieri@lqt.it
 
@@ -23,7 +23,7 @@ The Original Code is the SpatiaLite library
 
 The Initial Developer of the Original Code is Alessandro Furieri
  
-Portions created by the Initial Developer are Copyright (C) 2015
+Portions created by the Initial Developer are Copyright (C) 2015-202
 the Initial Developer. All Rights Reserved.
 
 Contributor(s):
@@ -59,6 +59,9 @@ the terms of any one of the MPL, the GPL or the LGPL.
 #endif
 #endif
 
+#define GAIA_MODE_TOPO_FACE		0x00
+#define GAIA_MODE_TOPO_NO_FACE	0xbb
+
 struct gaia_topology
 {
 /* a struct wrapping a Topology Accessor Object */
@@ -81,6 +84,7 @@ struct gaia_topology
     sqlite3_stmt *stmt_getNodeWithinBox2D;
     sqlite3_stmt *stmt_getEdgeWithinBox2D;
     sqlite3_stmt *stmt_getFaceWithinBox2D;
+    sqlite3_stmt *stmt_getAllEdges;
     sqlite3_stmt *stmt_updateNodes;
     sqlite3_stmt *stmt_insertFaces;
     sqlite3_stmt *stmt_updateFacesById;
@@ -124,10 +128,12 @@ struct face_edges
 };
 
 /* common utilities */
-TOPOLOGY_PRIVATE RTLINE *gaia_convert_linestring_to_rtline (const RTCTX *ctx, gaiaLinestringPtr
+TOPOLOGY_PRIVATE RTLINE *gaia_convert_linestring_to_rtline (const RTCTX * ctx,
+							    gaiaLinestringPtr
 							    ln, int srid,
 							    int has_z);
-TOPOLOGY_PRIVATE RTPOLY *gaia_convert_polygon_to_rtpoly (const RTCTX *ctx, gaiaPolygonPtr pg,
+TOPOLOGY_PRIVATE RTPOLY *gaia_convert_polygon_to_rtpoly (const RTCTX * ctx,
+							 gaiaPolygonPtr pg,
 							 int srid, int has_z);
 
 /* prototypes for functions handling Topology errors */
@@ -201,7 +207,9 @@ TOPOLOGY_PRIVATE int auxtopo_insert_into_topology (GaiaTopologyAccessorPtr
 						   gaiaGeomCollPtr geom,
 						   double tolerance,
 						   int line_max_points,
-						   double max_length);
+						   double max_length, int mode,
+						   gaiaGeomCollPtr *
+						   failing_geometry);
 
 
 /* prototypes for functions creating some SQL prepared statement */
@@ -219,6 +227,9 @@ TOPOLOGY_PRIVATE sqlite3_stmt
 
 TOPOLOGY_PRIVATE sqlite3_stmt
     * do_create_stmt_getFaceWithinBox2D (GaiaTopologyAccessorPtr accessor);
+
+TOPOLOGY_PRIVATE sqlite3_stmt
+    * do_create_stmt_getAllEdges (GaiaTopologyAccessorPtr accessor);
 
 TOPOLOGY_PRIVATE sqlite3_stmt
     *
@@ -325,6 +336,9 @@ RTT_ISO_NODE *callback_getNodeWithinBox2D (const RTT_BE_TOPOLOGY * topo,
 RTT_ISO_EDGE *callback_getEdgeWithinBox2D (const RTT_BE_TOPOLOGY * topo,
 					   const RTGBOX * box, int *numelems,
 					   int fields, int limit);
+
+RTT_ISO_EDGE *callback_getAllEdges (const RTT_BE_TOPOLOGY * topo, int *numelems,
+				    int fields, int limit);
 
 RTT_ISO_EDGE *callback_getEdgeByNode (const RTT_BE_TOPOLOGY * topo,
 				      const RTT_ELEMID * ids,
