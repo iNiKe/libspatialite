@@ -24,7 +24,7 @@ The Original Code is the SpatiaLite library
 
 The Initial Developer of the Original Code is Alessandro Furieri
  
-Portions created by the Initial Developer are Copyright (C) 2008-2020
+Portions created by the Initial Developer are Copyright (C) 2008-2021
 the Initial Developer. All Rights Reserved.
 
 Contributor(s):
@@ -58,7 +58,7 @@ the terms of any one of the MPL, the GPL or the LGPL.
 #include <spatialite/sqlite.h>
 #include <spatialite/debug.h>
 
-#include <spatialite/spatialite.h>
+#include <spatialite/spatialite_ext.h>
 #include <spatialite/gaiaaux.h>
 #include <spatialite/gaiageo.h>
 #include <spatialite_private.h>
@@ -928,6 +928,10 @@ vshp_eval_constraints (VirtualShapeCursorPtr cursor)
 			    if (cursor->current_row >= pC->intValue)
 				ok = 1;
 			    break;
+			case SQLITE_INDEX_CONSTRAINT_NE:
+			    if (cursor->current_row != pC->intValue)
+				ok = 1;
+			    break;
 			};
 		  }
 		goto done;
@@ -972,6 +976,11 @@ vshp_eval_constraints (VirtualShapeCursorPtr cursor)
 						  pC->intValue)
 						  ok = 1;
 					      break;
+					  case SQLITE_INDEX_CONSTRAINT_NE:
+					      if (pFld->Value->IntValue !=
+						  pC->intValue)
+						  ok = 1;
+					      break;
 					  };
 				    }
 				  break;
@@ -1002,6 +1011,11 @@ vshp_eval_constraints (VirtualShapeCursorPtr cursor)
 					      break;
 					  case SQLITE_INDEX_CONSTRAINT_GE:
 					      if (pFld->Value->DblValue >=
+						  pC->intValue)
+						  ok = 1;
+					      break;
+					  case SQLITE_INDEX_CONSTRAINT_NE:
+					      if (pFld->Value->DblValue !=
 						  pC->intValue)
 						  ok = 1;
 					      break;
@@ -1036,6 +1050,11 @@ vshp_eval_constraints (VirtualShapeCursorPtr cursor)
 						  pC->dblValue)
 						  ok = 1;
 					      break;
+					  case SQLITE_INDEX_CONSTRAINT_NE:
+					      if (pFld->Value->DblValue !=
+						  pC->dblValue)
+						  ok = 1;
+					      break;
 					  }
 				    }
 				  break;
@@ -1066,6 +1085,10 @@ vshp_eval_constraints (VirtualShapeCursorPtr cursor)
 					      break;
 					  case SQLITE_INDEX_CONSTRAINT_GE:
 					      if (ret >= 0)
+						  ok = 1;
+					      break;
+					  case SQLITE_INDEX_CONSTRAINT_NE:
+					      if (ret != 0)
 						  ok = 1;
 					      break;
 #ifdef HAVE_DECL_SQLITE_INDEX_CONSTRAINT_LIKE

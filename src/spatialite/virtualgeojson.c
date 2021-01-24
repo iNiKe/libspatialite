@@ -24,7 +24,7 @@ The Original Code is the SpatiaLite library
 
 The Initial Developer of the Original Code is Alessandro Furieri
  
-Portions created by the Initial Developer are Copyright (C) 2016-2020
+Portions created by the Initial Developer are Copyright (C) 2016-2021
 the Initial Developer. All Rights Reserved.
 
 Contributor(s):
@@ -60,7 +60,7 @@ the terms of any one of the MPL, the GPL or the LGPL.
 
 #include <spatialite/gaiaaux.h>
 #include <spatialite.h>
-#include <spatialite/spatialite.h>
+#include <spatialite/spatialite_ext.h>
 #include <spatialite/geojson.h>
 
 #ifdef _WIN32
@@ -2349,7 +2349,11 @@ vgeojson_create (sqlite3 * db, void *pAux, int argc, const char *const *argv,
     p_vt->MaxY = -DBL_MAX;
 
 /* attempting to open the GeoJSON file for reading */
+#ifdef _WIN32
+    in = gaia_win_fopen (path, "rb");
+#else
     in = fopen (path, "rb");
+#endif
     if (in == NULL)
       {
 	  error_message =
@@ -2942,6 +2946,10 @@ vgeojson_eval_constraints (VirtualGeoJsonCursorPtr cursor)
 			    if (cursor->current_fid >= pC->intValue)
 				ok = 1;
 			    break;
+			case SQLITE_INDEX_CONSTRAINT_NE:
+			    if (cursor->current_fid != pC->intValue)
+				ok = 1;
+			    break;
 			};
 		  }
 		goto done;
@@ -2995,6 +3003,10 @@ vgeojson_eval_constraints (VirtualGeoJsonCursorPtr cursor)
 				  if (prop->int_value >= pC->intValue)
 				      ok = 1;
 				  break;
+			      case SQLITE_INDEX_CONSTRAINT_NE:
+				  if (prop->int_value != pC->intValue)
+				      ok = 1;
+				  break;
 			      };
 			}
 		      break;
@@ -3023,6 +3035,10 @@ vgeojson_eval_constraints (VirtualGeoJsonCursorPtr cursor)
 				  if (prop->dbl_value >= pC->intValue)
 				      ok = 1;
 				  break;
+			      case SQLITE_INDEX_CONSTRAINT_NE:
+				  if (prop->dbl_value != pC->intValue)
+				      ok = 1;
+				  break;
 			      };
 			}
 		      if (pC->valueType == 'D')
@@ -3047,6 +3063,10 @@ vgeojson_eval_constraints (VirtualGeoJsonCursorPtr cursor)
 				  break;
 			      case SQLITE_INDEX_CONSTRAINT_GE:
 				  if (prop->dbl_value >= pC->dblValue)
+				      ok = 1;
+				  break;
+			      case SQLITE_INDEX_CONSTRAINT_NE:
+				  if (prop->dbl_value != pC->dblValue)
 				      ok = 1;
 				  break;
 			      }
@@ -3077,6 +3097,10 @@ vgeojson_eval_constraints (VirtualGeoJsonCursorPtr cursor)
 				  break;
 			      case SQLITE_INDEX_CONSTRAINT_GE:
 				  if (ret >= 0)
+				      ok = 1;
+				  break;
+			      case SQLITE_INDEX_CONSTRAINT_NE:
+				  if (ret != 0)
 				      ok = 1;
 				  break;
 #ifdef HAVE_DECL_SQLITE_INDEX_CONSTRAINT_LIKE
