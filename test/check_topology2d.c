@@ -51,72 +51,6 @@ the terms of any one of the MPL, the GPL or the LGPL.
 #include "sqlite3.h"
 #include "spatialite.h"
 
-#ifdef ENABLE_RTTOPO		/* only if RTTOPO is enabled */
-
-static int
-do_level7_tests (sqlite3 * handle, int *retcode)
-{
-/* performing basic tests: level 7 */
-    int ret;
-    char *err_msg = NULL;
-
-/* testing RegisterTopoGeoCoverage */
-    ret =
-	sqlite3_exec (handle,
-		      "SELECT CreateStylingTables(1)", NULL, NULL, &err_msg);
-    if (ret != SQLITE_OK)
-      {
-	  fprintf (stderr, "CreateStylingTables() #1 error: %s\n", err_msg);
-	  sqlite3_free (err_msg);
-	  *retcode = -340;
-	  return 0;
-      }
-
-/* testing RegisterTopoGeoCoverage - short form */
-    ret =
-	sqlite3_exec (handle,
-		      "SELECT SE_RegisterTopoGeoCoverage('topo', 'topo')",
-		      NULL, NULL, &err_msg);
-    if (ret != SQLITE_OK)
-      {
-	  fprintf (stderr, "SE_RegisterTopoGeoCoverage() #1 error: %s\n",
-		   err_msg);
-	  sqlite3_free (err_msg);
-	  *retcode = -341;
-	  return 0;
-      }
-
-/* testing UnRegisterVectorCoverage */
-    ret =
-	sqlite3_exec (handle,
-		      "SELECT SE_UnRegisterVectorCoverage('topo')",
-		      NULL, NULL, &err_msg);
-    if (ret != SQLITE_OK)
-      {
-	  fprintf (stderr, "SE_RegisterVectorCoverage() #1 error: %s\n",
-		   err_msg);
-	  sqlite3_free (err_msg);
-	  *retcode = -342;
-	  return 0;
-      }
-
-/* testing RegisterTopoGeoCoverage - long form */
-    ret =
-	sqlite3_exec (handle,
-		      "SELECT SE_RegisterTopoGeoCoverage('topo', 'topo', 'title', 'abstract', 1, 1)",
-		      NULL, NULL, &err_msg);
-    if (ret != SQLITE_OK)
-      {
-	  fprintf (stderr, "SE_RegisterTopoGeoCoverage() #2 error: %s\n",
-		   err_msg);
-	  sqlite3_free (err_msg);
-	  *retcode = -343;
-	  return 0;
-      }
-
-    return 1;
-}
-
 static int
 do_level6_tests (sqlite3 * handle, int *retcode)
 {
@@ -127,7 +61,7 @@ do_level6_tests (sqlite3 * handle, int *retcode)
 /* retrieving a Node by Point */
     ret =
 	sqlite3_exec (handle,
-		      "SELECT GetNodeByPoint('topo', MakePoint(152, 160))",
+		      "SELECT GetNodeByPoint('topo', MakePoint(152, 160), 0)",
 		      NULL, NULL, &err_msg);
     if (ret != SQLITE_OK)
       {
@@ -160,7 +94,7 @@ do_level6_tests (sqlite3 * handle, int *retcode)
 /* attempting to retrieve a Node by Point (not found) */
     ret =
 	sqlite3_exec (handle,
-		      "SELECT GetNodeByPoint('topo', MakePoint(1, 1))",
+		      "SELECT GetNodeByPoint('topo', MakePoint(1, 1), 0)",
 		      NULL, NULL, &err_msg);
     if (ret != SQLITE_OK)
       {
@@ -173,7 +107,7 @@ do_level6_tests (sqlite3 * handle, int *retcode)
 /* retrieving an Edge by Point */
     ret =
 	sqlite3_exec (handle,
-		      "SELECT GetEdgeByPoint('topo', MakePoint(154, 167))",
+		      "SELECT GetEdgeByPoint('topo', MakePoint(154, 167), 0)",
 		      NULL, NULL, &err_msg);
     if (ret != SQLITE_OK)
       {
@@ -206,7 +140,7 @@ do_level6_tests (sqlite3 * handle, int *retcode)
 /* attempting to retrieve an Edge by Point (not found) */
     ret =
 	sqlite3_exec (handle,
-		      "SELECT GetEdgeByPoint('topo', MakePoint(1, 1))",
+		      "SELECT GetEdgeByPoint('topo', MakePoint(1, 1), 0)",
 		      NULL, NULL, &err_msg);
     if (ret != SQLITE_OK)
       {
@@ -219,7 +153,7 @@ do_level6_tests (sqlite3 * handle, int *retcode)
 /* retrieving a Face by Point */
     ret =
 	sqlite3_exec (handle,
-		      "SELECT GetFaceByPoint('topo', MakePoint(153, 161))",
+		      "SELECT GetFaceByPoint('topo', MakePoint(153, 161), 0)",
 		      NULL, NULL, &err_msg);
     if (ret != SQLITE_OK)
       {
@@ -252,7 +186,7 @@ do_level6_tests (sqlite3 * handle, int *retcode)
 /* attempting to retrieve a Face by Point (not found) */
     ret =
 	sqlite3_exec (handle,
-		      "SELECT GetFaceByPoint('topo', MakePoint(1, 1))",
+		      "SELECT GetFaceByPoint('topo', MakePoint(1, 1), 0)",
 		      NULL, NULL, &err_msg);
     if (ret != SQLITE_OK)
       {
@@ -265,7 +199,7 @@ do_level6_tests (sqlite3 * handle, int *retcode)
 /* adding four Points */
     ret =
 	sqlite3_exec (handle,
-		      "SELECT TopoGeo_AddPoint('topo', MakePoint(10, -10, 4326))",
+		      "SELECT TopoGeo_AddPoint('topo', MakePoint(10, -10, 4326), 0)",
 		      NULL, NULL, &err_msg);
     if (ret != SQLITE_OK)
       {
@@ -276,7 +210,7 @@ do_level6_tests (sqlite3 * handle, int *retcode)
       }
     ret =
 	sqlite3_exec (handle,
-		      "SELECT TopoGeo_AddPoint('topo', MakePoint(25, -10, 4326))",
+		      "SELECT TopoGeo_AddPoint('topo', MakePoint(25, -10, 4326), 0)",
 		      NULL, NULL, &err_msg);
     if (ret != SQLITE_OK)
       {
@@ -287,7 +221,7 @@ do_level6_tests (sqlite3 * handle, int *retcode)
       }
     ret =
 	sqlite3_exec (handle,
-		      "SELECT TopoGeo_AddPoint('topo', MakePoint(50, -10, 4326))",
+		      "SELECT TopoGeo_AddPoint('topo', MakePoint(50, -10, 4326), 0)",
 		      NULL, NULL, &err_msg);
     if (ret != SQLITE_OK)
       {
@@ -298,7 +232,7 @@ do_level6_tests (sqlite3 * handle, int *retcode)
       }
     ret =
 	sqlite3_exec (handle,
-		      "SELECT TopoGeo_AddPoint('topo', MakePoint(100, -10, 4326))",
+		      "SELECT TopoGeo_AddPoint('topo', MakePoint(100, -10, 4326), 0)",
 		      NULL, NULL, &err_msg);
     if (ret != SQLITE_OK)
       {
@@ -311,7 +245,7 @@ do_level6_tests (sqlite3 * handle, int *retcode)
 /* adding four Linestrings */
     ret =
 	sqlite3_exec (handle,
-		      "SELECT TopoGeo_AddLineString('topo', GeomFromText('LINESTRING(10 -10, 100 -10)', 4326))",
+		      "SELECT TopoGeo_AddLineString('topo', GeomFromText('LINESTRING(10 -10, 100 -10)', 4326), 0)",
 		      NULL, NULL, &err_msg);
     if (ret != SQLITE_OK)
       {
@@ -322,7 +256,7 @@ do_level6_tests (sqlite3 * handle, int *retcode)
       }
     ret =
 	sqlite3_exec (handle,
-		      "SELECT TopoGeo_AddLineString('topo', GeomFromText('LINESTRING(10 -25, 100 -25)', 4326))",
+		      "SELECT TopoGeo_AddLineString('topo', GeomFromText('LINESTRING(10 -25, 100 -25)', 4326), 0)",
 		      NULL, NULL, &err_msg);
     if (ret != SQLITE_OK)
       {
@@ -333,7 +267,7 @@ do_level6_tests (sqlite3 * handle, int *retcode)
       }
     ret =
 	sqlite3_exec (handle,
-		      "SELECT TopoGeo_AddLineString('topo', GeomFromText('LINESTRING(10 -50, 100 -50)', 4326))",
+		      "SELECT TopoGeo_AddLineString('topo', GeomFromText('LINESTRING(10 -50, 100 -50)', 4326), 0)",
 		      NULL, NULL, &err_msg);
     if (ret != SQLITE_OK)
       {
@@ -344,7 +278,7 @@ do_level6_tests (sqlite3 * handle, int *retcode)
       }
     ret =
 	sqlite3_exec (handle,
-		      "SELECT TopoGeo_AddLineString('topo', GeomFromText('LINESTRING(10 -100, 100 -100)', 4326))",
+		      "SELECT TopoGeo_AddLineString('topo', GeomFromText('LINESTRING(10 -100, 100 -100)', 4326), 0)",
 		      NULL, NULL, &err_msg);
     if (ret != SQLITE_OK)
       {
@@ -3029,7 +2963,6 @@ do_level0_tests (sqlite3 * handle, int *retcode)
     return 1;
 }
 
-#endif
 
 int
 main (int argc, char *argv[])
@@ -3041,6 +2974,9 @@ main (int argc, char *argv[])
     sqlite3 *handle;
     char *err_msg = NULL;
     void *cache = spatialite_alloc_connection ();
+
+    if (argc > 1 || argv[0] == NULL)
+	argc = 1;		/* silencing stupid compiler warnings */
 
     ret =
 	sqlite3_open_v2 (":memory:", &handle,
@@ -3062,15 +2998,6 @@ main (int argc, char *argv[])
 	  goto end;
       }
 
-    ret = sqlite3_exec (handle, "PRAGMA foreign_keys=1", NULL, NULL, &err_msg);
-    if (ret != SQLITE_OK)
-      {
-	  fprintf (stderr, "PRAGMA foreign_keys=1 error: %s\n", err_msg);
-	  sqlite3_free (err_msg);
-	  sqlite3_close (handle);
-	  return -2;
-      }
-
     ret =
 	sqlite3_exec (handle, "SELECT InitSpatialMetadata(1)", NULL, NULL,
 		      &err_msg);
@@ -3079,7 +3006,7 @@ main (int argc, char *argv[])
 	  fprintf (stderr, "InitSpatialMetadata() error: %s\n", err_msg);
 	  sqlite3_free (err_msg);
 	  sqlite3_close (handle);
-	  return -3;
+	  return -2;
       }
 
 /* creating a Topology 2D */
@@ -3091,7 +3018,7 @@ main (int argc, char *argv[])
 	  fprintf (stderr, "CreateTopology() error: %s\n", err_msg);
 	  sqlite3_free (err_msg);
 	  sqlite3_close (handle);
-	  return -4;
+	  return -3;
       }
 
 /* basic tests: level 0 */
@@ -3122,14 +3049,6 @@ main (int argc, char *argv[])
     if (!do_level6_tests (handle, &retcode))
 	goto end;
 
-#ifdef ENABLE_LIBXML2		/* only if LIBXML2 is supported */
-
-/* testing RegisterTopoGeoCoverage */
-    if (!do_level7_tests (handle, &retcode))
-	goto end;
-
-#endif
-
 /* dropping the Topology 2D */
     ret =
 	sqlite3_exec (handle, "SELECT DropTopology('topo')", NULL, NULL,
@@ -3139,7 +3058,7 @@ main (int argc, char *argv[])
 	  fprintf (stderr, "DropTopology() error: %s\n", err_msg);
 	  sqlite3_free (err_msg);
 	  sqlite3_close (handle);
-	  return -5;
+	  return -4;
       }
 
   end:
@@ -3148,9 +3067,6 @@ main (int argc, char *argv[])
     spatialite_cleanup_ex (cache);
 
 #endif /* end RTTOPO conditional */
-
-    if (argc > 1 || argv[0] == NULL)
-	argc = 1;		/* silencing stupid compiler warnings */
 
     spatialite_shutdown ();
     return retcode;

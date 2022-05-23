@@ -1,7 +1,0 @@
-SqlProc_NumVariables - valid BLOB
-:memory: #use in-memory database
-SELECT SqlProc_NumVariables(SqlProc_FromText('SELECT @col1@, $col2$ FROM @table@'));
-1 # rows (not including the header row)
-1 # columns
-SqlProc_NumVariables(SqlProc_FromText('SELECT @col1@, $col2$ FROM @table@'))
-3

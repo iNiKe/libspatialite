@@ -2,7 +2,7 @@
 
  gg_utf8.c -- locale charset handling
   
- version 5.0, 2020 August 1
+ version 4.3, 2015 June 29
 
  Author: Sandro Furieri a.furieri@lqt.it
 
@@ -24,7 +24,7 @@ The Original Code is the SpatiaLite library
 
 The Initial Developer of the Original Code is Alessandro Furieri
  
-Portions created by the Initial Developer are Copyright (C) 2008-2020
+Portions created by the Initial Developer are Copyright (C) 2008-2015
 the Initial Developer. All Rights Reserved.
 
 Contributor(s):
@@ -55,10 +55,6 @@ the terms of any one of the MPL, the GPL or the LGPL.
 #include "config.h"
 #endif
 
-#include <spatialite/sqlite.h>
-#include <spatialite/gaiaaux.h>
-#include <spatialite_private.h>
-
 #if OMIT_ICONV == 0		/* ICONV is absolutely required */
 
 #if defined(__MINGW32__) || defined(_WIN32)
@@ -81,6 +77,9 @@ extern const char *locale_charset (void);
 #include <langinfo.h>
 #endif
 #endif
+
+#include <spatialite/sqlite.h>
+#include <spatialite/gaiaaux.h>
 
 GAIAAUX_DECLARE const char *
 gaiaGetLocaleCharset ()
@@ -115,16 +114,6 @@ gaiaConvertCharset (char **buf, const char *fromCs, const char *toCs)
     if (cvt == (iconv_t) (-1))
 	goto unsupported;
     len = strlen (*buf);
-    if (len == 0)
-      {
-	  /* empty string */
-	  utf8buf = sqlite3_malloc (1);
-	  *utf8buf = '\0';
-	  sqlite3_free (*buf);
-	  *buf = utf8buf;
-	  iconv_close (cvt);
-	  return 1;
-      }
     maxlen = len * 4;
     utf8len = maxlen;
     pBuf = *buf;
@@ -198,90 +187,4 @@ gaiaConvertToUTF8 (void *cvtCS, const char *buf, int buflen, int *err)
     return utf8buf;
 }
 
-SPATIALITE_PRIVATE char *
-url_toUtf8 (const char *url, const char *in_charset)
-{
-/* converting an URL to UTF-8 */
-    iconv_t cvt;
-    size_t len;
-    size_t utf8len;
-    int maxlen;
-    char *utf8buf;
-    char *pUtf8buf;
-#if !defined(__MINGW32__) && defined(_WIN32)
-    const char *pBuf = url;
-#else /* not WIN32 */
-    char *pBuf = (char *) url;
-#endif
-
-    if (url == NULL || in_charset == NULL)
-	return NULL;
-    cvt = iconv_open ("UTF-8", in_charset);
-    if (cvt == (iconv_t) (-1))
-	goto unsupported;
-    len = strlen (url);
-    maxlen = len * 4;
-    utf8len = maxlen;
-    utf8buf = malloc (maxlen);
-    pUtf8buf = utf8buf;
-    if (iconv (cvt, &pBuf, &len, &pUtf8buf, &utf8len) == (size_t) (-1))
-	goto error;
-    utf8buf[maxlen - utf8len] = '\0';
-    iconv_close (cvt);
-    return utf8buf;
-
-  error:
-    iconv_close (cvt);
-    free (utf8buf);
-  unsupported:
-    return NULL;
-}
-
-SPATIALITE_PRIVATE char *
-url_fromUtf8 (const char *url, const char *out_charset)
-{
-/* converting an URL from UTF-8 */
-    iconv_t cvt;
-    size_t len;
-    size_t utf8len;
-    int maxlen;
-    char *utf8buf;
-    char *pUtf8buf;
-#if !defined(__MINGW32__) && defined(_WIN32)
-    const char *pBuf = url;
-#else /* not WIN32 */
-    char *pBuf = (char *) url;
-#endif
-
-    if (url == NULL || out_charset == NULL)
-	return NULL;
-    cvt = iconv_open (out_charset, "UTF-8");
-    if (cvt == (iconv_t) (-1))
-	goto unsupported;
-    len = strlen (url);
-    maxlen = len * 4;
-    utf8len = maxlen;
-    utf8buf = malloc (maxlen);
-    pUtf8buf = utf8buf;
-    if (iconv (cvt, &pBuf, &len, &pUtf8buf, &utf8len) == (size_t) (-1))
-	goto error;
-    utf8buf[maxlen - utf8len] = '\0';
-    iconv_close (cvt);
-    return utf8buf;
-
-  error:
-    iconv_close (cvt);
-    free (utf8buf);
-  unsupported:
-    return NULL;
-}
-
-#else
-GAIAAUX_DECLARE char *
-gaiaConvertToUTF8 (void *cvtCS, const char *buf, int buflen, int *err)
-{
-	if (cvtCS == NULL || buf == NULL || err == NULL || buflen == 0)
-    return NULL;
-    return NULL;
-}
 #endif /* ICONV enabled/disabled */

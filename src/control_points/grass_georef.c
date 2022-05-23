@@ -2,7 +2,7 @@
 
  grass_georef.c -- strictly derived from Grass GIS code: lib/imagery/georef.c
     
- version 5.0, 2020 August 1
+ version 4.3, 2015 May 5
 
  Author: Sandro Furieri a.furieri@lqt.it
 

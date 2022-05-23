@@ -15,12 +15,6 @@ EXTRA_DIST = blobfromfile1.testcase \
 	exportdbf2.testcase \
 	exportdbf3.testcase \
 	exportdbf4.testcase \
-	exportdbf5.testcase \
-	exportdbf6.testcase \
-	exportdbf7.testcase \
-	exportdbf8.testcase \
-	exportdbf9.testcase \
-	exportdbf10.testcase \
 	exportdxf1.testcase \
 	exportdxf2.testcase \
 	exportdxf3.testcase \
@@ -32,16 +26,6 @@ EXTRA_DIST = blobfromfile1.testcase \
 	exportdxf8.testcase \
 	exportdxf9.testcase \
 	exportdxf10.testcase \
-	export2geojson1.testcase \
-	export2geojson2.testcase \
-	export2geojson3.testcase \
-	export2geojson4.testcase \
-	export2geojson5.testcase \
-	export2geojson6.testcase \
-	export2geojson7.testcase \
-	export2geojson8.testcase \
-	export2geojson9.testcase \
-	export2geojson10.testcase \
 	exportgeojson1.testcase \
 	exportgeojson2.testcase \
 	exportgeojson3.testcase \
@@ -66,12 +50,6 @@ EXTRA_DIST = blobfromfile1.testcase \
 	exportshp4.testcase \
 	exportshp5.testcase \
 	exportshp6.testcase \
-	exportshp7.testcase \
-	exportshp8.testcase \
-	exportshp9.testcase \
-	exportshp10.testcase \
-	exportshp11.testcase \
-	exportshp12.testcase \
 	exportdxf11.testcase \
 	importdbf1.testcase \
 	importdbf2.testcase \
@@ -80,12 +58,6 @@ EXTRA_DIST = blobfromfile1.testcase \
 	importdbf5.testcase \
 	importdbf6.testcase \
 	importdbf7.testcase \
-	importdbf8.testcase \
-	importdbf9.testcase \
-	importdbf10.testcase \
-	importdbf11.testcase \
-	importdbf12.testcase \
-	importdbf13.testcase \
 	importdxf1.testcase \
 	importdxf2.testcase \
 	importdxf3.testcase \
@@ -132,53 +104,9 @@ EXTRA_DIST = blobfromfile1.testcase \
 	importshp12.testcase \
 	importshp13.testcase \
 	importshp14.testcase \
-	importshp15.testcase \
-	importshp16.testcase \
-	importshp17.testcase \
-	importshp18.testcase \
-	importshp19.testcase \
-	importshp20.testcase \
-	importshp21.testcase \
-	importshp22.testcase \
-	importxls1.testcase \
-	importxls2.testcase \
-	importxls3.testcase \
-	importxls4.testcase \
-	importxls5.testcase \
-	importxls6.testcase \
-	importxls7.testcase \
-	importxls8.testcase \
-	importxls9.testcase \
-	importxls10.testcase \
-	importxls11.testcase \
-	importxls12.testcase \
-	importxls13.testcase \
-	importxls14.testcase \
-	importxls15.testcase \
-	importxls16.testcase \
-	importxls17.testcase \
-	importgeojson1.testcase \
-	importgeojson2.testcase \
-	importgeojson3.testcase \
-	importgeojson4.testcase \
-	importgeojson5.testcase \
-	importgeojson6.testcase \
-	importgeojson7.testcase \
 	isXblob1.testcase \
 	isXblob2.testcase \
 	isXblob3.testcase \
 	isXblob4.testcase \
 	isXblob8.testcase \
-	isXblob9.testcase \
-	sp_fromfile1.testcase \
-	sp_fromfile2.testcase \
-	sp_fromfile3.testcase \
-	sp_fromfile4.testcase \
-	sp_fromfile5.testcase \
-	sp_fromfile6.testcase \
-	sp_fromfile7.testcase \
-	sp_fromfile8.testcase \
-	sp_fromfile9.testcase \
-	sp_fromfile10.testcase \
-	sp_fromfile11.testcase \
-	sp_fromfile12.testcase
+	isXblob9.testcase 

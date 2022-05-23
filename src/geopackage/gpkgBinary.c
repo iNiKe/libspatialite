@@ -38,17 +38,8 @@ the terms of any one of the MPL, the GPL or the LGPL.
 */
 
 #include "spatialite/geopackage.h"
-#include "geopackage_internal.h"
-
-#if defined(_WIN32) && !defined(__MINGW32__)
-#include "config-msvc.h"
-#else
 #include "config.h"
-#endif
-
-#ifdef _WIN32
-#define strcasecmp	_stricmp
-#endif /* not WIN32 */
+#include "geopackage_internal.h"
 
 #ifdef ENABLE_GEOPACKAGE
 
@@ -101,14 +92,12 @@ gaiaToGPB (gaiaGeomCollPtr geom, unsigned char **result, int *size)
     gpkgSetHeader2DLittleEndian (ptr, geom->Srid, endian_arch);
 
     /* build MBR */
-    gpkgSetHeader2DMbr (ptr +
-			GEOPACKAGE_HEADER_LEN,
-			geom->MinX,
-			geom->MinY, geom->MaxX, geom->MaxY, endian_arch);
+    gpkgSetHeader2DMbr (ptr + GEOPACKAGE_HEADER_LEN, geom->MinX, geom->MinY,
+			geom->MaxX, geom->MaxY, endian_arch);
 
     /* copy wkbonly results to result */
-    memcpy (ptr + GEOPACKAGE_HEADER_LEN +
-	    GEOPACKAGE_2D_ENVELOPE_LEN, wkbOnlyGeometry, wkbOnlyLength);
+    memcpy (ptr + GEOPACKAGE_HEADER_LEN + GEOPACKAGE_2D_ENVELOPE_LEN,
+	    wkbOnlyGeometry, wkbOnlyLength);
 
     free (wkbOnlyGeometry);
 }
@@ -483,15 +472,14 @@ fnct_GPKG_IsAssignable (sqlite3_context * context, int argc,
 	ret = 1;
     if (strcasecmp (expected, "GEOMETRY") == 0)
 	ret = 1;
-    if (strcasecmp (expected, "MULTIPOINT")
-	== 0 && strcasecmp (actual, "POINT") == 0)
+    if (strcasecmp (expected, "MULTIPOINT") == 0
+	&& strcasecmp (actual, "POINT") == 0)
 	ret = 1;
-    if (strcasecmp
-	(expected, "MULTILINESTRING") == 0
+    if (strcasecmp (expected, "MULTILINESTRING") == 0
 	&& strcasecmp (actual, "LINESTRING") == 0)
 	ret = 1;
-    if (strcasecmp
-	(expected, "MULTIPOLYGON") == 0 && strcasecmp (actual, "POLYGON") == 0)
+    if (strcasecmp (expected, "MULTIPOLYGON") == 0
+	&& strcasecmp (actual, "POLYGON") == 0)
 	ret = 1;
     sqlite3_result_int (context, ret);
 }

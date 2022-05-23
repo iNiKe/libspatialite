@@ -2,7 +2,7 @@
 
  gg_relations.c -- Gaia spatial relations
     
- version 5.0, 2020 August 1
+ version 4.3, 2015 June 29
 
  Author: Sandro Furieri a.furieri@lqt.it
 
@@ -24,7 +24,7 @@ The Original Code is the SpatiaLite library
 
 The Initial Developer of the Original Code is Alessandro Furieri
  
-Portions created by the Initial Developer are Copyright (C) 2008-2020
+Portions created by the Initial Developer are Copyright (C) 2008-2015
 the Initial Developer. All Rights Reserved.
 
 Contributor(s):
@@ -380,169 +380,16 @@ evalGeosCacheItem (unsigned char *blob, int blob_size, uLong crc,
 }
 
 static int
-sniffTinyPointBlob (const unsigned char *blob, const int size)
-{
-/* sniffing for a possible TinyPoint BLOB */
-    if (size == 24 || size == 32 || size == 40)
-	;
-    else
-	return 0;
-    if (*(blob + 0) != GAIA_MARK_START)
-	return 0;
-    if (*(blob + 1) == GAIA_TINYPOINT_LITTLE_ENDIAN
-	|| *(blob + 1) == GAIA_TINYPOINT_BIG_ENDIAN)
-	;
-    else
-	return 0;
-    if (*(blob + (size - 1)) != GAIA_MARK_END)
-	return 0;
-    return 1;
-}
-
-static void
-tinyPoint2Geom (const unsigned char *tiny, unsigned char **geom, int *geom_sz)
-{
-/* quickly converting from BLOB-TinyPoint to BLOB-Geometry */
-    int little_endian;
-    int endian_arch = gaiaEndianArch ();
-    int srid;
-    int type;
-    double x;
-    double y;
-    double z;
-    double m;
-    unsigned char *blob;
-    int blob_sz;
-
-/* parsing the BLOB-TinyPoint */
-    if (*(tiny + 1) == GAIA_TINYPOINT_LITTLE_ENDIAN)
-	little_endian = 1;
-    else
-	little_endian = 0;
-    srid = gaiaImport32 (tiny + 2, little_endian, endian_arch);
-    if (*(tiny + 6) == GAIA_TINYPOINT_XYZ)
-	type = GAIA_POINTZ;
-    else if (*(tiny + 6) == GAIA_TINYPOINT_XYM)
-	type = GAIA_POINTM;
-    else if (*(tiny + 6) == GAIA_TINYPOINT_XYZM)
-	type = GAIA_POINTZM;
-    else
-	type = GAIA_POINT;
-    x = gaiaImport64 (tiny + 7, little_endian, endian_arch);
-    y = gaiaImport64 (tiny + 15, little_endian, endian_arch);
-    if (type == GAIA_POINTZ)
-	z = gaiaImport64 (tiny + 23, little_endian, endian_arch);
-    if (type == GAIA_POINTM)
-	m = gaiaImport64 (tiny + 23, little_endian, endian_arch);
-    if (type == GAIA_POINTZM)
-      {
-	  z = gaiaImport64 (tiny + 23, little_endian, endian_arch);
-	  m = gaiaImport64 (tiny + 31, little_endian, endian_arch);
-      }
-
-/* allocating and initializing the BLOB-Geometry */
-    switch (type)
-      {
-      case GAIA_POINT:
-	  blob_sz = 60;
-	  break;
-      case GAIA_POINTZ:
-      case GAIA_POINTM:
-	  blob_sz = 68;
-	  break;
-      case GAIA_POINTZM:
-	  blob_sz = 76;
-	  break;
-      };
-    blob = malloc (blob_sz);
-
-    *geom = blob;
-    *geom_sz = blob_sz;
-    switch (type)
-      {
-      case GAIA_POINT:
-	  *blob = GAIA_MARK_START;	/* START signature */
-	  *(blob + 1) = GAIA_LITTLE_ENDIAN;	/* byte ordering */
-	  gaiaExport32 (blob + 2, srid, 1, endian_arch);	/* the SRID */
-	  gaiaExport64 (blob + 6, x, 1, endian_arch);	/* MBR - minimum X */
-	  gaiaExport64 (blob + 14, y, 1, endian_arch);	/* MBR - minimum Y */
-	  gaiaExport64 (blob + 22, x, 1, endian_arch);	/* MBR - maximum X */
-	  gaiaExport64 (blob + 30, y, 1, endian_arch);	/* MBR - maximum Y */
-	  *(blob + 38) = GAIA_MARK_MBR;	/* MBR signature */
-	  gaiaExport32 (blob + 39, GAIA_POINT, 1, endian_arch);	/* class POINT */
-	  gaiaExport64 (blob + 43, x, 1, endian_arch);	/* X */
-	  gaiaExport64 (blob + 51, y, 1, endian_arch);	/* Y */
-	  *(blob + 59) = GAIA_MARK_END;	/* END signature */
-	  break;
-      case GAIA_POINTZ:
-	  *blob = GAIA_MARK_START;	/* START signature */
-	  *(blob + 1) = GAIA_LITTLE_ENDIAN;	/* byte ordering */
-	  gaiaExport32 (blob + 2, srid, 1, endian_arch);	/* the SRID */
-	  gaiaExport64 (blob + 6, x, 1, endian_arch);	/* MBR - minimum X */
-	  gaiaExport64 (blob + 14, y, 1, endian_arch);	/* MBR - minimum Y */
-	  gaiaExport64 (blob + 22, x, 1, endian_arch);	/* MBR - maximum X */
-	  gaiaExport64 (blob + 30, y, 1, endian_arch);	/* MBR - maximum Y */
-	  *(blob + 38) = GAIA_MARK_MBR;	/* MBR signature */
-	  gaiaExport32 (blob + 39, GAIA_POINTZ, 1, endian_arch);	/* class POINT XYZ */
-	  gaiaExport64 (blob + 43, x, 1, endian_arch);	/* X */
-	  gaiaExport64 (blob + 51, y, 1, endian_arch);	/* Y */
-	  gaiaExport64 (blob + 59, z, 1, endian_arch);	/* Z */
-	  *(blob + 67) = GAIA_MARK_END;	/* END signature */
-	  break;
-      case GAIA_POINTM:
-	  *blob = GAIA_MARK_START;	/* START signature */
-	  *(blob + 1) = GAIA_LITTLE_ENDIAN;	/* byte ordering */
-	  gaiaExport32 (blob + 2, srid, 1, endian_arch);	/* the SRID */
-	  gaiaExport64 (blob + 6, x, 1, endian_arch);	/* MBR - minimum X */
-	  gaiaExport64 (blob + 14, y, 1, endian_arch);	/* MBR - minimum Y */
-	  gaiaExport64 (blob + 22, x, 1, endian_arch);	/* MBR - maximum X */
-	  gaiaExport64 (blob + 30, y, 1, endian_arch);	/* MBR - maximum Y */
-	  *(blob + 38) = GAIA_MARK_MBR;	/* MBR signature */
-	  gaiaExport32 (blob + 39, GAIA_POINTM, 1, endian_arch);	/* class POINT XYM */
-	  gaiaExport64 (blob + 43, x, 1, endian_arch);	/* X */
-	  gaiaExport64 (blob + 51, y, 1, endian_arch);	/* Y */
-	  gaiaExport64 (blob + 59, m, 1, endian_arch);	/* M */
-	  *(blob + 67) = GAIA_MARK_END;	/* END signature */
-	  break;
-      case GAIA_POINTZM:
-	  *blob = GAIA_MARK_START;	/* START signature */
-	  *(blob + 1) = GAIA_LITTLE_ENDIAN;	/* byte ordering */
-	  gaiaExport32 (blob + 2, srid, 1, endian_arch);	/* the SRID */
-	  gaiaExport64 (blob + 6, x, 1, endian_arch);	/* MBR - minimum X */
-	  gaiaExport64 (blob + 14, y, 1, endian_arch);	/* MBR - minimum Y */
-	  gaiaExport64 (blob + 22, x, 1, endian_arch);	/* MBR - maximum X */
-	  gaiaExport64 (blob + 30, y, 1, endian_arch);	/* MBR - maximum Y */
-	  *(blob + 38) = GAIA_MARK_MBR;	/* MBR signature */
-	  gaiaExport32 (blob + 39, GAIA_POINTZM, 1, endian_arch);	/* class POINT XYZM */
-	  gaiaExport64 (blob + 43, x, 1, endian_arch);	/* X */
-	  gaiaExport64 (blob + 51, y, 1, endian_arch);	/* Y */
-	  gaiaExport64 (blob + 59, z, 1, endian_arch);	/* M */
-	  gaiaExport64 (blob + 67, m, 1, endian_arch);	/* Z */
-	  *(blob + 75) = GAIA_MARK_END;	/* END signature */
-	  break;
-      };
-}
-
-static int
 evalGeosCache (struct splite_internal_cache *cache, gaiaGeomCollPtr geom1,
-	       const unsigned char *blob1, const int size1,
-	       gaiaGeomCollPtr geom2, const unsigned char *blob2,
-	       const int size2, GEOSPreparedGeometry ** gPrep,
+	       unsigned char *blob1, int size1, gaiaGeomCollPtr geom2,
+	       unsigned char *blob2, int size2, GEOSPreparedGeometry ** gPrep,
 	       gaiaGeomCollPtr * geom)
 {
 /* handling the internal GEOS cache */
     struct splite_geos_cache_item *p1 = &(cache->cacheItem1);
     struct splite_geos_cache_item *p2 = &(cache->cacheItem2);
-    uLong crc1;
-    uLong crc2;
-    unsigned char *tiny1 = NULL;
-    unsigned char *tiny2 = NULL;
-    unsigned char *p_blob1;
-    unsigned char *p_blob2;
-    int sz1;
-    int sz2;
-    int tiny_sz;
-    int retcode;
+    uLong crc1 = crc32 (0L, blob1, size1);
+    uLong crc2 = crc32 (0L, blob2, size2);
     GEOSContextHandle_t handle = NULL;
     if (cache == NULL)
 	return 0;
@@ -553,33 +400,8 @@ evalGeosCache (struct splite_internal_cache *cache, gaiaGeomCollPtr geom1,
     if (handle == NULL)
 	return 0;
 
-    if (sniffTinyPointBlob (blob1, size1))
-      {
-	  tinyPoint2Geom (blob1, &tiny1, &tiny_sz);
-	  p_blob1 = tiny1;
-	  sz1 = tiny_sz;
-      }
-    else
-      {
-	  p_blob1 = (unsigned char *) blob1;
-	  sz1 = size1;
-      }
-    if (sniffTinyPointBlob (blob2, size2))
-      {
-	  tinyPoint2Geom (blob2, &tiny2, &tiny_sz);
-	  p_blob2 = tiny2;
-	  sz2 = tiny_sz;
-      }
-    else
-      {
-	  p_blob2 = (unsigned char *) blob2;
-	  sz2 = size2;
-      }
-    crc1 = crc32 (0L, p_blob1, sz1);
-    crc2 = crc32 (0L, p_blob2, sz2);
-
 /* checking the first cache item */
-    if (evalGeosCacheItem (p_blob1, sz1, crc1, p1))
+    if (evalGeosCacheItem (blob1, size1, crc1, p1))
       {
 	  /* found a matching item */
 	  if (p1->preparedGeosGeom == NULL)
@@ -603,15 +425,13 @@ evalGeosCache (struct splite_internal_cache *cache, gaiaGeomCollPtr geom1,
 		/* returning the corresponding GeosPreparedGeometry */
 		*gPrep = p1->preparedGeosGeom;
 		*geom = geom2;
-		retcode = 1;
-		goto end;
+		return 1;
 	    }
-	  retcode = 0;
-	  goto end;
+	  return 0;
       }
 
 /* checking the second cache item */
-    if (evalGeosCacheItem (p_blob2, sz2, crc2, p2))
+    if (evalGeosCacheItem (blob2, size2, crc2, p2))
       {
 	  /* found a matching item */
 	  if (p2->preparedGeosGeom == NULL)
@@ -635,16 +455,14 @@ evalGeosCache (struct splite_internal_cache *cache, gaiaGeomCollPtr geom1,
 		/* returning the corresponding GeosPreparedGeometry */
 		*gPrep = p2->preparedGeosGeom;
 		*geom = geom1;
-		retcode = 1;
-		goto end;
+		return 1;
 	    }
-	  retcode = 0;
-	  goto end;
+	  return 0;
       }
 
 /* updating the GEOS cache item#1 */
-    memcpy (p1->gaiaBlob, p_blob1, 46);
-    p1->gaiaBlobSize = sz1;
+    memcpy (p1->gaiaBlob, blob1, 46);
+    p1->gaiaBlobSize = size1;
     p1->crc32 = crc1;
     if (p1->preparedGeosGeom)
 	GEOSPreparedGeom_destroy_r (handle, p1->preparedGeosGeom);
@@ -654,8 +472,8 @@ evalGeosCache (struct splite_internal_cache *cache, gaiaGeomCollPtr geom1,
     p1->preparedGeosGeom = NULL;
 
 /* updating the GEOS cache item#2 */
-    memcpy (p2->gaiaBlob, p_blob2, 46);
-    p2->gaiaBlobSize = sz2;
+    memcpy (p2->gaiaBlob, blob2, 46);
+    p2->gaiaBlobSize = size2;
     p2->crc32 = crc2;
     if (p2->preparedGeosGeom)
 	GEOSPreparedGeom_destroy_r (handle, p2->preparedGeosGeom);
@@ -663,14 +481,8 @@ evalGeosCache (struct splite_internal_cache *cache, gaiaGeomCollPtr geom1,
 	GEOSGeom_destroy_r (handle, p2->geosGeom);
     p2->geosGeom = NULL;
     p2->preparedGeosGeom = NULL;
-    retcode = 0;
 
-  end:
-    if (tiny1 != NULL)
-	free (tiny1);
-    if (tiny2 != NULL)
-	free (tiny2);
-    return retcode;
+    return 0;
 }
 
 GAIAGEO_DECLARE int
@@ -1633,159 +1445,6 @@ gaiaGeomCollRelate_r (const void *p_cache, gaiaGeomCollPtr geom1,
     return ret;
 }
 
-GAIAGEO_DECLARE char *
-gaiaGeomCollRelateBoundaryNodeRule (gaiaGeomCollPtr geom1,
-				    gaiaGeomCollPtr geom2, int mode)
-{
-/* return the intesection matrix [DE-9IM] of GEOM-1 and GEOM-2 */
-#ifndef GEOS_USE_ONLY_R_API	/* obsolete versions non fully thread-safe */
-    GEOSGeometry *g1;
-    GEOSGeometry *g2;
-    int bnr;
-    char *retMatrix;
-    char *matrix;
-    int len;
-    gaiaResetGeosMsg ();
-    if (!geom1 || !geom2)
-	return NULL;
-    if (gaiaIsToxic (geom1) || gaiaIsToxic (geom2))
-	return NULL;
-    g1 = gaiaToGeos (geom1);
-    g2 = gaiaToGeos (geom2);
-    switch (mode)
-      {
-      case 2:
-	  bnr = GEOSRELATE_BNR_ENDPOINT;
-	  break;
-      case 3:
-	  bnr = GEOSRELATE_BNR_MULTIVALENT_ENDPOINT;
-	  break;
-      case 4:
-	  bnr = GEOSRELATE_BNR_MONOVALENT_ENDPOINT;
-	  break;
-      default:
-	  bnr = GEOSRELATE_BNR_MOD2;
-	  break;
-      };
-    retMatrix = GEOSRelateBoundaryNodeRule (g1, g2, bnr);
-    GEOSGeom_destroy (g1);
-    GEOSGeom_destroy (g2);
-    if (retMatrix == NULL)
-	return NULL;
-    len = strlen (retMatrix);
-    matrix = malloc (len + 1);
-    strcpy (matrix, retMatrix);
-    GEOSFree (retMatrix);
-    return matrix;
-#else
-    if (geom1 == NULL || geom2 == NULL || mode == 0)
-	geom1 = NULL;		/* silencing stupid compiler warnings */
-#endif
-    return NULL;
-}
-
-GAIAGEO_DECLARE char *
-gaiaGeomCollRelateBoundaryNodeRule_r (const void *p_cache,
-				      gaiaGeomCollPtr geom1,
-				      gaiaGeomCollPtr geom2, int mode)
-{
-/* return the intesection matrix [DE-9IM] of GEOM-1 and GEOM-2 */
-    GEOSGeometry *g1;
-    GEOSGeometry *g2;
-    int bnr;
-    char *retMatrix;
-    char *matrix;
-    int len;
-    struct splite_internal_cache *cache =
-	(struct splite_internal_cache *) p_cache;
-    GEOSContextHandle_t handle = NULL;
-    if (cache == NULL)
-	return NULL;
-    if (cache->magic1 != SPATIALITE_CACHE_MAGIC1
-	|| cache->magic2 != SPATIALITE_CACHE_MAGIC2)
-	return NULL;
-    handle = cache->GEOS_handle;
-    if (handle == NULL)
-	return NULL;
-    gaiaResetGeosMsg_r (cache);
-    if (!geom1 || !geom2)
-	return NULL;
-    if (gaiaIsToxic_r (cache, geom1) || gaiaIsToxic_r (cache, geom2))
-	return NULL;
-    g1 = gaiaToGeos_r (cache, geom1);
-    g2 = gaiaToGeos_r (cache, geom2);
-    switch (mode)
-      {
-      case 2:
-	  bnr = GEOSRELATE_BNR_ENDPOINT;
-	  break;
-      case 3:
-	  bnr = GEOSRELATE_BNR_MULTIVALENT_ENDPOINT;
-	  break;
-      case 4:
-	  bnr = GEOSRELATE_BNR_MONOVALENT_ENDPOINT;
-	  break;
-      default:
-	  bnr = GEOSRELATE_BNR_MOD2;
-	  break;
-      };
-    retMatrix = GEOSRelateBoundaryNodeRule_r (handle, g1, g2, bnr);
-    GEOSGeom_destroy_r (handle, g1);
-    GEOSGeom_destroy_r (handle, g2);
-    if (retMatrix == NULL)
-	return NULL;
-    len = strlen (retMatrix);
-    matrix = malloc (len + 1);
-    strcpy (matrix, retMatrix);
-    GEOSFree_r (handle, retMatrix);
-    return matrix;
-}
-
-GAIAGEO_DECLARE int
-gaiaIntersectionMatrixPatternMatch (const char *matrix, const char *pattern)
-{
-/* evalutes if an intersection matrix [DE-9IM]  matches a matrix pattern */
-#ifndef GEOS_USE_ONLY_R_API	/* obsolete versions non fully thread-safe */
-    int ret;
-    gaiaResetGeosMsg ();
-    if (matrix == NULL || pattern == NULL)
-	return -1;
-    ret = GEOSRelatePatternMatch (matrix, pattern);
-    if (ret == 0 || ret == 1)
-	return ret;
-#else
-    if (matrix == NULL || pattern == NULL)
-	matrix = NULL;		/* silencing stupid compiler warnings */
-#endif
-    return -1;
-}
-
-GAIAGEO_DECLARE int
-gaiaIntersectionMatrixPatternMatch_r (const void *p_cache, const char *matrix,
-				      const char *pattern)
-{
-/* evalutes is an intersection matrix [DE-9IM]  matches a matrix pattern */
-    int ret;
-    struct splite_internal_cache *cache =
-	(struct splite_internal_cache *) p_cache;
-    GEOSContextHandle_t handle = NULL;
-    if (cache == NULL)
-	return -1;
-    if (cache->magic1 != SPATIALITE_CACHE_MAGIC1
-	|| cache->magic2 != SPATIALITE_CACHE_MAGIC2)
-	return -1;
-    handle = cache->GEOS_handle;
-    if (handle == NULL)
-	return -1;
-    gaiaResetGeosMsg_r (cache);
-    if (matrix == NULL || pattern == NULL)
-	return -1;
-    ret = GEOSRelatePatternMatch_r (handle, matrix, pattern);
-    if (ret == 0 || ret == 1)
-	return ret;
-    return -1;
-}
-
 GAIAGEO_DECLARE int
 gaiaGeomCollLength (gaiaGeomCollPtr geom, double *xlength)
 {
@@ -2063,11 +1722,6 @@ gaiaGeometryIntersection (gaiaGeomCollPtr geom1, gaiaGeomCollPtr geom2)
     GEOSGeom_destroy (g2);
     if (!g3)
 	return NULL;
-    if (GEOSisEmpty (g3) == 1)
-      {
-	  GEOSGeom_destroy (g3);
-	  return NULL;
-      }
     if (geom1->DimensionModel == GAIA_XY_Z)
 	geo = gaiaFromGeos_XYZ (g3);
     else if (geom1->DimensionModel == GAIA_XY_M)
@@ -2124,11 +1778,6 @@ gaiaGeometryIntersection_r (const void *p_cache, gaiaGeomCollPtr geom1,
     GEOSGeom_destroy_r (handle, g2);
     if (!g3)
 	return NULL;
-    if (GEOSisEmpty_r (handle, g3) == 1)
-      {
-	  GEOSGeom_destroy_r (handle, g3);
-	  return NULL;
-      }
     if (geom1->DimensionModel == GAIA_XY_Z)
 	geo = gaiaFromGeos_XYZ_r (cache, g3);
     else if (geom1->DimensionModel == GAIA_XY_M)
@@ -2163,13 +1812,6 @@ gaiaGeometryUnion (gaiaGeomCollPtr geom1, gaiaGeomCollPtr geom2)
     g3 = GEOSUnion (g1, g2);
     GEOSGeom_destroy (g1);
     GEOSGeom_destroy (g2);
-    if (g3 == NULL)
-	return NULL;
-    if (GEOSisEmpty (g3) == 1)
-      {
-	  GEOSGeom_destroy (g3);
-	  return NULL;
-      }
     if (geom1->DimensionModel == GAIA_XY_Z)
 	geo = gaiaFromGeos_XYZ (g3);
     else if (geom1->DimensionModel == GAIA_XY_M)
@@ -2228,13 +1870,6 @@ gaiaGeometryUnion_r (const void *p_cache, gaiaGeomCollPtr geom1,
     g3 = GEOSUnion_r (handle, g1, g2);
     GEOSGeom_destroy_r (handle, g1);
     GEOSGeom_destroy_r (handle, g2);
-    if (g3 == NULL)
-	return NULL;
-    if (GEOSisEmpty_r (handle, g3) == 1)
-      {
-	  GEOSGeom_destroy_r (handle, g3);
-	  return NULL;
-      }
     if (geom1->DimensionModel == GAIA_XY_Z)
 	geo = gaiaFromGeos_XYZ_r (cache, g3);
     else if (geom1->DimensionModel == GAIA_XY_M)
@@ -2308,11 +1943,6 @@ gaiaUnionCascaded (gaiaGeomCollPtr geom)
     GEOSGeom_destroy (g1);
     if (!g2)
 	return NULL;
-    if (GEOSisEmpty (g2) == 1)
-      {
-	  GEOSGeom_destroy (g2);
-	  return NULL;
-      }
     if (geom->DimensionModel == GAIA_XY_Z)
 	result = gaiaFromGeos_XYZ (g2);
     else if (geom->DimensionModel == GAIA_XY_M)
@@ -2391,11 +2021,6 @@ gaiaUnionCascaded_r (const void *p_cache, gaiaGeomCollPtr geom)
     GEOSGeom_destroy_r (handle, g1);
     if (!g2)
 	return NULL;
-    if (GEOSisEmpty_r (handle, g2) == 1)
-      {
-	  GEOSGeom_destroy_r (handle, g2);
-	  return NULL;
-      }
     if (geom->DimensionModel == GAIA_XY_Z)
 	result = gaiaFromGeos_XYZ_r (cache, g2);
     else if (geom->DimensionModel == GAIA_XY_M)
@@ -2432,11 +2057,6 @@ gaiaGeometryDifference (gaiaGeomCollPtr geom1, gaiaGeomCollPtr geom2)
     GEOSGeom_destroy (g2);
     if (!g3)
 	return NULL;
-    if (GEOSisEmpty (g3) == 1)
-      {
-	  GEOSGeom_destroy (g3);
-	  return NULL;
-      }
     if (geom1->DimensionModel == GAIA_XY_Z)
 	geo = gaiaFromGeos_XYZ (g3);
     else if (geom1->DimensionModel == GAIA_XY_M)
@@ -2488,11 +2108,6 @@ gaiaGeometryDifference_r (const void *p_cache, gaiaGeomCollPtr geom1,
     GEOSGeom_destroy_r (handle, g2);
     if (!g3)
 	return NULL;
-    if (GEOSisEmpty_r (handle, g3) == 1)
-      {
-	  GEOSGeom_destroy_r (handle, g3);
-	  return NULL;
-      }
     if (geom1->DimensionModel == GAIA_XY_Z)
 	geo = gaiaFromGeos_XYZ_r (cache, g3);
     else if (geom1->DimensionModel == GAIA_XY_M)
@@ -2529,11 +2144,6 @@ gaiaGeometrySymDifference (gaiaGeomCollPtr geom1, gaiaGeomCollPtr geom2)
     GEOSGeom_destroy (g2);
     if (!g3)
 	return NULL;
-    if (GEOSisEmpty (g3) == 1)
-      {
-	  GEOSGeom_destroy (g3);
-	  return NULL;
-      }
     if (geom1->DimensionModel == GAIA_XY_Z)
 	geo = gaiaFromGeos_XYZ (g3);
     else if (geom1->DimensionModel == GAIA_XY_M)
@@ -2585,11 +2195,6 @@ gaiaGeometrySymDifference_r (const void *p_cache, gaiaGeomCollPtr geom1,
     GEOSGeom_destroy_r (handle, g2);
     if (!g3)
 	return NULL;
-    if (GEOSisEmpty_r (handle, g3) == 1)
-      {
-	  GEOSGeom_destroy_r (handle, g3);
-	  return NULL;
-      }
     if (geom1->DimensionModel == GAIA_XY_Z)
 	geo = gaiaFromGeos_XYZ_r (cache, g3);
     else if (geom1->DimensionModel == GAIA_XY_M)
@@ -2623,11 +2228,6 @@ gaiaBoundary (gaiaGeomCollPtr geom)
     GEOSGeom_destroy (g1);
     if (!g2)
 	return NULL;
-    if (GEOSisEmpty (g2) == 1)
-      {
-	  GEOSGeom_destroy (g2);
-	  return NULL;
-      }
     if (geom->DimensionModel == GAIA_XY_Z)
 	geo = gaiaFromGeos_XYZ (g2);
     else if (geom->DimensionModel == GAIA_XY_M)
@@ -2675,11 +2275,6 @@ gaiaBoundary_r (const void *p_cache, gaiaGeomCollPtr geom)
     GEOSGeom_destroy_r (handle, g1);
     if (!g2)
 	return NULL;
-    if (GEOSisEmpty_r (handle, g2) == 1)
-      {
-	  GEOSGeom_destroy_r (handle, g2);
-	  return NULL;
-      }
     if (geom->DimensionModel == GAIA_XY_Z)
 	geo = gaiaFromGeos_XYZ_r (cache, g2);
     else if (geom->DimensionModel == GAIA_XY_M)
@@ -2715,11 +2310,6 @@ gaiaGeomCollCentroid (gaiaGeomCollPtr geom, double *x, double *y)
     GEOSGeom_destroy (g1);
     if (!g2)
 	return 0;
-    if (GEOSisEmpty (g2) == 1)
-      {
-	  GEOSGeom_destroy (g2);
-	  return 0;
-      }
     if (geom->DimensionModel == GAIA_XY_Z)
 	geo = gaiaFromGeos_XYZ (g2);
     else if (geom->DimensionModel == GAIA_XY_M)
@@ -2777,11 +2367,6 @@ gaiaGeomCollCentroid_r (const void *p_cache, gaiaGeomCollPtr geom, double *x,
     GEOSGeom_destroy_r (handle, g1);
     if (!g2)
 	return 0;
-    if (GEOSisEmpty_r (handle, g2) == 1)
-      {
-	  GEOSGeom_destroy_r (handle, g2);
-	  return 0;
-      }
     if (geom->DimensionModel == GAIA_XY_Z)
 	geo = gaiaFromGeos_XYZ_r (cache, g2);
     else if (geom->DimensionModel == GAIA_XY_M)
@@ -2824,11 +2409,6 @@ gaiaGetPointOnSurface (gaiaGeomCollPtr geom, double *x, double *y)
     GEOSGeom_destroy (g1);
     if (!g2)
 	return 0;
-    if (GEOSisEmpty (g2) == 1)
-      {
-	  GEOSGeom_destroy (g2);
-	  return 0;
-      }
     if (geom->DimensionModel == GAIA_XY_Z)
 	geo = gaiaFromGeos_XYZ (g2);
     else if (geom->DimensionModel == GAIA_XY_M)
@@ -2886,11 +2466,6 @@ gaiaGetPointOnSurface_r (const void *p_cache, gaiaGeomCollPtr geom, double *x,
     GEOSGeom_destroy_r (handle, g1);
     if (!g2)
 	return 0;
-    if (GEOSisEmpty_r (handle, g2) == 1)
-      {
-	  GEOSGeom_destroy_r (handle, g2);
-	  return 0;
-      }
     if (geom->DimensionModel == GAIA_XY_Z)
 	geo = gaiaFromGeos_XYZ_r (cache, g2);
     else if (geom->DimensionModel == GAIA_XY_M)
@@ -3331,7 +2906,7 @@ gaiaIsValidDetailEx (gaiaGeomCollPtr geom, int esri_flag)
     detail = gaiaFromGeos_XY (d);
     GEOSGeom_destroy (d);
 #else
-    if (geom == NULL && esri_flag == 0)
+    if (geom == NULL)
 	geom = NULL;		/* silencing stupid compiler warnings */
 #endif
     return detail;
@@ -3474,11 +3049,6 @@ gaiaGeomCollSimplify (gaiaGeomCollPtr geom, double tolerance)
     GEOSGeom_destroy (g1);
     if (!g2)
 	return NULL;
-    if (GEOSisEmpty (g2) == 1)
-      {
-	  GEOSGeom_destroy (g2);
-	  return NULL;
-      }
     if (geom->DimensionModel == GAIA_XY_Z)
 	geo = gaiaFromGeos_XYZ (g2);
     else if (geom->DimensionModel == GAIA_XY_M)
@@ -3527,11 +3097,6 @@ gaiaGeomCollSimplify_r (const void *p_cache, gaiaGeomCollPtr geom,
     GEOSGeom_destroy_r (handle, g1);
     if (!g2)
 	return NULL;
-    if (GEOSisEmpty_r (handle, g2) == 1)
-      {
-	  GEOSGeom_destroy_r (handle, g2);
-	  return NULL;
-      }
     if (geom->DimensionModel == GAIA_XY_Z)
 	geo = gaiaFromGeos_XYZ_r (cache, g2);
     else if (geom->DimensionModel == GAIA_XY_M)
@@ -3565,11 +3130,6 @@ gaiaGeomCollSimplifyPreserveTopology (gaiaGeomCollPtr geom, double tolerance)
     GEOSGeom_destroy (g1);
     if (!g2)
 	return NULL;
-    if (GEOSisEmpty (g2) == 1)
-      {
-	  GEOSGeom_destroy (g2);
-	  return NULL;
-      }
     if (geom->DimensionModel == GAIA_XY_Z)
 	geo = gaiaFromGeos_XYZ (g2);
     else if (geom->DimensionModel == GAIA_XY_M)
@@ -3618,11 +3178,6 @@ gaiaGeomCollSimplifyPreserveTopology_r (const void *p_cache,
     GEOSGeom_destroy_r (handle, g1);
     if (!g2)
 	return NULL;
-    if (GEOSisEmpty_r (handle, g2) == 1)
-      {
-	  GEOSGeom_destroy_r (handle, g2);
-	  return NULL;
-      }
     if (geom->DimensionModel == GAIA_XY_Z)
 	geo = gaiaFromGeos_XYZ_r (cache, g2);
     else if (geom->DimensionModel == GAIA_XY_M)
@@ -3656,11 +3211,6 @@ gaiaConvexHull (gaiaGeomCollPtr geom)
     GEOSGeom_destroy (g1);
     if (!g2)
 	return NULL;
-    if (GEOSisEmpty (g2) == 1)
-      {
-	  GEOSGeom_destroy (g2);
-	  return NULL;
-      }
     if (geom->DimensionModel == GAIA_XY_Z)
 	geo = gaiaFromGeos_XYZ (g2);
     else if (geom->DimensionModel == GAIA_XY_M)
@@ -3708,11 +3258,6 @@ gaiaConvexHull_r (const void *p_cache, gaiaGeomCollPtr geom)
     GEOSGeom_destroy_r (handle, g1);
     if (!g2)
 	return NULL;
-    if (GEOSisEmpty_r (handle, g2) == 1)
-      {
-	  GEOSGeom_destroy_r (handle, g2);
-	  return NULL;
-      }
     if (geom->DimensionModel == GAIA_XY_Z)
 	geo = gaiaFromGeos_XYZ_r (cache, g2);
     else if (geom->DimensionModel == GAIA_XY_M)
@@ -3736,31 +3281,16 @@ gaiaGeomCollBuffer (gaiaGeomCollPtr geom, double radius, int points)
 #ifndef GEOS_USE_ONLY_R_API	/* obsolete versions non fully thread-safe */
     GEOSGeometry *g1;
     GEOSGeometry *g2;
-    GEOSBufferParams *params = NULL;
     gaiaResetGeosMsg ();
     if (!geom)
 	return NULL;
     if (gaiaIsToxic (geom))
 	return NULL;
     g1 = gaiaToGeos (geom);
-/* setting up Buffer params */
-    params = GEOSBufferParams_create ();
-    GEOSBufferParams_setEndCapStyle (params, GEOSBUF_CAP_ROUND);
-    GEOSBufferParams_setJoinStyle (params, GEOSBUF_JOIN_ROUND);
-    GEOSBufferParams_setMitreLimit (params, 5.0);
-    GEOSBufferParams_setQuadrantSegments (params, points);
-    GEOSBufferParams_setSingleSided (params, 0);
-
-    g2 = GEOSBufferWithParams (g1, params, radius);
+    g2 = GEOSBuffer (g1, radius, points);
     GEOSGeom_destroy (g1);
-    GEOSBufferParams_destroy (params);
     if (!g2)
 	return NULL;
-    if (GEOSisEmpty (g2) == 1)
-      {
-	  GEOSGeom_destroy (g2);
-	  return NULL;
-      }
     if (geom->DimensionModel == GAIA_XY_Z)
 	geo = gaiaFromGeos_XYZ (g2);
     else if (geom->DimensionModel == GAIA_XY_M)
@@ -3788,11 +3318,9 @@ gaiaGeomCollBuffer_r (const void *p_cache, gaiaGeomCollPtr geom, double radius,
     gaiaGeomCollPtr geo;
     GEOSGeometry *g1;
     GEOSGeometry *g2;
-    GEOSBufferParams *params = NULL;
     struct splite_internal_cache *cache =
 	(struct splite_internal_cache *) p_cache;
     GEOSContextHandle_t handle = NULL;
-    int quadsegs = 30;
     if (cache == NULL)
 	return NULL;
     if (cache->magic1 != SPATIALITE_CACHE_MAGIC1
@@ -3807,30 +3335,10 @@ gaiaGeomCollBuffer_r (const void *p_cache, gaiaGeomCollPtr geom, double radius,
     if (gaiaIsToxic_r (cache, geom))
 	return NULL;
     g1 = gaiaToGeos_r (cache, geom);
-/* setting up Buffer params */
-    params = GEOSBufferParams_create_r (handle);
-    GEOSBufferParams_setEndCapStyle_r (handle, params,
-				       cache->buffer_end_cap_style);
-    GEOSBufferParams_setJoinStyle_r (handle, params, cache->buffer_join_style);
-    GEOSBufferParams_setMitreLimit_r (handle, params,
-				      cache->buffer_mitre_limit);
-    if (points > 0)
-	quadsegs = points;
-    else if (cache->buffer_quadrant_segments > 0)
-	quadsegs = cache->buffer_quadrant_segments;
-    GEOSBufferParams_setQuadrantSegments_r (handle, params, quadsegs);
-    GEOSBufferParams_setSingleSided_r (handle, params, 0);
-
-    g2 = GEOSBufferWithParams_r (handle, g1, params, radius);
+    g2 = GEOSBuffer_r (handle, g1, radius, points);
     GEOSGeom_destroy_r (handle, g1);
-    GEOSBufferParams_destroy_r (handle, params);
     if (!g2)
 	return NULL;
-    if (GEOSisEmpty_r (handle, g2) == 1)
-      {
-	  GEOSGeom_destroy_r (handle, g2);
-	  return NULL;
-      }
     if (geom->DimensionModel == GAIA_XY_Z)
 	geo = gaiaFromGeos_XYZ_r (cache, g2);
     else if (geom->DimensionModel == GAIA_XY_M)
@@ -4280,7 +3788,7 @@ gaiaPolygonizeCommon (const void *cache, GEOSContextHandle_t handle,
       }
 
 /* identifying valid Polygons [excluding holes] */
-    valid_polygons = malloc (sizeof (char *) * items);
+    valid_polygons = malloc (items);
     for (ig = 0; ig < items; ig++)
 	valid_polygons[ig] = 'Y';
     for (ig = 0; ig < items; ig++)

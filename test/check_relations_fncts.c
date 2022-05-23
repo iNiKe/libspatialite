@@ -47,7 +47,6 @@ the terms of any one of the MPL, the GPL or the LGPL.
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <math.h>
 
 #include "config.h"
 
@@ -820,7 +819,7 @@ test_current_mode ()
       }
 
     resultDouble = gaiaLineLocatePoint_r (cache, 0, validGeometry);
-    if (fabs (resultDouble - -1.0) > double_eps)
+    if (abs (resultDouble - -1.0) > double_eps)
       {
 	  fprintf (stderr, "bad result at %s:%i: %f\n", __FILE__, __LINE__,
 		   resultDouble);
@@ -829,7 +828,7 @@ test_current_mode ()
       }
 
     resultDouble = gaiaLineLocatePoint_r (cache, validGeometry, 0);
-    if (fabs (resultDouble - -1.0) > double_eps)
+    if (abs (resultDouble - -1.0) > double_eps)
       {
 	  fprintf (stderr, "bad result at %s:%i: %f\n", __FILE__, __LINE__,
 		   resultDouble);
@@ -838,7 +837,7 @@ test_current_mode ()
       }
 
     resultDouble = gaiaLineLocatePoint_r (cache, 0, 0);
-    if (fabs (resultDouble - -1.0) > double_eps)
+    if (abs (resultDouble - -1.0) > double_eps)
       {
 	  fprintf (stderr, "bad result at %s:%i: %f\n", __FILE__, __LINE__,
 		   resultDouble);
@@ -1712,7 +1711,7 @@ test_legacy_mode ()
       }
 
     resultDouble = gaiaLineLocatePoint (0, validGeometry);
-    if (fabs (resultDouble - -1.0) > double_eps)
+    if (abs (resultDouble - -1.0) > double_eps)
       {
 	  fprintf (stderr, "bad result at %s:%i: %f\n", __FILE__, __LINE__,
 		   resultDouble);
@@ -1721,7 +1720,7 @@ test_legacy_mode ()
       }
 
     resultDouble = gaiaLineLocatePoint (validGeometry, 0);
-    if (fabs (resultDouble - -1.0) > double_eps)
+    if (abs (resultDouble - -1.0) > double_eps)
       {
 	  fprintf (stderr, "bad result at %s:%i: %f\n", __FILE__, __LINE__,
 		   resultDouble);
@@ -1730,7 +1729,7 @@ test_legacy_mode ()
       }
 
     resultDouble = gaiaLineLocatePoint (0, 0);
-    if (fabs (resultDouble - -1.0) > double_eps)
+    if (abs (resultDouble - -1.0) > double_eps)
       {
 	  fprintf (stderr, "bad result at %s:%i: %f\n", __FILE__, __LINE__,
 		   resultDouble);

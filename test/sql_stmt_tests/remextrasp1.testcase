@@ -1,7 +1,0 @@
-RemoveExtraSpaces() - invalid NULL
-:memory: #use in-memory database
-SELECT RemoveExtraSpaces(NULL);
-1 # rows (not including the header row)
-1 # columns
-RemoveExtraSpaces(NULL)
-(NULL)

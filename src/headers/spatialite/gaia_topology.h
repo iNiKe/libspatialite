@@ -1,7 +1,7 @@
 /*
  gaia_topology.h -- Gaia common support for Topology
   
- version 5.0, 2020 August 1
+ version 4.3, 2015 July 15
 
  Author: Sandro Furieri a.furieri@lqt.it
 
@@ -23,7 +23,7 @@ The Original Code is the SpatiaLite library
 
 The Initial Developer of the Original Code is Alessandro Furieri
  
-Portions created by the Initial Developer are Copyright (C) 2015-2020
+Portions created by the Initial Developer are Copyright (C) 2015
 the Initial Developer. All Rights Reserved.
 
 Contributor(s):
@@ -168,8 +168,7 @@ extern "C"
 						   const char
 						   *topo_name,
 						   char **topology_name,
-						   int *srid,
-						   double *tolerance,
+						   int *srid, double *tolerance,
 						   int *has_z);
 
 /**
@@ -235,8 +234,8 @@ extern "C"
 
  \sa gaiaTopologyFromDBMS
  */
-    GAIATOPO_DECLARE sqlite3_int64 gaiaAddIsoNode (GaiaTopologyAccessorPtr
-						   ptr, sqlite3_int64 face,
+    GAIATOPO_DECLARE sqlite3_int64 gaiaAddIsoNode (GaiaTopologyAccessorPtr ptr,
+						   sqlite3_int64 face,
 						   gaiaPointPtr pt,
 						   int skip_checks);
 
@@ -279,8 +278,7 @@ extern "C"
 
  \sa gaiaTopologyFromDBMS
  */
-    GAIATOPO_DECLARE sqlite3_int64 gaiaAddIsoEdge (GaiaTopologyAccessorPtr
-						   ptr,
+    GAIATOPO_DECLARE sqlite3_int64 gaiaAddIsoEdge (GaiaTopologyAccessorPtr ptr,
 						   sqlite3_int64 start_node,
 						   sqlite3_int64 end_node,
 						   gaiaLinestringPtr ln);
@@ -366,8 +364,7 @@ extern "C"
  */
     GAIATOPO_DECLARE sqlite3_int64 gaiaAddEdgeModFace (GaiaTopologyAccessorPtr
 						       ptr,
-						       sqlite3_int64
-						       start_node,
+						       sqlite3_int64 start_node,
 						       sqlite3_int64 end_node,
 						       gaiaLinestringPtr ln,
 						       int skip_checks);
@@ -387,10 +384,13 @@ extern "C"
 
  \sa gaiaTopologyFromDBMS
  */
-    GAIATOPO_DECLARE sqlite3_int64
-	gaiaAddEdgeNewFaces (GaiaTopologyAccessorPtr ptr,
-			     sqlite3_int64 start_node, sqlite3_int64 end_node,
-			     gaiaLinestringPtr ln, int skip_checks);
+    GAIATOPO_DECLARE sqlite3_int64 gaiaAddEdgeNewFaces (GaiaTopologyAccessorPtr
+							ptr,
+							sqlite3_int64
+							start_node,
+							sqlite3_int64 end_node,
+							gaiaLinestringPtr ln,
+							int skip_checks);
 
 /**
  Removes an edge, and if the removed edge separated two faces, delete one
@@ -569,25 +569,6 @@ extern "C"
 			      double tolerance);
 
 /**
- Adds a Linestring to an existing Topology without determining generated faces..
-
- \param ptr pointer to the Topology Accessor Object.
- \param ln pointer to the Linestring Geometry.
- \param tolerance approximation factor.
- \param edge_ids on success will point to an array of Edge IDs
- \param ids_count on success will report the number of Edge IDs in the
- above array
-
- \return 1 on success; 0 on failure.
-
- \sa gaiaTopologyFromDBMS, gaiaTopoGeo_AddLineStringNoFace
- */
-    GAIATOPO_DECLARE int
-	gaiaTopoGeo_AddLineString (GaiaTopologyAccessorPtr ptr,
-				   gaiaLinestringPtr pt, double tolerance,
-				   sqlite3_int64 ** edge_ids, int *ids_count);
-
-/**
  Adds a Linestring to an existing Topology and possibly splitting Edges/Faces.
 
  \param ptr pointer to the Topology Accessor Object.
@@ -599,45 +580,12 @@ extern "C"
 
  \return 1 on success; 0 on failure.
 
- \sa gaiaTopologyFromDBMS, gaiaTopoGeo_AddLineString, gaiaTopoGeo_Polygonize
- */
-    GAIATOPO_DECLARE int
-	gaiaTopoGeo_AddLineStringNoFace (GaiaTopologyAccessorPtr ptr,
-					 gaiaLinestringPtr pt,
-					 double tolerance,
-					 sqlite3_int64 ** edge_ids,
-					 int *ids_count);
-
-/**
- Determine and register all topology faces.
-
- \param ptr pointer to the Topology Accessor Object.
-
- \return 1 on success; 0 on failure.
-
- \sa gaiaTopologyFromDBMS, gaiaTopoGeo_AddLineStringNoFace, 
- gaiaTopoGeo_FromGeoTableNoFace, FromGeoTableNoFaceExt
- */
-    GAIATOPO_DECLARE int gaiaTopoGeo_Polygonize (GaiaTopologyAccessorPtr ptr);
-
-/**
- Snap Geometry to Topology.
-
- \param ptr pointer to the Topology Accessor Object.
- \param geom pointer to the input Geometry.
- \param tolerance_snap snap tolerance.
- \param tolerance_removal removal tolerance (use -1 to skip removal phase).
- \param iterate if non zero, allows snapping to more than a single 
- vertex, iteratively.
-
- \return pointer to the snapped Geometry; NULL on failure.
-
  \sa gaiaTopologyFromDBMS
  */
-    GAIATOPO_DECLARE gaiaGeomCollPtr
-	gaiaTopoSnap (GaiaTopologyAccessorPtr ptr, gaiaGeomCollPtr geom,
-		      double tolerance_snap, double tolerance_removal,
-		      int iterate);
+    GAIATOPO_DECLARE int
+	gaiaTopoGeo_AddLineString (GaiaTopologyAccessorPtr ptr,
+				   gaiaLinestringPtr pt, double tolerance,
+				   sqlite3_int64 ** edge_ids, int *ids_count);
 
 /**
  Adds a Polygon to an existing Topology and possibly splitting Edges/Faces.
@@ -654,9 +602,9 @@ extern "C"
  \sa gaiaTopologyFromDBMS
  */
     GAIATOPO_DECLARE int
-	gaiaTopoGeo_AddPolygon (GaiaTopologyAccessorPtr ptr,
-				gaiaPolygonPtr pg, double tolerance,
-				sqlite3_int64 ** face_ids, int *ids_count);
+	gaiaTopoGeo_AddPolygon (GaiaTopologyAccessorPtr ptr, gaiaPolygonPtr pg,
+				double tolerance, sqlite3_int64 ** face_ids,
+				int *ids_count);
 
 /**
  Populates a Topology by importing a whole GeoTable
@@ -679,44 +627,13 @@ extern "C"
 
  \return 1 on success; -1 on failure (will raise an exception).
 
- \sa gaiaTopologyFromDBMS, gaiaTopoGeo_FromGeoTableNoFace
+ \sa gaiaTopologyFromDBMS
  */
     GAIATOPO_DECLARE int
 	gaiaTopoGeo_FromGeoTable (GaiaTopologyAccessorPtr ptr,
 				  const char *db_prefix, const char *table,
 				  const char *column, double tolerance,
 				  int line_max_points, double max_length);
-
-/**
- Populates a Topology by importing a whole GeoTable without 
- determining generated faces
-
- \param ptr pointer to the Topology Accessor Object.
- \param db-prefix prefix of the DB containing the input GeoTable.
- If NULL the "main" DB will be intended by default.
- \param table name of the input GeoTable.
- \param column name of the input Geometry Column.
- Could be NULL is the input table has just a single Geometry Column.
- \param tolerance approximation factor.
- \param line_max_points if set to a positive number all input Linestrings
- and/or Polygon Rings will be split into simpler Linestrings having no more 
- than this maximum number of points. 
- \param max_length if set to a positive value all input Linestrings 
- and/or Polygon Rings will be split into simpler Lines having a length
- not exceeding this threshold. If both line_max_points and max_legth
- are set as the same time the first condition occurring will cause
- a new Line to be started. 
-
- \return 1 on success; -1 on failure (will raise an exception).
-
- \sa gaiaTopologyFromDBMS, gaiaTopoGeo_FromGeoTable, gaiaTopoGeo_Polygonize
- */
-    GAIATOPO_DECLARE int
-	gaiaTopoGeo_FromGeoTableNoFace (GaiaTopologyAccessorPtr ptr,
-					const char *db_prefix,
-					const char *table, const char *column,
-					double tolerance, int line_max_points,
-					double max_length);
 
 /**
  Populates a Topology by importing a whole GeoTable - Extended mode
@@ -742,80 +659,15 @@ extern "C"
  and referenced by the "dustbin" table); -1 if some unexpected
  error occurred.
 
- \sa gaiaTopologyFromDBMS, gaiaTopoGeo_FromGeoTableNoFaceExtended
+ \sa gaiaTopologyFromDBMS
  */
     GAIATOPO_DECLARE int
 	gaiaTopoGeo_FromGeoTableExtended (GaiaTopologyAccessorPtr ptr,
 					  const char *sql_in,
 					  const char *sql_out,
-					  const char *sql_in2,
-					  double tolerance,
+					  const char *sql_in2, double tolerance,
 					  int line_max_points,
 					  double max_length);
-
-/**
- Populates a Topology by importing a whole GeoTable without 
- determining generated faces - Extended mode
-
- \param ptr pointer to the Topology Accessor Object.
- \param sql_in an SQL statement (SELECT) returning input features
- \param sql_out a second SQL statement (INSERT INTO) intended to
- store failing features references into the "dustbin" table.
- \param sql_in2 an SQL statement (SELECT) returning a single input 
- feature (used for retrying to insert a failing feature)
- \param tolerance approximation factor.
- \param line_max_points if set to a positive number all input Linestrings
- and/or Polygon Rings will be split into simpler Linestrings having no more 
- than this maximum number of points. 
- \param max_length if set to a positive value all input Linestrings 
- and/or Polygon Rings will be split into simpler Lines having a length
- not exceeding this threshold. If both line_max_points and max_legth
- are set as the same time the first condition occurring will cause
- a new Line to be started. 
-
- \return 0 if all input features were succesfully importer, or a
- positive number (total count of failing features raising an exception
- and referenced by the "dustbin" table); -1 if some unexpected
- error occurred.
-
- \sa gaiaTopologyFromDBMS, gaiaTopoGeo_FromGeoTableExtended, 
- gaiaTopoGeo_Polygonize
- */
-    GAIATOPO_DECLARE int
-	gaiaTopoGeo_FromGeoTableNoFaceExtended (GaiaTopologyAccessorPtr ptr,
-						const char *sql_in,
-						const char *sql_out,
-						const char *sql_in2,
-						double tolerance,
-						int line_max_points,
-						double max_length);
-
-/**
- Creates and populates a new GeoTable by snapping all Geometries
- contained into another GeoTable against a given Topology
-
- \param ptr pointer to the Topology Accessor Object.
- \param db-prefix prefix of the DB containing the input GeoTable.
- If NULL the "main" DB will be intended by default.
- \param table name of the input GeoTable.
- \param column name of the input Geometry Column.
- Could be NULL is the input table has just a single Geometry Column.
- \param outtable name of the output GeoTable.
- \param tolerance_snap snap tolerance.
- \param tolerance_removal removal tolerance (use -1 to skip removal phase).
- \param iterate if non zero, allows snapping to more than a single 
- vertex, iteratively.
-
- \return 1 on success; -1 on failure (will raise an exception).
-
- \sa gaiaTopologyFromDBMS
- */
-    GAIATOPO_DECLARE int
-	gaiaTopoGeo_SnappedGeoTable (GaiaTopologyAccessorPtr ptr,
-				     const char *db_prefix, const char *table,
-				     const char *column, const char *outtable,
-				     double tolerance_snap,
-				     double tolerance_removal, int iterate);
 
 /**
  Creates a temporary table containing a validation report for a given TopoGeo.
@@ -853,20 +705,6 @@ extern "C"
  */
     GAIATOPO_DECLARE gaiaGeomCollPtr
 	gaiaGetFaceSeed (GaiaTopologyAccessorPtr ptr, sqlite3_int64 face);
-
-/**
- Ensures that all Edges on a Topology-Geometry will have not less
- than three vertices; for all Edges found being simple two-points 
- segments a third intermediate point will be interpolated.
-
- \param ptr pointer to the Topology Accessor Object.
-
- \return the total number of changed Edges; a negativa number on error
-
- \sa gaiaTopologyFromDBMS
- */
-    GAIATOPO_DECLARE int
-	gaiaTopoGeo_DisambiguateSegmentEdges (GaiaTopologyAccessorPtr ptr);
 
 /**
  Will update all Seeds for a Topology-Geometry
@@ -937,52 +775,6 @@ extern "C"
 				int with_spatial_index);
 
 /**
- Creates and populates a Table containing a comprehensive report
- about all intesections between the Faces of some Topology and
- a given reference Table of the Polygon/Multipolygon type.
-
- \param ptr pointer to the Topology Accessor Object.
- \param db-prefix prefix of the DB containing the reference GeoTable.
- If NULL the "main" DB will be intended by default.
- \param ref_table name of the reference GeoTable.
- \param ref_column name of the reference Geometry Column.
- Could be NULL is the reference table has just a single Geometry Column.
- \param out_table name of the output output table to be created and populated.
-
- \return 1 on success; -1 on failure (will raise an exception).
-
- \sa gaiaTopologyFromDBMS
- */
-    GAIATOPO_DECLARE int
-	gaiaTopoGeo_PolyFacesList (GaiaTopologyAccessorPtr ptr,
-				   const char *db_prefix, const char *ref_table,
-				   const char *ref_column,
-				   const char *out_table);
-
-/**
- Creates and populates a Table containing a comprehensive report
- about all intesections between the Edges of some Topology and
- a given reference Table of the Linestring/Multilinestring type.
-
- \param ptr pointer to the Topology Accessor Object.
- \param db-prefix prefix of the DB containing the reference GeoTable.
- If NULL the "main" DB will be intended by default.
- \param ref_table name of the reference GeoTable.
- \param ref_column name of the reference Geometry Column.
- Could be NULL is the reference table has just a single Geometry Column.
- \param out_table name of the output output table to be created and populated.
-
- \return 1 on success; -1 on failure (will raise an exception).
-
- \sa gaiaTopologyFromDBMS
- */
-    GAIATOPO_DECLARE int
-	gaiaTopoGeo_LineEdgesList (GaiaTopologyAccessorPtr ptr,
-				   const char *db_prefix, const char *ref_table,
-				   const char *ref_column,
-				   const char *out_table);
-
-/**
  Extracts a simplified/generalized Simple Features Table out from a Topology 
  by matching Topology Seeds to a given reference Table.
 
@@ -1012,10 +804,9 @@ extern "C"
 					  int with_spatial_index);
 
 /**
- Removes all small Faces from a Topology
+ Removeas all small Faces from a Topology
 
  \param ptr pointer to the Topology Accessor Object.
- \param min_circularity threshold Circularity-index identifying threadlike Faces.
  \param min_area threshold area to identify small Faces.
 
  \return 1 on success; -1 on failure (will raise an exception).
@@ -1024,10 +815,10 @@ extern "C"
  */
     GAIATOPO_DECLARE int
 	gaiaTopoGeo_RemoveSmallFaces (GaiaTopologyAccessorPtr ptr,
-				      double min_circularity, double min_area);
+				      double min_area);
 
 /**
- Removes all dangling Edges from a Topology
+ Removeas all dangling Edges from a Topology
 
  \param ptr pointer to the Topology Accessor Object.
 
@@ -1039,7 +830,7 @@ extern "C"
 	gaiaTopoGeo_RemoveDanglingEdges (GaiaTopologyAccessorPtr ptr);
 
 /**
- Removes all dangling Nodes from a Topology
+ Removeas all dangling Nodes from a Topology
 
  \param ptr pointer to the Topology Accessor Object.
 
@@ -1050,69 +841,7 @@ extern "C"
     GAIATOPO_DECLARE int
 	gaiaTopoGeo_RemoveDanglingNodes (GaiaTopologyAccessorPtr ptr);
 
-/**
- Removes all useless Nodes from a Topology by calling ST_NewEdgeHeal
 
- \param ptr pointer to the Topology Accessor Object.
-
- \return 1 on success; -1 on failure (will raise an exception).
-
- \sa gaiaTopologyFromDBMS, gaiaTopoGeo_ModEdgeHeal
- */
-    GAIATOPO_DECLARE int gaiaTopoGeo_NewEdgeHeal (GaiaTopologyAccessorPtr ptr);
-
-/**
- Removes all useless Nodes from a Topology by calling ST_ModEdgeHeal
-
- \param ptr pointer to the Topology Accessor Object.
-
- \return 1 on success; -1 on failure (will raise an exception).
-
- \sa gaiaTopologyFromDBMS, gaiaTopoGeo_NewEdgeHeal
- */
-    GAIATOPO_DECLARE int gaiaTopoGeo_ModEdgeHeal (GaiaTopologyAccessorPtr ptr);
-
-/**
- Removes all useless Nodes from a Topology by calling ST_NewEdgeHeal
-
- \param ptr pointer to the Topology Accessor Object.
- \param line_max_points if set to a positive number all input Edges
- will be split into simpler Edges having no more than this maximum 
- number of points. 
- \param max_length if set to a positive value all input Edges will 
- be split into simpler Edges having a length not exceeding this 
- threshold. If both line_max_points and max_legth are set as the 
- same time the first condition occurring will cause an Edge to be split
- in two halves. 
-
- \return 1 on success; -1 on failure (will raise an exception).
-
- \sa gaiaTopologyFromDBMS, gaiaTopoGeo_ModEdgeHeal
- */
-    GAIATOPO_DECLARE int gaiaTopoGeo_NewEdgesSplit (GaiaTopologyAccessorPtr ptr,
-						    int line_max_points,
-						    double max_length);
-
-/**
- Removes all useless Nodes from a Topology by calling ST_ModEdgeHeal
-
- \param ptr pointer to the Topology Accessor Object.
- \param line_max_points if set to a positive number all input Edges
- will be split into simpler Edges having no more than this maximum 
- number of points. 
- \param max_length if set to a positive value all input Edges will 
- be split into simpler Edges having a length not exceeding this 
- threshold. If both line_max_points and max_legth are set as the 
- same time the first condition occurring will cause an Edge to be split
- in two halves. 
-
- \return 1 on success; -1 on failure (will raise an exception).
-
- \sa gaiaTopologyFromDBMS, gaiaTopoGeo_NewEdgeHeal
- */
-    GAIATOPO_DECLARE int gaiaTopoGeo_ModEdgeSplit (GaiaTopologyAccessorPtr ptr,
-						   int line_max_points,
-						   double max_length);
 
 /**
  creates a TopoLayer and its corresponding Feature relations for a given 

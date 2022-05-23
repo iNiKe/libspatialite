@@ -2,7 +2,7 @@
 
  virtualdbf.c -- SQLite3 extension [VIRTUAL TABLE accessing DBF]
 
- version 5.0, 2020 August 1
+ version 4.3, 2015 June 29
 
  Author: Sandro Furieri a.furieri@lqt.it
 
@@ -24,7 +24,7 @@ The Original Code is the SpatiaLite library
 
 The Initial Developer of the Original Code is Alessandro Furieri
  
-Portions created by the Initial Developer are Copyright (C) 2008-2020
+Portions created by the Initial Developer are Copyright (C) 2008-2015
 the Initial Developer. All Rights Reserved.
 
 Contributor(s):
@@ -106,31 +106,6 @@ typedef struct VirtualDbfCursorStruct
 
 typedef VirtualDbfCursor *VirtualDbfCursorPtr;
 
-static char *
-convert_dbf_colname_case (const char *buf, int colname_case)
-{
-/* converts a DBF column-name to Lower- or Upper-case */
-    int len = strlen (buf);
-    char *clean = malloc (len + 1);
-    char *p = clean;
-    strcpy (clean, buf);
-    while (*p != '\0')
-      {
-	  if (colname_case == GAIA_DBF_COLNAME_LOWERCASE)
-	    {
-		if (*p >= 'A' && *p <= 'Z')
-		    *p = *p - 'A' + 'a';
-	    }
-	  if (colname_case == GAIA_DBF_COLNAME_UPPERCASE)
-	    {
-		if (*p >= 'a' && *p <= 'z')
-		    *p = *p - 'a' + 'A';
-	    }
-	  p++;
-      }
-    return clean;
-}
-
 static int
 vdbf_create (sqlite3 * db, void *pAux, int argc, const char *const *argv,
 	     sqlite3_vtab ** ppVTab, char **pzErr)
@@ -141,8 +116,6 @@ vdbf_create (sqlite3 * db, void *pAux, int argc, const char *const *argv,
     char path[2048];
     char encoding[128];
     const char *pEncoding = NULL;
-    char ColnameCase[128];
-    const char *pColnameCase;
     int len;
     const char *pPath = NULL;
     gaiaDbfFieldPtr pFld;
@@ -152,14 +125,13 @@ vdbf_create (sqlite3 * db, void *pAux, int argc, const char *const *argv,
     int dup;
     int idup;
     int text_dates = 0;
-    int colname_case = GAIA_DBF_COLNAME_LOWERCASE;
     char *xname;
     char **col_name = NULL;
     gaiaOutBuffer sql_statement;
     if (pAux)
 	pAux = pAux;		/* unused arg warning suppression */
 /* checking for DBF PATH */
-    if (argc == 5 || argc == 6 || argc == 7)
+    if (argc == 5 || argc == 6)
       {
 	  pPath = argv[3];
 	  len = strlen (pPath);
@@ -186,38 +158,14 @@ vdbf_create (sqlite3 * db, void *pAux, int argc, const char *const *argv,
 	    }
 	  else
 	      strcpy (encoding, pEncoding);
-	  if (argc >= 6)
+	  if (argc == 6)
 	      text_dates = atoi (argv[5]);
-	  if (argc >= 7)
-	    {
-		pColnameCase = argv[6];
-		len = strlen (pColnameCase);
-		if ((*(pColnameCase + 0) == '\'' || *(pColnameCase + 0) == '"')
-		    && (*(pColnameCase + len - 1) == '\''
-			|| *(pColnameCase + len - 1) == '"'))
-		  {
-		      /* the charset-name is enclosed between quotes - we need to dequote it */
-		      strcpy (ColnameCase, pColnameCase + 1);
-		      len = strlen (ColnameCase);
-		      *(ColnameCase + len - 1) = '\0';
-		  }
-		else
-		    strcpy (ColnameCase, pColnameCase);
-		if (strcasecmp (ColnameCase, "uppercase") == 0
-		    || strcasecmp (ColnameCase, "upper") == 0)
-		    colname_case = GAIA_DBF_COLNAME_UPPERCASE;
-		else if (strcasecmp (ColnameCase, "samecase") == 0
-			 || strcasecmp (ColnameCase, "same") == 0)
-		    colname_case = GAIA_DBF_COLNAME_CASE_IGNORE;
-		else
-		    colname_case = GAIA_DBF_COLNAME_LOWERCASE;
-	    }
       }
     else
       {
 	  *pzErr =
 	      sqlite3_mprintf
-	      ("[VirtualDbf module] CREATE VIRTUAL: illegal arg list {dbf_path, encoding [ , text_dates [ , colname_case ]] }");
+	      ("[VirtualDbf module] CREATE VIRTUAL: illegal arg list {dbf_path, encoding}");
 	  return SQLITE_ERROR;
       }
     p_vt = (VirtualDbfPtr) sqlite3_malloc (sizeof (VirtualDbf));
@@ -252,10 +200,7 @@ vdbf_create (sqlite3 * db, void *pAux, int argc, const char *const *argv,
 /* preparing the COLUMNs for this VIRTUAL TABLE */
     gaiaOutBufferInitialize (&sql_statement);
     xname = gaiaDoubleQuotedSql (argv[2]);
-    if (colname_case == GAIA_DBF_COLNAME_LOWERCASE)
-	sql = sqlite3_mprintf ("CREATE TABLE \"%s\" (pkuid INTEGER", xname);
-    else
-	sql = sqlite3_mprintf ("CREATE TABLE \"%s\" (PKUID INTEGER", xname);
+    sql = sqlite3_mprintf ("CREATE TABLE \"%s\" (PKUID INTEGER", xname);
     free (xname);
     gaiaAppendToOutBuffer (&sql_statement, sql);
     sqlite3_free (sql);
@@ -274,9 +219,7 @@ vdbf_create (sqlite3 * db, void *pAux, int argc, const char *const *argv,
     pFld = p_vt->dbf->Dbf->First;
     while (pFld)
       {
-	  char *casename = convert_dbf_colname_case (pFld->Name, colname_case);
-	  xname = gaiaDoubleQuotedSql (casename);
-	  free (casename);
+	  xname = gaiaDoubleQuotedSql (pFld->Name);
 	  dup = 0;
 	  for (idup = 0; idup < cnt; idup++)
 	    {
@@ -289,9 +232,7 @@ vdbf_create (sqlite3 * db, void *pAux, int argc, const char *const *argv,
 	    {
 		free (xname);
 		sql = sqlite3_mprintf ("COL_%d", seed++);
-		casename = convert_dbf_colname_case (sql, colname_case);
 		xname = gaiaDoubleQuotedSql (sql);
-		free (casename);
 		sqlite3_free (sql);
 	    }
 	  if (pFld->Type == 'N')
@@ -722,12 +663,7 @@ vdbf_eval_constraints (VirtualDbfCursorPtr cursor)
 					      break;
 #ifdef HAVE_DECL_SQLITE_INDEX_CONSTRAINT_LIKE
 					  case SQLITE_INDEX_CONSTRAINT_LIKE:
-					      ret =
-						  sqlite3_strlike (pC->txtValue,
-								   pFld->
-								   Value->TxtValue,
-								   0);
-					      if (ret == 0)
+					      if (ret >= 0)
 						  ok = 1;
 					      break;
 #endif

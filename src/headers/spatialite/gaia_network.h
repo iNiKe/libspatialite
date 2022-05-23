@@ -1,7 +1,7 @@
 /*
  gaia_network.h -- Gaia common support for Topology-Network
   
- version 5.0, 2020 August 1
+ version 4.3, 2015 August 11
 
  Author: Sandro Furieri a.furieri@lqt.it
 
@@ -23,7 +23,7 @@ The Original Code is the SpatiaLite library
 
 The Initial Developer of the Original Code is Alessandro Furieri
  
-Portions created by the Initial Developer are Copyright (C) 2015-2020
+Portions created by the Initial Developer are Copyright (C) 2015
 the Initial Developer. All Rights Reserved.
 
 Contributor(s):
@@ -245,8 +245,8 @@ extern "C"
  \sa gaiaNetworkFromDBMS, gaiaMoveIsoNetNode, gaiaRemIsoNetNode,
  gaiaAddLink
  */
-    GAIANET_DECLARE sqlite3_int64 gaiaAddIsoNetNode (GaiaNetworkAccessorPtr
-						     ptr, gaiaPointPtr pt);
+    GAIANET_DECLARE sqlite3_int64 gaiaAddIsoNetNode (GaiaNetworkAccessorPtr ptr,
+						     gaiaPointPtr pt);
 
 /**
  Moves an isolated node in a Topology-Network from one point to another
@@ -368,8 +368,7 @@ extern "C"
  gaiaModLinkHeal
  */
     GAIANET_DECLARE sqlite3_int64 gaiaNewGeoLinkSplit (GaiaNetworkAccessorPtr
-						       ptr,
-						       sqlite3_int64 link,
+						       ptr, sqlite3_int64 link,
 						       gaiaPointPtr pt);
 
 /**
@@ -387,8 +386,7 @@ extern "C"
  gaiaModLinkHeal
  */
     GAIANET_DECLARE sqlite3_int64 gaiaModGeoLinkSplit (GaiaNetworkAccessorPtr
-						       ptr,
-						       sqlite3_int64 link,
+						       ptr, sqlite3_int64 link,
 						       gaiaPointPtr pt);
 
 /**
@@ -436,7 +434,7 @@ extern "C"
 
  \return 1 on success; 0 on failure.
 
- \sa gaiaNetworkFromDBMS
+ \sa gaiaTopologyFromDBMS
  */
     GAIANET_DECLARE int gaiaValidLogicalNet (GaiaNetworkAccessorPtr ptr);
 
@@ -448,7 +446,7 @@ extern "C"
 
  \return 1 on success; 0 on failure.
 
- \sa gaiaNetworkFromDBMS
+ \sa gaiaTopologyFromDBMS
  */
     GAIANET_DECLARE int gaiaValidSpatialNet (GaiaNetworkAccessorPtr ptr);
 
@@ -515,20 +513,6 @@ extern "C"
 	gaiaGetLinkSeed (GaiaNetworkAccessorPtr ptr, sqlite3_int64 link);
 
 /**
- Ensures that all Links on a Topology-Network will have not less
- than three vertices; for all Links found being simple two-points 
- segments a third intermediate point will be interpolated.
-
- \param ptr pointer to the Network Accessor Object.
-
- \return the total number of changed Links; a negativa number on error
-
- \sa gaiaNetworkFromDBMS
- */
-    GAIANET_DECLARE int
-	gaiaTopoNet_DisambiguateSegmentLinks (GaiaNetworkAccessorPtr ptr);
-
-/**
  Will update all Seeds for a Topology-Network
 
  \param ptr pointer to the Network Accessor Object.
@@ -558,7 +542,7 @@ extern "C"
 
  \return 1 on success; -1 on failure (will raise an exception).
 
- \sa gaiaNetworkFromDBMS
+ \sa gaiaTopologyFromDBMS
  */
     GAIANET_DECLARE int
 	gaiaTopoNet_ToGeoTable (GaiaNetworkAccessorPtr ptr,
@@ -584,7 +568,7 @@ extern "C"
 
  \return 1 on success; -1 on failure (will raise an exception).
 
- \sa gaiaNetworkFromDBMS
+ \sa gaiaTopologyFromDBMS
  */
     GAIANET_DECLARE int
 	gaiaTopoNet_ToGeoTableGeneralize (GaiaNetworkAccessorPtr ptr,
@@ -594,30 +578,6 @@ extern "C"
 					  const char *out_table,
 					  double tolerance,
 					  int with_spatial_index);
-
-/**
- Creates and populates a Table containing a comprehensive report
- about all intesections between the Links of some Network and
- a given reference Table of the Linestring/Multilinestring type.
-
- \param ptr pointer to the Network Accessor Object.
- \param db-prefix prefix of the DB containing the reference GeoTable.
- If NULL the "main" DB will be intended by default.
- \param ref_table name of the reference GeoTable.
- \param ref_column name of the reference Geometry Column.
- Could be NULL is the reference table has just a single Geometry Column.
- \param out_table name of the output output table to be created and populated.
-
- \return 1 on success; -1 on failure (will raise an exception).
-
- \sa gaiaNetworkFromDBMS
- */
-    GAIANET_DECLARE int
-	gaiaTopoNet_LineLinksList (GaiaNetworkAccessorPtr ptr,
-				   const char *db_prefix, const char *ref_table,
-				   const char *ref_column,
-				   const char *out_table);
-
 
 #ifdef __cplusplus
 }

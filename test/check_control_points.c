@@ -50,8 +50,6 @@ the terms of any one of the MPL, the GPL or the LGPL.
 #include "sqlite3.h"
 #include "spatialite.h"
 
-#ifdef ENABLE_GCP		/* only if Control Points (Grass) is enabled */
-
 static int
 test_query (sqlite3 * sqlite, const char *sql, const char *expected)
 {
@@ -288,8 +286,6 @@ test_invalid (sqlite3 * handle)
     return 1;
 }
 
-#endif
-
 int
 main (int argc, char *argv[])
 {
@@ -300,6 +296,9 @@ main (int argc, char *argv[])
     const char *sql;
     int order;
     void *cache = spatialite_alloc_connection ();
+
+    if (argc > 1 || argv[0] == NULL)
+	argc = 1;		/* silencing stupid compiler warnings */
 
     ret =
 	sqlite3_open_v2 (":memory:", &handle,
@@ -907,9 +906,6 @@ main (int argc, char *argv[])
     spatialite_cleanup_ex (cache);
 
 #endif /* end CGP conditional */
-
-    if (argc > 1 || argv[0] == NULL)
-	argc = 1;		/* silencing stupid compiler warnings */
 
     spatialite_shutdown ();
     return 0;

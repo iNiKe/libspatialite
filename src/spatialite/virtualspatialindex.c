@@ -2,7 +2,7 @@
 
  virtualspatialindex.c -- SQLite3 extension [VIRTUAL TABLE RTree metahandler]
 
- version 5.0, 2020 August 1
+ version 4.3, 2015 June 29
 
  Author: Sandro Furieri a.furieri@lqt.it
 
@@ -24,7 +24,7 @@ The Original Code is the SpatiaLite library
 
 The Initial Developer of the Original Code is Alessandro Furieri
  
-Portions created by the Initial Developer are Copyright (C) 2008-2020
+Portions created by the Initial Developer are Copyright (C) 2008-2015
 the Initial Developer. All Rights Reserved.
 
 Contributor(s):
@@ -96,44 +96,6 @@ typedef struct VirtualSpatialIndexCursorStruct
 typedef VirtualSpatialIndexCursor *VirtualSpatialIndexCursorPtr;
 
 static int
-vspidx_validate_view_rowid (void *p_sqlite, const char *table,
-			    const char *column)
-{
-/* checks if a table does really contains a given column */
-    sqlite3 *sqlite = (sqlite3 *) p_sqlite;
-    int rowid = 0;
-    char *sql;
-    int ret;
-    const char *name;
-    int i;
-    char **results;
-    int rows;
-    int columns;
-    char *quoted_table = gaiaDoubleQuotedSql (table);
-    sql = sqlite3_mprintf ("PRAGMA table_info(\"%s\")", quoted_table);
-    ret = sqlite3_get_table (sqlite, sql, &results, &rows, &columns, NULL);
-    sqlite3_free (sql);
-    free (quoted_table);
-    if (ret != SQLITE_OK)
-	return 0;
-    if (rows < 1)
-	;
-    else
-      {
-	  for (i = 1; i <= rows; i++)
-	    {
-		name = results[(i * columns) + 1];
-		if (strcasecmp (name, column) == 0)
-		    rowid = 1;
-	    }
-      }
-    sqlite3_free_table (results);
-    if (rowid == 0)
-	return 0;
-    return 1;
-}
-
-static int
 vspidx_check_view_rtree (sqlite3 * sqlite, const char *table_name,
 			 const char *geom_column, char **real_table,
 			 char **real_geom)
@@ -145,7 +107,6 @@ vspidx_check_view_rtree (sqlite3 * sqlite, const char *table_name,
     int count = 0;
     char *rt = NULL;
     char *rg = NULL;
-    char *rowid = NULL;
 
 /* testing if views_geometry_columns exists */
     sql_statement = sqlite3_mprintf ("SELECT tbl_name FROM sqlite_master "
@@ -172,14 +133,14 @@ vspidx_check_view_rtree (sqlite3 * sqlite, const char *table_name,
 
 /* attempting to find the RTree Geometry Column */
     sql_statement =
-	sqlite3_mprintf
-	("SELECT a.f_table_name, a.f_geometry_column, a.view_rowid "
-	 "FROM views_geometry_columns AS a " "JOIN geometry_columns AS b ON ("
-	 "Upper(a.f_table_name) = Upper(b.f_table_name) AND "
-	 "Upper(a.f_geometry_column) = Upper(b.f_geometry_column)) "
-	 "WHERE Upper(a.view_name) = Upper(%Q) "
-	 "AND Upper(a.view_geometry) = Upper(%Q) AND b.spatial_index_enabled = 1",
-	 table_name, geom_column);
+	sqlite3_mprintf ("SELECT a.f_table_name, a.f_geometry_column "
+			 "FROM views_geometry_columns AS a "
+			 "JOIN geometry_columns AS b ON ("
+			 "Upper(a.f_table_name) = Upper(b.f_table_name) AND "
+			 "Upper(a.f_geometry_column) = Upper(b.f_geometry_column)) "
+			 "WHERE Upper(a.view_name) = Upper(%Q) "
+			 "AND Upper(a.view_geometry) = Upper(%Q) AND b.spatial_index_enabled = 1",
+			 table_name, geom_column);
     ret =
 	sqlite3_prepare_v2 (sqlite, sql_statement, strlen (sql_statement),
 			    &stmt, NULL);
@@ -206,26 +167,18 @@ vspidx_check_view_rtree (sqlite3 * sqlite, const char *table_name,
 		    free (rg);
 		rg = malloc (len + 1);
 		strcpy (rg, v);
-		v = (const char *) sqlite3_column_text (stmt, 2);
-		len = sqlite3_column_bytes (stmt, 2);
-		if (rowid)
-		    free (rowid);
-		rowid = malloc (len + 1);
-		strcpy (rowid, v);
 		count++;
 	    }
       }
     sqlite3_finalize (stmt);
     if (count != 1)
 	return 0;
-    if (!vspidx_validate_view_rowid (sqlite, table_name, rowid))
+    if (validateRowid (sqlite, table_name))
       {
 	  free (rt);
 	  free (rg);
-	  free (rowid);
 	  return 0;
       }
-    free (rowid);
     *real_table = rt;
     *real_geom = rg;
     return 1;
@@ -295,14 +248,8 @@ vspidx_check_rtree (sqlite3 * sqlite, const char *db_prefix,
       }
     sqlite3_finalize (stmt);
     if (count != 1)
-      {
-	  if (rg != NULL)
-	      free (rg);
-	  if (rt != NULL)
-	      free (rt);
-	  return vspidx_check_view_rtree (sqlite, table_name, geom_column,
-					  real_table, real_geom);
-      }
+	return vspidx_check_view_rtree (sqlite, table_name, geom_column,
+					real_table, real_geom);
     else
       {
 	  *real_table = rt;
@@ -323,7 +270,6 @@ vspidx_find_view_rtree (sqlite3 * sqlite, const char *db_prefix,
     int count = 0;
     char *rt = NULL;
     char *rg = NULL;
-    char *rowid = NULL;
 
 /* testing if views_geometry_columns exists */
     if (db_prefix == NULL)
@@ -364,27 +310,25 @@ vspidx_find_view_rtree (sqlite3 * sqlite, const char *db_prefix,
     if (db_prefix == NULL)
       {
 	  sql_statement =
-	      sqlite3_mprintf
-	      ("SELECT a.f_table_name, a.f_geometry_column, a.view_rowid "
-	       "FROM views_geometry_columns AS a "
-	       "JOIN geometry_columns AS b ON ("
-	       "Upper(a.f_table_name) = Upper(b.f_table_name) AND "
-	       "Upper(a.f_geometry_column) = Upper(b.f_geometry_column)) "
-	       "WHERE Upper(a.view_name) = Upper(%Q) AND b.spatial_index_enabled = 1",
-	       table_name);
+	      sqlite3_mprintf ("SELECT a.f_table_name, a.f_geometry_column "
+			       "FROM views_geometry_columns AS a "
+			       "JOIN geometry_columns AS b ON ("
+			       "Upper(a.f_table_name) = Upper(b.f_table_name) AND "
+			       "Upper(a.f_geometry_column) = Upper(b.f_geometry_column)) "
+			       "WHERE Upper(a.view_name) = Upper(%Q) AND b.spatial_index_enabled = 1",
+			       table_name);
       }
     else
       {
 	  char *quoted_db = gaiaDoubleQuotedSql (db_prefix);
 	  sql_statement =
-	      sqlite3_mprintf
-	      ("SELECT a.f_table_name, a.f_geometry_column, a.view_rowid "
-	       "FROM \"%s\".views_geometry_columns AS a "
-	       "JOIN \"%s\".geometry_columns AS b ON ("
-	       "Upper(a.f_table_name) = Upper(b.f_table_name) AND "
-	       "Upper(a.f_geometry_column) = Upper(b.f_geometry_column)) "
-	       "WHERE Upper(a.view_name) = Upper(%Q) AND b.spatial_index_enabled = 1",
-	       quoted_db, quoted_db, table_name);
+	      sqlite3_mprintf ("SELECT a.f_table_name, a.f_geometry_column "
+			       "FROM \"%s\".views_geometry_columns AS a "
+			       "JOIN \"%s\".geometry_columns AS b ON ("
+			       "Upper(a.f_table_name) = Upper(b.f_table_name) AND "
+			       "Upper(a.f_geometry_column) = Upper(b.f_geometry_column)) "
+			       "WHERE Upper(a.view_name) = Upper(%Q) AND b.spatial_index_enabled = 1",
+			       quoted_db, quoted_db, table_name);
 	  free (quoted_db);
       }
     ret =
@@ -413,26 +357,12 @@ vspidx_find_view_rtree (sqlite3 * sqlite, const char *db_prefix,
 		    free (rg);
 		rg = malloc (len + 1);
 		strcpy (rg, v);
-		v = (const char *) sqlite3_column_text (stmt, 2);
-		len = sqlite3_column_bytes (stmt, 2);
-		if (rowid)
-		    free (rowid);
-		rowid = malloc (len + 1);
-		strcpy (rowid, v);
 		count++;
 	    }
       }
     sqlite3_finalize (stmt);
     if (count != 1)
 	return 0;
-    if (!vspidx_validate_view_rowid (sqlite, table_name, rowid))
-      {
-	  free (rt);
-	  free (rg);
-	  free (rowid);
-	  return 0;
-      }
-    free (rowid);
     *real_table = rt;
     *real_geom = rg;
     return 1;
@@ -499,14 +429,8 @@ vspidx_find_rtree (sqlite3 * sqlite, const char *db_prefix,
       }
     sqlite3_finalize (stmt);
     if (count != 1)
-      {
-	  if (rg != NULL)
-	      free (rg);
-	  if (rt != NULL)
-	      free (rt);
-	  return vspidx_find_view_rtree (sqlite, db_prefix, table_name,
-					 real_table, real_geom);
-      }
+	return vspidx_find_view_rtree (sqlite, db_prefix, table_name,
+				       real_table, real_geom);
     else
       {
 	  *real_table = rt;

@@ -29,7 +29,6 @@
 #include <stdio.h>
 
 #include <ogr_srs_api.h>
-#include <cpl_conv.h>
 
 static void
 print_wkt (int srid)
@@ -194,9 +193,9 @@ print_wkt (int srid)
 	    }
 	skip:
 	  if (proj4 != NULL)
-	      CPLFree (proj4);
+	      OGRFree (proj4);
 	  if (wkt != NULL)
-	      CPLFree (wkt);
+	      OGRFree (wkt);
 	  OSRRelease (handle);
       }
 }

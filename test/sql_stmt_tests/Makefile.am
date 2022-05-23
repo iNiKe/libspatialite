@@ -27,21 +27,6 @@ EXTRA_DIST = addpoint10.testcase \
 	addpoint7.testcase \
 	addpoint8.testcase \
 	addpoint9.testcase \
-	addmeasure1.testcase \
-	addmeasure2.testcase \
-	addmeasure3.testcase \
-	addmeasure4.testcase \
-	addmeasure5.testcase \
-	addmeasure6.testcase \
-	addmeasure7.testcase \
-	addmeasure8.testcase \
-	addmeasure9.testcase \
-	addmeasure10.testcase \
-	addmeasure11.testcase \
-	addmeasure12.testcase \
-	addmeasure13.testcase \
-	addmeasure14.testcase \
-	addmeasure15.testcase \
 	asbinary10.testcase \
 	asbinary11.testcase \
 	asbinary12.testcase \
@@ -438,48 +423,25 @@ EXTRA_DIST = addpoint10.testcase \
 	casttoxym4.testcase \
 	casttoxym5.testcase \
 	casttoxym6.testcase \
-	casttoxym7.testcase \
-	casttoxym8.testcase \
-	casttoxym9.testcase \
-	casttoxym10.testcase \
-	casttoxym11.testcase \
 	casttoxyz1.testcase \
 	casttoxyz2.testcase \
 	casttoxyz3.testcase \
 	casttoxyz4.testcase \
 	casttoxyz5.testcase \
 	casttoxyz6.testcase \
-	casttoxyz7.testcase \
-	casttoxyz8.testcase \
-	casttoxyz9.testcase \
-	casttoxyz10.testcase \
-	casttoxyz11.testcase \
 	casttoxyzm1.testcase \
 	casttoxyzm2.testcase \
 	casttoxyzm3.testcase \
 	casttoxyzm4.testcase \
 	casttoxyzm5.testcase \
 	casttoxyzm6.testcase \
-	casttoxyzm7.testcase \
-	casttoxyzm8.testcase \
-	casttoxyzm9.testcase \
-	casttoxyzm10.testcase \
-	casttoxyzm11.testcase \
-	casttoxyzm12.testcase \
-	casttoxyzm13.testcase \
-	casttoxyzm14.testcase \
-	casttoxyzm15.testcase \
-	casttoxyzm16.testcase \
-	checkdupl1.testcase \
-	checkdupl2.testcase \
 	checkspatialmetadata1.testcase \
 	checkspatialmetadata2.testcase \
 	checkspatialmetadata3.testcase \
+	checkdupl1.testcase \
+	checkdupl2.testcase \
 	checkspatialmetadata4.testcase \
 	checkspatialmetadata5.testcase \
-	checkspatialmetadata6.testcase \
-	checkspatialmetadata7.testcase \
-	checkspatialmetadata8.testcase \
 	clonetable1.testcase \
 	clonetable2.testcase \
 	clonetable3.testcase \
@@ -664,52 +626,13 @@ EXTRA_DIST = addpoint10.testcase \
 	compressgeometry8.testcase \
 	compressgeometry9.testcase \
 	createrastercoverages.testcase \
+	createvectorcoverages.testcase \
 	createuuid1.testcase \
-	curvosity1.testcase \
-	curvosity2.testcase \
-	curvosity3.testcase \
-	curvosity4.testcase \
-	curvosity5.testcase \
-	curvosity6.testcase \
-	curvosity7.testcase \
-	curvosity8.testcase \
-	curvosity9.testcase \
-	curvosity10.testcase \
-	curvosity11.testcase \
-	curvosity12.testcase \
-	datalic_register1.testcase \
-	datalic_register2.testcase \
-	datalic_register3.testcase \
-	datalic_register4.testcase \
-	datalic_register5.testcase \
-	datalic_register6.testcase \
-	datalic_register7.testcase \
-	datalic_register8.testcase \
-	datalic_register9.testcase \
-	datalic_register10.testcase \
-	datalic_rename1.testcase \
-	datalic_rename2.testcase \
-	datalic_rename3.testcase \
-	datalic_rename4.testcase \
-	datalic_rename5.testcase \
-	datalic_rename6.testcase \
-	datalic_rename7.testcase \
-	datalic_rename8.testcase \
-	datalic_rename9.testcase \
-	datalic_seturl1.testcase \
-	datalic_seturl2.testcase \
-	datalic_seturl3.testcase \
-	datalic_seturl4.testcase \
-	datalic_seturl5.testcase \
-	datalic_seturl6.testcase \
-	datalic_seturl7.testcase \
-	datalic_seturl8.testcase \
-	datalic_seturl9.testcase \
-	datalic_unregister1.testcase \
-	datalic_unregister2.testcase \
-	datalic_unregister3.testcase \
-	datalic_unregister4.testcase \
-	datalic_unregister5.testcase \
+	decodeurl1.testcase \
+	decodeurl2.testcase \
+	decodeurl3.testcase \
+	decodeurl4.testcase \
+	decodeurl5.testcase \
 	dirfrompath1.testcase \
 	dirfrompath2.testcase \
 	dirfrompath3.testcase \
@@ -754,14 +677,6 @@ EXTRA_DIST = addpoint10.testcase \
 	dissolve8.testcase \
 	dissolve9.testcase \
 	dm_m.testcase \
-	downhill1.testcase \
-	downhill2.testcase \
-	downhill3.testcase \
-	downhill4.testcase \
-	downhill5.testcase \
-	downhill6.testcase \
-	downhill7.testcase \
-	downhill8.testcase \
 	DSC_1467.JPG \
 	DSCN0042.JPG \
 	dropgeo1.testcase \
@@ -773,19 +688,6 @@ EXTRA_DIST = addpoint10.testcase \
 	dropgeo7.testcase \
 	dropgeo8.testcase \
 	dropgeo9.testcase \
-	droptable1.testcase \
-	droptable2.testcase \
-	droptable3.testcase \
-	droptable4.testcase \
-	droptable5.testcase \
-	droptable6.testcase \
-	droptable7.testcase \
-	droptable8.testcase \
-	droptable9.testcase \
-	droptable10.testcase \
-	droptable11.testcase \
-	droptable12.testcase \
-	droptable13.testcase \
 	elemgeo1.testcase \
 	elemgeo2.testcase \
 	elemgeo3.testcase \
@@ -794,29 +696,13 @@ EXTRA_DIST = addpoint10.testcase \
 	elemgeo6.testcase \
 	elemgeo7.testcase \
 	elemgeo8.testcase \
-	elemgeo9.testcase \
-	elemgeo10.testcase \
-	elemgeo11.testcase \
-	elemgeo12.testcase \
-	elemgeo13.testcase \
-	elemgeo14.testcase \
-	elemgeo15.testcase \
-	elemgeo16.testcase \
-	elemgeo17.testcase \
-	elemgeo18.testcase \
-	elemgeo19.testcase \
 	emptyfile.txt \
+	encodeurl1.testcase \
+	encodeurl2.testcase \
+	encodeurl3.testcase \
+	encodeurl4.testcase \
+	encodeurl5.testcase \
 	endpoint1.testcase \
-	ensureclosedrings1.testcase \
-	ensureclosedrings2.testcase \
-	ensureclosedrings3.testcase \
-	ensureclosedrings4.testcase \
-	ensureclosedrings5.testcase \
-	ensureclosedrings6.testcase \
-	ensureclosedrings7.testcase \
-	ensureclosedrings8.testcase \
-	ensureclosedrings9.testcase \
-	ensureclosedrings10.testcase \
 	envelope1.testcase \
 	envelope2.testcase \
 	envelope3.testcase \
@@ -871,12 +757,6 @@ EXTRA_DIST = addpoint10.testcase \
 	fath_m.testcase \
 	fdo_ogr1.testcase \
 	fdo_ogr2.testcase \
-	fdo_ogr3.testcase \
-	fdo_ogr4.testcase \
-	fdo_ogr5.testcase \
-	fdo_ogr6.testcase \
-	fdo_ogr7.testcase \
-	fdo_ogr8.testcase \
 	fdo-wkb.sqlite_RO \
 	forcenull10.testcase \
 	forcenull11.testcase \
@@ -976,53 +856,6 @@ EXTRA_DIST = addpoint10.testcase \
 	fromgeojson7.testcase \
 	fromgeojson8.testcase \
 	fromgeojson9.testcase \
-	fromgeojsonmix1.testcase \
-	fromgeojsonmix2.testcase \
-	fromgeojsonmix3.testcase \
-	fromgeojsonmix4.testcase \
-	fromgeojsonmix5.testcase \
-	fromgeojsonmix6.testcase \
-	fromgeojsonmix7.testcase \
-	fromgeojsonmix8.testcase \
-	fromgeojsonmix9.testcase \
-	fromgeojsonpt10.testcase \
-	fromgeojsonpt11.testcase \
-	fromgeojsonpt12.testcase \
-	fromgeojsonpt13.testcase \
-	fromgeojsonpt14.testcase \
-	fromgeojsonpt15.testcase \
-	fromgeojsonpt16.testcase \
-	fromgeojsonpt17.testcase \
-	fromgeojsonpt18.testcase \
-	fromgeojsonpt19.testcase \
-	fromgeojsonpt1.testcase \
-	fromgeojsonpt20.testcase \
-	fromgeojsonpt21.testcase \
-	fromgeojsonpt22.testcase \
-	fromgeojsonpt23.testcase \
-	fromgeojsonpt24.testcase \
-	fromgeojsonpt25.testcase \
-	fromgeojsonpt26.testcase \
-	fromgeojsonpt27.testcase \
-	fromgeojsonpt28.testcase \
-	fromgeojsonpt29.testcase \
-	fromgeojsonpt2.testcase \
-	fromgeojsonpt30.testcase \
-	fromgeojsonpt31.testcase \
-	fromgeojsonpt32.testcase \
-	fromgeojsonpt33.testcase \
-	fromgeojsonpt34.testcase \
-	fromgeojsonpt35.testcase \
-	fromgeojsonpt36.testcase \
-	fromgeojsonpt37.testcase \
-	fromgeojsonpt38.testcase \
-	fromgeojsonpt3.testcase \
-	fromgeojsonpt4.testcase \
-	fromgeojsonpt5.testcase \
-	fromgeojsonpt6.testcase \
-	fromgeojsonpt7.testcase \
-	fromgeojsonpt8.testcase \
-	fromgeojsonpt9.testcase \
 	fromgml10.testcase \
 	fromgml11.testcase \
 	fromgml12.testcase \
@@ -1194,28 +1027,6 @@ EXTRA_DIST = addpoint10.testcase \
 	geodesic-len6.testcase \
 	geodesic-len7.testcase \
 	geodesic-len8.testcase \
-	geodesicangle1.testcase \
-	geodesicangle2.testcase \
-	geodesicangle3.testcase \
-	geodesicangle4.testcase \
-	geodesicangle5.testcase \
-	geodesicangle6.testcase \
-	geodesicarcarea1.testcase \
-	geodesicarcarea2.testcase \
-	geodesicarcarea3.testcase \
-	geodesicarcheight1.testcase \
-	geodesicarcheight2.testcase \
-	geodesicarcheight3.testcase \
-	geodesicarclen1.testcase \
-	geodesicarclen2.testcase \
-	geodesicarclen3.testcase \
-	geodesicarclen4.testcase \
-	geodesicarclen5.testcase \
-	geodesicchordlen1.testcase \
-	geodesicchordlen2.testcase \
-	geodesicchordlen3.testcase \
-	geodesicchordlen4.testcase \
-	geodesicchordlen5.testcase \
 	geojson1.testcase \
 	geojson2.testcase \
 	geojson3.testcase \
@@ -1352,16 +1163,6 @@ EXTRA_DIST = addpoint10.testcase \
 	geomfromtext7.testcase \
 	geomfromtext8.testcase \
 	geomfromtext9.testcase \
-	geompointencode1.testcase \
-	geompointencode2.testcase \
-	geompointencode3.testcase \
-	geompointencode4.testcase \
-	geompointencode5.testcase \
-	geompointencode6.testcase \
-	geompointencode7.testcase \
-	geompointencode8.testcase \
-	geompointencode9.testcase \
-	geompointencode10.testcase \
 	geomtype10.testcase \
 	geomtype11.testcase \
 	geomtype12.testcase \
@@ -1436,11 +1237,6 @@ EXTRA_DIST = addpoint10.testcase \
 	getmimetype3.testcase \
 	getmimetype4.testcase \
 	getmimetype5.testcase \
-	getvtableextent1.testcase \
-	getvtableextent2.testcase \
-	getvtableextent3.testcase \
-	getvtableextent4.testcase \
-	getvtableextent5.testcase \
 	gml10.testcase \
 	gml11.testcase \
 	gml12.testcase \
@@ -1477,70 +1273,24 @@ EXTRA_DIST = addpoint10.testcase \
 	is3d4.testcase \
 	is3d5.testcase \
 	is3d6.testcase \
-	isdecimalnumber1.testcase \
-	isdecimalnumber2.testcase \
-	isdecimalnumber3.testcase \
-	isdecimalnumber4.testcase \
-	isdecimalnumber5.testcase \
-	isdecimalnumber6.testcase \
-	isdecimalnumber7.testcase \
-	isdecimalnumber8.testcase \
-	isdecimalnumber9.testcase \
-	isdecimalnumber10.testcase \
-	isdecimalnumber11.testcase \
-	isdecimalnumber12.testcase \
 	isempty2.testcase \
 	isempty3.testcase \
 	isempty4.testcase \
 	isempty.testcase \
-	isinteger1.testcase \
-	isinteger2.testcase \
-	isinteger3.testcase \
-	isinteger4.testcase \
-	isinteger5.testcase \
-	isinteger6.testcase \
-	isinteger7.testcase \
-	isinteger8.testcase \
-	isinteger9.testcase \
-	isinteger10.testcase \
-	isinteger11.testcase \
-	isnumber1.testcase \
-	isnumber2.testcase \
-	isnumber3.testcase \
-	isnumber4.testcase \
-	isnumber5.testcase \
-	isnumber7.testcase \
-	isnumber8.testcase \
 	ismeasured1.testcase \
 	ismeasured2.testcase \
 	ismeasured3.testcase \
 	ismeasured4.testcase \
 	ismeasured5.testcase \
-	ispolygccw1.testcase \
-	ispolygccw2.testcase \
-	ispolygccw3.testcase \
-	ispolygccw4.testcase \
-	ispolygccw5.testcase \
-	ispolygcw1.testcase \
-	ispolygcw2.testcase \
-	ispolygcw3.testcase \
-	ispolygcw4.testcase \
-	ispolygcw5.testcase \
+	ismeasured6.testcase \
 	ispopulatedcoverage1.testcase \
 	ispopulatedcoverage2.testcase \
-	ispopulatedcoverage3.testcase \
 	checkfontfacename1.testcase \
 	checkfontfacename2.testcase \
 	checkfontfacename3.testcase \
 	getfontfamily.testcase \
 	isfontbold.testcase \
 	isfontitalic.testcase \
-	islowascii1.testcase \
-	islowascii2.testcase \
-	islowascii3.testcase \
-	islowascii4.testcase \
-	islowascii5.testcase \
-	islowascii6.testcase \
 	isvalidfont1.testcase \
 	isvalidfont2.testcase \
 	isvalidnodata1.testcase \
@@ -1557,23 +1307,13 @@ EXTRA_DIST = addpoint10.testcase \
 	isvalidrasterstats5.testcase \
 	isvalidrasterstats6.testcase \
 	isvalidrasterstats7.testcase \
-	isvalidrasterstats8.testcase \
 	isvalidrastertile1.testcase \
 	isvalidrastertile2.testcase \
 	isvalidrastertile3.testcase \
 	isvalidrastertile4.testcase \
 	isvalidrastertile5.testcase \
 	isvalidrastertile6.testcase \
-	isvalidrastertile7.testcase \
-	isvalidrastertile8.testcase \
-	isvalidrastertile9.testcase \
-	isvalidtrajectory1.testcase \
-	isvalidtrajectory2.testcase \
-	isvalidtrajectory3.testcase \
-	isvalidtrajectory4.testcase \
-	isvalidtrajectory5.testcase \
-	isvalidtrajectory6.testcase \
-	isvalidtrajectory7.testcase \
+	isXblob5.testcase \
 	isXblob6.testcase \
 	isXblob7.testcase \
 	k3b-icon.png \
@@ -1596,39 +1336,6 @@ EXTRA_DIST = addpoint10.testcase \
 	linesfromrings5.testcase \
 	linesfromrings6.testcase \
 	linesfromrings7.testcase \
-	linesegavg1.testcase \
-	linesegavg2.testcase \
-	linesegavg3.testcase \
-	linesegavg4.testcase \
-	linesegavg5.testcase \
-	linesegavg6.testcase \
-	linesegavg7.testcase \
-	linesegavg8.testcase \
-	linesegavg9.testcase \
-	linesegmax1.testcase \
-	linesegmax2.testcase \
-	linesegmax3.testcase \
-	linesegmax4.testcase \
-	linesegmax5.testcase \
-	linesegmax6.testcase \
-	linesegmax7.testcase \
-	linesegmax8.testcase \
-	linesegmax9.testcase \
-	linesegmin1.testcase \
-	linesegmin2.testcase \
-	linesegmin3.testcase \
-	linesegmin4.testcase \
-	linesegmin5.testcase \
-	linesegmin6.testcase \
-	linesegmin7.testcase \
-	linesegmin8.testcase \
-	linesegmin9.testcase \
-	linesegmin10.testcase \
-	linesegmin11.testcase \
-	linesegmin12.testcase \
-	linesegmin13.testcase \
-	linesegmin14.testcase \
-	linesegmin15.testcase \
 	link_m.testcase \
 	locatemeasure10.testcase \
 	locatemeasure11.testcase \
@@ -2042,21 +1749,8 @@ EXTRA_DIST = addpoint10.testcase \
 	pointn7.testcase \
 	pointn8.testcase \
 	pointn9.testcase \
-	polygccw1.testcase \
-	polygccw2.testcase \
-	polygccw3.testcase \
-	polygccw4.testcase \
-	polygccw5.testcase \
-	polygccw6.testcase \
-	polygcw1.testcase \
-	polygcw2.testcase \
-	polygcw3.testcase \
-	polygcw4.testcase \
-	polygcw5.testcase \
-	polygcw6.testcase \
 	polygonfromtext1.testcase \
 	polygonfromtext2.testcase \
-	recreaterastercoverages.testcase \
 	reflectcoords10.testcase \
 	reflectcoords11.testcase \
 	reflectcoords12.testcase \
@@ -2074,12 +1768,6 @@ EXTRA_DIST = addpoint10.testcase \
 	reflectcoords7.testcase \
 	reflectcoords8.testcase \
 	reflectcoords9.testcase \
-	remextrasp1.testcase \
-	remextrasp2.testcase \
-	remextrasp3.testcase \
-	remextrasp4.testcase \
-	remextrasp5.testcase \
-	remextrasp6.testcase \
 	removedupl1.testcase \
 	removedupl2.testcase \
 	removedupl3.testcase \
@@ -2100,20 +1788,6 @@ EXTRA_DIST = addpoint10.testcase \
 	removepoint7.testcase \
 	removepoint8.testcase \
 	removepoint9.testcase \
-	repeatedpoints1.testcase \
-	repeatedpoints2.testcase \
-	repeatedpoints3.testcase \
-	repeatedpoints4.testcase \
-	repeatedpoints5.testcase \
-	repeatedpoints6.testcase \
-	repeatedpoints7.testcase \
-	repeatedpoints8.testcase \
-	repeatedpoints9.testcase \
-	repeatedpoints10.testcase \
-	repeatedpoints11.testcase \
-	repeatedpoints12.testcase \
-	repeatedpoints13.testcase \
-	repeatedpoints14.testcase \
 	reverse1.testcase \
 	reverse2.testcase \
 	reverse3.testcase \
@@ -2299,21 +1973,6 @@ EXTRA_DIST = addpoint10.testcase \
 	shiftlongitude8.testcase \
 	shiftlongitude9.testcase \
 	spatialindex.testcase \
-	spatialindexextent1.testcase \
-	spatialindexextent2.testcase \
-	spatialindexextent3.testcase \
-	spatialindexextent4.testcase \
-	spatialindexextent5.testcase \
-	spatialindexextent6.testcase \
-	spatialindexextent7.testcase \
-	spatialindexextent8.testcase \
-	spatialindexextent9.testcase \
-	spatialindexextent10.testcase \
-	spatialindexextent11.testcase \
-	spatialindexextent12.testcase \
-	spatialindexextent13.testcase \
-	spatialindexextent14.testcase \
-	spatialindexextent15.testcase \
 	srid10.testcase \
 	srid11.testcase \
 	srid1.testcase \
@@ -2539,11 +2198,6 @@ EXTRA_DIST = addpoint10.testcase \
 	todms11.testcase \
 	todms12.testcase \
 	todms13.testcase \
-	todms14.testcase \
-	todms15.testcase \
-	todms16.testcase \
-	todms17.testcase \
-	todms18.testcase \
 	fromdms1.testcase \
 	fromdms2.testcase \
 	fromdms3.testcase \
@@ -2591,6 +2245,7 @@ EXTRA_DIST = addpoint10.testcase \
 	sriddatum3.testcase \
 	sriddatum4.testcase \
 	sriddatum5.testcase \
+	sriddatum6.testcase \
 	sridunit1.testcase \
 	sridunit2.testcase \
 	sridunit3.testcase \
@@ -2602,455 +2257,28 @@ EXTRA_DIST = addpoint10.testcase \
 	sridprojection3.testcase \
 	sridprojection4.testcase \
 	sridprojection5.testcase \
+	sridprojection6.testcase \
 	sridax1name1.testcase \
 	sridax1name2.testcase \
 	sridax1name3.testcase \
 	sridax1name4.testcase \
 	sridax1name5.testcase \
+	sridax1name6.testcase \
 	sridax1orient1.testcase \
 	sridax1orient2.testcase \
 	sridax1orient3.testcase \
 	sridax1orient4.testcase \
 	sridax1orient5.testcase \
+	sridax1orient6.testcase \
 	sridax2name1.testcase \
 	sridax2name2.testcase \
 	sridax2name3.testcase \
 	sridax2name4.testcase \
 	sridax2name5.testcase \
+	sridax2name6.testcase \
 	sridax2orient1.testcase \
 	sridax2orient2.testcase \
 	sridax2orient3.testcase \
 	sridax2orient4.testcase \
 	sridax2orient5.testcase \
-	stringlist1.testcase \
-	stringlist2.testcase \
-	stringlist3.testcase \
-	stringlist4.testcase \
-	stringlist5.testcase \
-	tinypointencode1.testcase \
-	tinypointencode2.testcase \
-	tinypointencode3.testcase \
-	tinypointencode4.testcase \
-	tinypointencode5.testcase \
-	tinypointencode6.testcase \
-	tinypointencode7.testcase \
-	tinypointencode8.testcase \
-	tinypointencode9.testcase \
-	tinypointencode10.testcase \
-	trajectorypoint1.testcase \
-	trajectorypoint2.testcase \
-	trajectorypoint3.testcase \
-	trajectorypoint4.testcase \
-	trajectorypoint5.testcase \
-	trajectorypoint6.testcase \
-	trajectorypoint7.testcase \
-	trajectorypoint8.testcase \
-	trajectorypoint9.testcase \
-	trajectorypoint10.testcase \
-	trajectorypoint11.testcase \
-	trajectorypoint12.testcase \
-	uphill1.testcase \
-	uphill2.testcase \
-	uphill3.testcase \
-	uphill4.testcase \
-	uphill5.testcase \
-	uphill6.testcase \
-	uphill7.testcase \
-	uphill8.testcase \
-	updown1.testcase \
-	updown2.testcase \
-	updown3.testcase \
-	updown4.testcase \
-	updown5.testcase \
-	updown6.testcase \
-	updown7.testcase \
-	updown8.testcase \
-	wms_defaultsetting1.testcase \
-	wms_defaultsetting2.testcase \
-	wms_defaultsetting3.testcase \
-	wms_defaultsetting4.testcase \
-	wms_defaultsetting5.testcase \
-	wms_defaultsetting6.testcase \
-	wms_defaultsetting7.testcase \
-	wms_defaultsetting8.testcase \
-	wms_defaultsetting9.testcase \
-	wms_defaultsetting10.testcase \
-	wms_defaultsetting11.testcase \
-	wms_defaultsetting12.testcase \
-	wms_defaultsetting13.testcase \
-	wms_defaultsetting14.testcase \
-	wms_defaultsetting15.testcase \
-	wms_defaultsetting16.testcase \
-	wms_defaultsetting17.testcase \
-	wms_defaultsrs1.testcase \
-	wms_defaultsrs2.testcase \
-	wms_defaultsrs3.testcase \
-	wms_defaultsrs4.testcase \
-	wms_defaultsrs5.testcase \
-	wms_defaultsrs6.testcase \
-	wms_defaultsrs7.testcase \
-	wms_defaultsrs8.testcase \
-	wms_defaultsrs9.testcase \
-	wms_defaultsrs10.testcase \
-	wms_defaultsrs11.testcase \
-	wms_defaultsrs12.testcase \
-	wms_defaultsrs13.testcase \
-	wms_getmapoptions1.testcase \
-	wms_getmapoptions2.testcase \
-	wms_getmapoptions3.testcase \
-	wms_getmapoptions4.testcase \
-	wms_getmapoptions5.testcase \
-	wms_getmapoptions6.testcase \
-	wms_getmapoptions7.testcase \
-	wms_getmapoptions8.testcase \
-	wms_getmapoptions9.testcase \
-	wms_getmapoptions10.testcase \
-	wms_getmapoptions11.testcase \
-	wms_getmapoptions12.testcase \
-	wms_getmapoptions13.testcase \
-	wms_getmapoptions14.testcase \
-	wms_getmapoptions15.testcase \
-	wms_getmapoptions16.testcase \
-	wms_getmapoptions17.testcase \
-	wms_getmapoptions18.testcase \
-	wms_getmapoptions19.testcase \
-	wms_getmapoptions20.testcase \
-	wms_getmapoptions21.testcase \
-	wms_getmapoptions22.testcase \
-	wms_getmapoptions23.testcase \
-	wms_getmapoptions24.testcase \
-	wms_getmapoptions25.testcase \
-	wms_getmapoptions26.testcase \
-	wms_getmapoptions27.testcase \
-	wms_getmapoptions28.testcase \
-	wms_getmapoptions29.testcase \
-	wms_getmapoptions30.testcase \
-	wms_getmapoptions31.testcase \
-	wms_getmapoptions32.testcase \
-	wms_getmapoptions33.testcase \
-	wms_getmapoptions34.testcase \
-	wms_getmapoptions35.testcase \
-	wms_getmapoptions36.testcase \
-	wms_getmapoptions37.testcase \
-	wms_getmapoptions38.testcase \
-	wms_getmapoptions39.testcase \
-	wms_getmapoptions40.testcase \
-	wms_getmapoptions41.testcase \
-	wms_getmapoptions42.testcase \
-	wms_getmapoptions43.testcase \
-	wms_getmapoptions44.testcase \
-	wms_getinfo_url1.testcase \
-	wms_getinfo_url2.testcase \
-	wms_getinfo_url3.testcase \
-	wms_getinfo_url4.testcase \
-	wms_getinfo_url5.testcase \
-	wms_getinfo_url6.testcase \
-	wms_getinfo_url7.testcase \
-	wms_getinfo_url8.testcase \
-	wms_getinfo_url9.testcase \
-	wms_getinfo_url10.testcase \
-	wms_getinfo_url11.testcase \
-	wms_getinfo_url12.testcase \
-	wms_getinfo_url13.testcase \
-	wms_getinfo_url14.testcase \
-	wms_getinfo_url15.testcase \
-	wms_getinfo_url16.testcase \
-	wms_getinfo_url17.testcase \
-	wms_getinfo_url18.testcase \
-	wms_getinfo_url19.testcase \
-	wms_getinfo_url20.testcase \
-	wms_getinfo_url21.testcase \
-	wms_getinfo_url22.testcase \
-	wms_getinfo_url23.testcase \
-	wms_getinfo_url24.testcase \
-	wms_getinfo_url25.testcase \
-	wms_getinfo_url26.testcase \
-	wms_getinfo_url27.testcase \
-	wms_getinfo_url28.testcase \
-	wms_getinfo_url29.testcase \
-	wms_getinfo_url30.testcase \
-	wms_getinfo_url31.testcase \
-	wms_getinfo_url32.testcase \
-	wms_getinfo_url33.testcase \
-	wms_getinfo_url34.testcase \
-	wms_getinfo_url35.testcase \
-	wms_getinfo_url36.testcase \
-	wms_getinfo_url37.testcase \
-	wms_getinfo_url38.testcase \
-	wms_getinfo_url39.testcase \
-	wms_getinfo_url40.testcase \
-	wms_getinfo_url41.testcase \
-	wms_getinfo_url42.testcase \
-	wms_getmap_url1.testcase \
-	wms_getmap_url2.testcase \
-	wms_getmap_url3.testcase \
-	wms_getmap_url4.testcase \
-	wms_getmap_url5.testcase \
-	wms_getmap_url6.testcase \
-	wms_getmap_url7.testcase \
-	wms_getmap_url8.testcase \
-	wms_getmap_url9.testcase \
-	wms_getmap_url10.testcase \
-	wms_getmap_url11.testcase \
-	wms_getmap_url12.testcase \
-	wms_getmap_url13.testcase \
-	wms_getmap_url14.testcase \
-	wms_getmap_url15.testcase \
-	wms_getmap_url16.testcase \
-	wms_getmap_url17.testcase \
-	wms_getmap_url18.testcase \
-	wms_getmap_url19.testcase \
-	wms_getmap_url20.testcase \
-	wms_getmap_url21.testcase \
-	wms_getmap_url22.testcase \
-	wms_getmap_url23.testcase \
-	wms_getmap_url24.testcase \
-	wms_getmap_url25.testcase \
-	wms_getmap_url26.testcase \
-	wms_getmap_url27.testcase \
-	wms_getmap_url28.testcase \
-	wms_getmap_url29.testcase \
-	wms_getmap_url30.testcase \
-	wms_registergetcapab1.testcase \
-	wms_registergetcapab2.testcase \
-	wms_registergetcapab3.testcase \
-	wms_registergetcapab4.testcase \
-	wms_registergetcapab5.testcase \
-	wms_registergetcapab6.testcase \
-	wms_registergetcapab7.testcase \
-	wms_registergetcapab8.testcase \
-	wms_registergetcapab9.testcase \
-	wms_registergetcapab10.testcase \
-	wms_registergetcapab11.testcase \
-	wms_registergetcapab12.testcase \
-	wms_registergetcapab13.testcase \
-	wms_registergetmap1.testcase \
-	wms_registergetmap2.testcase \
-	wms_registergetmap3.testcase \
-	wms_registergetmap4.testcase \
-	wms_registergetmap5.testcase \
-	wms_registergetmap6.testcase \
-	wms_registergetmap7.testcase \
-	wms_registergetmap8.testcase \
-	wms_registergetmap9.testcase \
-	wms_registergetmap10.testcase \
-	wms_registergetmap11.testcase \
-	wms_registergetmap12.testcase \
-	wms_registergetmap13.testcase \
-	wms_registergetmap14.testcase \
-	wms_registergetmap15.testcase \
-	wms_registergetmap16.testcase \
-	wms_registergetmap17.testcase \
-	wms_registergetmap18.testcase \
-	wms_registergetmap19.testcase \
-	wms_registergetmap20.testcase \
-	wms_registergetmap21.testcase \
-	wms_registergetmap22.testcase \
-	wms_registergetmap23.testcase \
-	wms_registergetmap24.testcase \
-	wms_registergetmap25.testcase \
-	wms_registergetmap26.testcase \
-	wms_registergetmap27.testcase \
-	wms_registergetmap28.testcase \
-	wms_registergetmap29.testcase \
-	wms_registergetmap30.testcase \
-	wms_registergetmap31.testcase \
-	wms_registergetmap32.testcase \
-	wms_registergetmap33.testcase \
-	wms_registergetmap34.testcase \
-	wms_registergetmap35.testcase \
-	wms_registergetmap36.testcase \
-	wms_registergetmap37.testcase \
-	wms_registergetmap38.testcase \
-	wms_registergetmap39.testcase \
-	wms_registergetmap40.testcase \
-	wms_registergetmap41.testcase \
-	wms_registergetmap42.testcase \
-	wms_registergetmap43.testcase \
-	wms_registergetmap44.testcase \
-	wms_registergetmap45.testcase \
-	wms_registergetmap46.testcase \
-	wms_registergetmap47.testcase \
-	wms_registergetmap48.testcase \
-	wms_registergetmap49.testcase \
-	wms_registergetmap50.testcase \
-	wms_registergetmap51.testcase \
-	wms_registergetmap52.testcase \
-	wms_registergetmap53.testcase \
-	wms_registergetmap54.testcase \
-	wms_registergetmap55.testcase \
-	wms_registergetmap56.testcase \
-	wms_registergetmap57.testcase \
-	wms_registergetmap58.testcase \
-	wms_registergetmap59.testcase \
-	wms_registergetmap60.testcase \
-	wms_registergetmap61.testcase \
-	wms_registergetmap62.testcase \
-	wms_registergetmap63.testcase \
-	wms_registergetmap64.testcase \
-	wms_registergetmap65.testcase \
-	wms_registergetmap66.testcase \
-	wms_registergetmap67.testcase \
-	wms_registergetmap68.testcase \
-	wms_registergetmap69.testcase \
-	wms_registergetmap70.testcase \
-	wms_registergetmap71.testcase \
-	wms_registergetmap72.testcase \
-	wms_registergetmap73.testcase \
-	wms_registergetmap74.testcase \
-	wms_registergetmap75.testcase \
-	wms_registergetmap76.testcase \
-	wms_registergetmap77.testcase \
-	wms_registergetmap78.testcase \
-	wms_registergetmap79.testcase \
-	wms_registergetmap80.testcase \
-	wms_registergetmap81.testcase \
-	wms_registergetmap82.testcase \
-	wms_registergetmap83.testcase \
-	wms_registergetmap84.testcase \
-	wms_registergetmap85.testcase \
-	wms_registergetmap86.testcase \
-	wms_registersetting1.testcase \
-	wms_registersetting2.testcase \
-	wms_registersetting3.testcase \
-	wms_registersetting4.testcase \
-	wms_registersetting5.testcase \
-	wms_registersetting6.testcase \
-	wms_registersetting7.testcase \
-	wms_registersetting8.testcase \
-	wms_registersetting9.testcase \
-	wms_registersetting10.testcase \
-	wms_registersetting11.testcase \
-	wms_registersetting12.testcase \
-	wms_registersetting13.testcase \
-	wms_registersetting14.testcase \
-	wms_registersetting15.testcase \
-	wms_registersetting16.testcase \
-	wms_registersetting17.testcase \
-	wms_registersetting18.testcase \
-	wms_registersetting19.testcase \
-	wms_registersetting20.testcase \
-	wms_registersetting21.testcase \
-	wms_registersetting22.testcase \
-	wms_registersrs1.testcase \
-	wms_registersrs2.testcase \
-	wms_registersrs3.testcase \
-	wms_registersrs4.testcase \
-	wms_registersrs5.testcase \
-	wms_registersrs6.testcase \
-	wms_registersrs7.testcase \
-	wms_registersrs8.testcase \
-	wms_registersrs9.testcase \
-	wms_registersrs10.testcase \
-	wms_registersrs11.testcase \
-	wms_registersrs12.testcase \
-	wms_registersrs13.testcase \
-	wms_registersrs14.testcase \
-	wms_registersrs15.testcase \
-	wms_registersrs16.testcase \
-	wms_registersrs17.testcase \
-	wms_registersrs18.testcase \
-	wms_registersrs19.testcase \
-	wms_registersrs20.testcase \
-	wms_registersrs21.testcase \
-	wms_registersrs22.testcase \
-	wms_registersrs23.testcase \
-	wms_registersrs24.testcase \
-	wms_registersrs25.testcase \
-	wms_registersrs26.testcase \
-	wms_registersrs27.testcase \
-	wms_registersrs28.testcase \
-	wms_registersrs29.testcase \
-	wms_setgetcapabinfo1.testcase \
-	wms_setgetcapabinfo2.testcase \
-	wms_setgetcapabinfo3.testcase \
-	wms_setgetcapabinfo4.testcase \
-	wms_setgetcapabinfo5.testcase \
-	wms_setgetcapabinfo6.testcase \
-	wms_setgetcapabinfo7.testcase \
-	wms_setgetcapabinfo8.testcase \
-	wms_setgetcapabinfo9.testcase \
-	wms_setgetcapabinfo10.testcase \
-	wms_setgetcapabinfo11.testcase \
-	wms_setgetcapabinfo12.testcase \
-	wms_setgetcapabinfo13.testcase \
-	wms_setcopyright1.testcase \
-	wms_setcopyright2.testcase \
-	wms_setcopyright3.testcase \
-	wms_setcopyright4.testcase \
-	wms_setcopyright5.testcase \
-	wms_setcopyright6.testcase \
-	wms_setcopyright7.testcase \
-	wms_setcopyright8.testcase \
-	wms_setcopyright9.testcase \
-	wms_setcopyright10.testcase \
-	wms_setcopyright11.testcase \
-	wms_setcopyright12.testcase \
-	wms_setcopyright13.testcase \
-	wms_setcopyright14.testcase \
-	wms_setcopyright15.testcase \
-	wms_setcopyright16.testcase \
-	wms_setcopyright17.testcase \
-	wms_setcopyright18.testcase \
-	wms_setcopyright19.testcase \
-	wms_setgetmapinfo1.testcase \
-	wms_setgetmapinfo2.testcase \
-	wms_setgetmapinfo3.testcase \
-	wms_setgetmapinfo4.testcase \
-	wms_setgetmapinfo5.testcase \
-	wms_setgetmapinfo6.testcase \
-	wms_setgetmapinfo7.testcase \
-	wms_setgetmapinfo8.testcase \
-	wms_setgetmapinfo9.testcase \
-	wms_setgetmapinfo10.testcase \
-	wms_setgetmapinfo11.testcase \
-	wms_setgetmapinfo12.testcase \
-	wms_setgetmapinfo13.testcase \
-	wms_setgetmapinfo14.testcase \
-	wms_setgetmapinfo15.testcase \
-	wms_setgetmapinfo16.testcase \
-	wms_setgetmapinfo17.testcase \
-	wms_unregistergetcapab1.testcase \
-	wms_unregistergetcapab2.testcase \
-	wms_unregistergetcapab3.testcase \
-	wms_unregistergetcapab4.testcase \
-	wms_unregistergetcapab5.testcase \
-	wms_unregistergetmap1.testcase \
-	wms_unregistergetmap2.testcase \
-	wms_unregistergetmap3.testcase \
-	wms_unregistergetmap4.testcase \
-	wms_unregistergetmap5.testcase \
-	wms_unregistergetmap6.testcase \
-	wms_unregistergetmap7.testcase \
-	wms_unregistergetmap8.testcase \
-	wms_unregistergetmap9.testcase \
-	wms_unregistersetting1.testcase \
-	wms_unregistersetting2.testcase \
-	wms_unregistersetting3.testcase \
-	wms_unregistersetting4.testcase \
-	wms_unregistersetting5.testcase \
-	wms_unregistersetting6.testcase \
-	wms_unregistersetting7.testcase \
-	wms_unregistersetting8.testcase \
-	wms_unregistersetting9.testcase \
-	wms_unregistersetting10.testcase \
-	wms_unregistersetting11.testcase \
-	wms_unregistersetting12.testcase \
-	wms_unregistersetting13.testcase \
-	wms_unregistersetting14.testcase \
-	wms_unregistersetting15.testcase \
-	wms_unregistersetting16.testcase \
-	wms_unregistersetting17.testcase \
-	wms_unregistersrs1.testcase \
-	wms_unregistersrs2.testcase \
-	wms_unregistersrs3.testcase \
-	wms_unregistersrs4.testcase \
-	wms_unregistersrs5.testcase \
-	wms_unregistersrs6.testcase \
-	wms_unregistersrs7.testcase \
-	wms_unregistersrs8.testcase \
-	wms_unregistersrs9.testcase \
-	wms_unregistersrs10.testcase \
-	wms_unregistersrs11.testcase \
-	wms_unregistersrs12.testcase \
-	wms_unregistersrs13.testcase
+	sridax2orient6.testcase

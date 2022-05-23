@@ -49,13 +49,6 @@ EXTRA_DIST = addfileid1.testcase \
 	isisometadata5.testcase \
 	isisometadata6.testcase \
 	isisometadata7.testcase \
-	ismapconfig1.testcase \
-	ismapconfig2.testcase \
-	ismapconfig3.testcase \
-	ismapconfig4.testcase \
-	ismapconfig5.testcase \
-	ismapconfig6.testcase \
-	ismapconfig7.testcase \
 	isschemavalidatedxmlblob1.testcase \
 	isschemavalidatedxmlblob2.testcase \
 	isschemavalidatedxmlblob3.testcase \
@@ -96,17 +89,6 @@ EXTRA_DIST = addfileid1.testcase \
 	isvalidxmlblob4.testcase \
 	isvalidxmlblob5.testcase \
 	isvalidxmlblob6.testcase \
-	recreatestyling1.testcase \
-	recreatestyling2.testcase \
-	recreatestyling3.testcase \
-	recreatestyling4.testcase \
-	recreatestyling5.testcase \
-	recreatestyling6.testcase \
-	recreatestyling7.testcase \
-	recreatestyling8.testcase \
-	recreatestyling9.testcase \
-	recreatestyling10.testcase \
-	recreatestyling11.testcase \
 	registerGraphic10.testcase \
 	registerGraphic11.testcase \
 	registerGraphic12.testcase \
@@ -129,6 +111,29 @@ EXTRA_DIST = addfileid1.testcase \
 	registerGraphic7.testcase \
 	registerGraphic8.testcase \
 	registerGraphic9.testcase \
+	registerGroupRaster1.testcase \
+	registerGroupRaster2.testcase \
+	registerGroupRaster3.testcase \
+	registerGroupRaster4.testcase \
+	registerGroupRaster5.testcase \
+	registerGroupRaster6.testcase \
+	registerGroupRaster7.testcase \
+	registerGroupRaster8.testcase \
+	registerGroupRaster9.testcase \
+	registerGroupVector1.testcase \
+	registerGroupVector2.testcase \
+	registerGroupVector3.testcase \
+	registerGroupVector4.testcase \
+	registerGroupVector5.testcase \
+	registerGroupVector6.testcase \
+	registerGroupVector7.testcase \
+	registerGroupVector8.testcase \
+	registerGroupVector9.testcase \
+	registerGroupStyle1.testcase \
+	registerGroupStyle2.testcase \
+	registerGroupStyle3.testcase \
+	registerGroupStyle4.testcase \
+	registerGroupStyle5.testcase \
 	registerIsoMeta10.testcase \
 	registerIsoMeta11.testcase \
 	registerIsoMeta12.testcase \
@@ -143,11 +148,6 @@ EXTRA_DIST = addfileid1.testcase \
 	registerIsoMeta7.testcase \
 	registerIsoMeta8.testcase \
 	registerIsoMeta9.testcase \
-	registerMapConfig1.testcase \
-	registerMapConfig2.testcase \
-	registerMapConfig3.testcase \
-	registerMapConfig4.testcase \
-	registerMapConfig5.testcase \
 	registerRaster1.testcase \
 	registerRaster2.testcase \
 	registerRaster3.testcase \
@@ -180,6 +180,15 @@ EXTRA_DIST = addfileid1.testcase \
 	registerRasterStyle3.testcase \
 	registerRasterStyle4.testcase \
 	registerRasterStyle5.testcase \
+	registerStllGroupStyle1.testcase \
+	registerStllGroupStyle3.testcase \
+	registerStllGroupStyle3.testcase \
+	registerStllGroupStyle4.testcase \
+	registerStllGroupStyle5.testcase \
+	registerStllGroupStyle6.testcase \
+	registerStllGroupStyle7.testcase \
+	registerStllGroupStyle8.testcase \
+	registerStllGroupStyle9.testcase \
 	registerVector1.testcase \
 	registerVector10.testcase \
 	registerVector11.testcase \
@@ -189,60 +198,6 @@ EXTRA_DIST = addfileid1.testcase \
 	registerVector3.testcase \
 	registerVector4.testcase \
 	registerVector9.testcase \
-	registertopogeocvg1.testcase \
-	registertopogeocvg2.testcase \
-	registertopogeocvg3.testcase \
-	registertopogeocvg4.testcase \
-	registertopogeocvg5.testcase \
-	registertopogeocvg6.testcase \
-	registertopogeocvg7.testcase \
-	registertopogeocvg8.testcase \
-	registertopogeocvg9.testcase \
-	registertopogeocvg10.testcase \
-	registertopogeocvg11.testcase \
-	registertopogeocvg12.testcase \
-	registertopogeocvg13.testcase \
-	registertopogeocvg14.testcase \
-	registertopogeocvg15.testcase \
-	registertopogeocvg16.testcase \
-	registertopogeocvg17.testcase \
-	registertopogeocvg18.testcase \
-	registertopogeocvg19.testcase \
-	registertopogeocvg20.testcase \
-	registertopogeocvg21.testcase \
-	registertopogeocvg22.testcase \
-	registertopogeocvg23.testcase \
-	registertopogeocvg24.testcase \
-	registertopogeocvg25.testcase \
-	registertopogeocvg26.testcase \
-	registertopogeocvg27.testcase \
-	registertoponetcvg1.testcase \
-	registertoponetcvg2.testcase \
-	registertoponetcvg3.testcase \
-	registertoponetcvg4.testcase \
-	registertoponetcvg5.testcase \
-	registertoponetcvg6.testcase \
-	registertoponetcvg7.testcase \
-	registertoponetcvg8.testcase \
-	registertoponetcvg9.testcase \
-	registertoponetcvg10.testcase \
-	registertoponetcvg11.testcase \
-	registertoponetcvg12.testcase \
-	registertoponetcvg13.testcase \
-	registertoponetcvg14.testcase \
-	registertoponetcvg15.testcase \
-	registertoponetcvg16.testcase \
-	registertoponetcvg17.testcase \
-	registertoponetcvg18.testcase \
-	registertoponetcvg19.testcase \
-	registertoponetcvg20.testcase \
-	registertoponetcvg21.testcase \
-	registertoponetcvg22.testcase \
-	registertoponetcvg23.testcase \
-	registertoponetcvg24.testcase \
-	registertoponetcvg25.testcase \
-	registertoponetcvg26.testcase \
-	registertoponetcvg27.testcase \
 	registervectorcvg1.testcase \
 	registervectorcvg2.testcase \
 	registervectorcvg3.testcase \
@@ -265,73 +220,6 @@ EXTRA_DIST = addfileid1.testcase \
 	registervectorcvg20.testcase \
 	registervectorcvg21.testcase \
 	registervectorcvg22.testcase \
-	registervectorcvg23.testcase \
-	registervectorcvg24.testcase \
-	registervectorcvg25.testcase \
-	registervectorcvg26.testcase \
-	registervectorcvg27.testcase \
-	registervectorcvg28.testcase \
-	registervectorcvg29.testcase \
-	registervectorcvg30.testcase \
-	registervectorcvg31.testcase \
-	registerviewcvg1.testcase \
-	registerviewcvg2.testcase \
-	registerviewcvg3.testcase \
-	registerviewcvg4.testcase \
-	registerviewcvg5.testcase \
-	registerviewcvg6.testcase \
-	registerviewcvg7.testcase \
-	registerviewcvg8.testcase \
-	registerviewcvg9.testcase \
-	registerviewcvg10.testcase \
-	registerviewcvg11.testcase \
-	registerviewcvg12.testcase \
-	registerviewcvg13.testcase \
-	registerviewcvg14.testcase \
-	registerviewcvg15.testcase \
-	registerviewcvg16.testcase \
-	registerviewcvg17.testcase \
-	registerviewcvg18.testcase \
-	registerviewcvg19.testcase \
-	registerviewcvg20.testcase \
-	registerviewcvg21.testcase \
-	registerviewcvg22.testcase \
-	registerviewcvg23.testcase \
-	registerviewcvg24.testcase \
-	registerviewcvg25.testcase \
-	registerviewcvg26.testcase \
-	registerviewcvg27.testcase \
-	registerviewcvg28.testcase \
-	registerviewcvg29.testcase \
-	registerviewcvg30.testcase \
-	registerviewcvg31.testcase \
-	registervirtualcvg1.testcase \
-	registervirtualcvg2.testcase \
-	registervirtualcvg3.testcase \
-	registervirtualcvg4.testcase \
-	registervirtualcvg5.testcase \
-	registervirtualcvg6.testcase \
-	registervirtualcvg7.testcase \
-	registervirtualcvg8.testcase \
-	registervirtualcvg9.testcase \
-	registervirtualcvg10.testcase \
-	registervirtualcvg11.testcase \
-	registervirtualcvg12.testcase \
-	registervirtualcvg13.testcase \
-	registervirtualcvg14.testcase \
-	registervirtualcvg15.testcase \
-	registervirtualcvg16.testcase \
-	registervirtualcvg17.testcase \
-	registervirtualcvg18.testcase \
-	registervirtualcvg19.testcase \
-	registervirtualcvg20.testcase \
-	registervirtualcvg21.testcase \
-	registervirtualcvg22.testcase \
-	registervirtualcvg23.testcase \
-	registervirtualcvg24.testcase \
-	registervirtualcvg25.testcase \
-	registervirtualcvg26.testcase \
-	registervirtualcvg27.testcase \
 	registervectorkeyword1.testcase \
 	registervectorkeyword2.testcase \
 	registervectorkeyword3.testcase \
@@ -355,15 +243,16 @@ EXTRA_DIST = addfileid1.testcase \
 	registerVectorStyle3.testcase \
 	registerVectorStyle4.testcase \
 	registerVectorStyle5.testcase \
-	reloadMapConfig1.testcase \
-	reloadMapConfig2.testcase \
-	reloadMapConfig3.testcase \
-	reloadMapConfig5.testcase \
-	reloadMapConfig6.testcase \
-	reloadMapConfig7.testcase \
-	reloadMapConfig8.testcase \
-	reloadMapConfig9.testcase \
-	reloadMapConfig10.testcase \
+	reloadGroupStyle1.testcase \
+	reloadGroupStyle2.testcase \
+	reloadGroupStyle3.testcase \
+	reloadGroupStyle4.testcase \
+	reloadGroupStyle5.testcase \
+	reloadGroupStyle6.testcase \
+	reloadGroupStyle7.testcase \
+	reloadGroupStyle8.testcase \
+	reloadGroupStyle9.testcase \
+	reloadGroupStyle10.testcase \
 	reloadRasterStyle1.testcase \
 	reloadRasterStyle2.testcase \
 	reloadRasterStyle3.testcase \
@@ -387,27 +276,58 @@ EXTRA_DIST = addfileid1.testcase \
 	setfileid3.testcase \
 	setfileid4.testcase \
 	setfileid5.testcase \
+	setGroupInfos10.testcase \
+	setGroupInfos11.testcase \
+	setGroupInfos12.testcase \
+	setGroupInfos13.testcase \
+	setGroupInfos1.testcase \
+	setGroupInfos2.testcase \
+	setGroupInfos3.testcase \
+	setGroupInfos4.testcase \
+	setGroupInfos5.testcase \
+	setGroupInfos6.testcase \
+	setGroupInfos7.testcase \
+	setGroupInfos8.testcase \
+	setGroupInfos9.testcase \
+	setPaintOrder1.testcase \
+	setPaintOrder2.testcase \
+	setPaintOrder3.testcase \
+	setPaintOrder4.testcase \
+	setPaintOrder5.testcase \
+	setPaintOrder6.testcase \
+	setPaintOrder7.testcase \
+	setPaintOrder8.testcase \
+	setRasterPaintOrder1.testcase \
+	setRasterPaintOrder2.testcase \
+	setRasterPaintOrder3.testcase \
+	setRasterPaintOrder4.testcase \
+	setRasterPaintOrder5.testcase \
+	setRasterPaintOrder6.testcase \
+	setRasterPaintOrder7.testcase \
+	setRasterPaintOrder8.testcase \
+	setRasterPaintOrder9.testcase \
+	setRasterPaintOrder10.testcase \
+	setRasterPaintOrder11.testcase \
+	setRasterPaintOrder12.testcase \
+	setRasterPaintOrder13.testcase \
+	setVectorPaintOrder1.testcase \
+	setVectorPaintOrder2.testcase \
+	setVectorPaintOrder3.testcase \
+	setVectorPaintOrder4.testcase \
+	setVectorPaintOrder5.testcase \
+	setVectorPaintOrder6.testcase \
+	setVectorPaintOrder7.testcase \
+	setVectorPaintOrder8.testcase \
+	setVectorPaintOrder9.testcase \
+	setVectorPaintOrder10.testcase \
+	setVectorPaintOrder11.testcase \
+	setVectorPaintOrder12.testcase \
+	setVectorPaintOrder13.testcase \
 	setparentid1.testcase \
 	setparentid2.testcase \
 	setparentid3.testcase \
 	setparentid4.testcase \
 	setparentid5.testcase \
-	setvectorcopyright1.testcase \
-	setvectorcopyright2.testcase \
-	setvectorcopyright3.testcase \
-	setvectorcopyright4.testcase \
-	setvectorcopyright5.testcase \
-	setvectorcopyright6.testcase \
-	setvectorcopyright7.testcase \
-	setvectorcopyright8.testcase \
-	setvectorcopyright9.testcase \
-	setvectorcopyright10.testcase \
-	setvectorcopyright11.testcase \
-	setvectorcopyright12.testcase \
-	setvectorcopyright13.testcase \
-	setvectorcopyright14.testcase \
-	setvectorcopyright15.testcase \
-	setvectorcopyright16.testcase \
 	setvectorinfos1.testcase \
 	setvectorinfos2.testcase \
 	setvectorinfos3.testcase \
@@ -421,25 +341,49 @@ EXTRA_DIST = addfileid1.testcase \
 	setvectorinfos11.testcase \
 	setvectorinfos12.testcase \
 	setvectorinfos13.testcase \
-	setvectorinfos14.testcase \
-	setvectorinfos15.testcase \
-	setvectorinfos16.testcase \
-	setvectorinfos17.testcase \
-	setvectorinfos18.testcase \
-	setvectorinfos19.testcase \
-	setvectorinfos20.testcase \
-	setvectorinfos21.testcase \
-	setvectorinfos22.testcase \
 	unregisterGraphic1.testcase \
 	unregisterGraphic2.testcase \
 	unregisterGraphic3.testcase \
 	unregisterGraphic4.testcase \
 	unregisterGraphic5.testcase \
-	unregisterMapConfig1.testcase \
-	unregisterMapConfig2.testcase \
-	unregisterMapConfig3.testcase \
-	unregisterMapConfig4.testcase \
-	unregisterMapConfig5.testcase \
+	unregisterGroup1.testcase \
+	unregisterGroup2.testcase \
+	unregisterGroup3.testcase \
+	unregisterGroup4.testcase \
+	unregisterGroup5.testcase \
+	unregisterGroupStyle1.testcase \
+	unregisterGroupStyle2.testcase \
+	unregisterGroupStyle3.testcase \
+	unregisterGroupStyle4.testcase \
+	unregisterGroupStyle5.testcase \
+	unregisterGroupStyle6.testcase \
+	unregisterGroupStyle7.testcase \
+	unregisterGroupStyle8.testcase \
+	unregisterGroupStyle9.testcase \
+	unregisterGroupStyle10.testcase \
+	unregisterGroupLayer1.testcase \
+	unregisterGroupLayer2.testcase \
+	unregisterGroupLayer3.testcase \
+	unregisterGroupLayer4.testcase \
+	unregisterGroupLayer5.testcase \
+	unregisterGroupRaster1.testcase \
+	unregisterGroupRaster2.testcase \
+	unregisterGroupRaster3.testcase \
+	unregisterGroupRaster4.testcase \
+	unregisterGroupRaster5.testcase \
+	unregisterGroupRaster6.testcase \
+	unregisterGroupRaster7.testcase \
+	unregisterGroupRaster8.testcase \
+	unregisterGroupRaster9.testcase \
+	unregisterGroupVector1.testcase \
+	unregisterGroupVector2.testcase \
+	unregisterGroupVector3.testcase \
+	unregisterGroupVector4.testcase \
+	unregisterGroupVector5.testcase \
+	unregisterGroupVector6.testcase \
+	unregisterGroupVector7.testcase \
+	unregisterGroupVector8.testcase \
+	unregisterGroupVector9.testcase \
 	unregisterRaster1.testcase \
 	unregisterRaster2.testcase \
 	unregisterRaster3.testcase \
@@ -477,6 +421,15 @@ EXTRA_DIST = addfileid1.testcase \
 	unregisterRasterStyle8.testcase \
 	unregisterRasterStyle9.testcase \
 	unregisterRasterStyle10.testcase \
+	unregisterStllGroupStyle1.testcase \
+	unregisterStllGroupStyle3.testcase \
+	unregisterStllGroupStyle3.testcase \
+	unregisterStllGroupStyle4.testcase \
+	unregisterStllGroupStyle5.testcase \
+	unregisterStllGroupStyle6.testcase \
+	unregisterStllGroupStyle7.testcase \
+	unregisterStllGroupStyle8.testcase \
+	unregisterStllGroupStyle9.testcase \
 	unregisterVector1.testcase \
 	unregisterVector2.testcase \
 	unregisterVector3.testcase \

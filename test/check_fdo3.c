@@ -70,6 +70,9 @@ main (int argc, char *argv[])
     int columns;
     void *cache = spatialite_alloc_connection ();
 
+    if (argc > 1 || argv[0] == NULL)
+	argc = 1;		/* silencing stupid compiler warnings */
+
     ret = system ("cp sql_stmt_tests/testFGF.sqlite testFGF.sqlite");
     if (ret != 0)
       {
@@ -209,9 +212,6 @@ main (int argc, char *argv[])
 	  return -16;
       }
 #endif /* end GEOS conditional */
-
-    if (argc > 1 || argv[0] == NULL)
-	argc = 1;		/* silencing stupid compiler warnings */
 
     spatialite_shutdown ();
     return 0;

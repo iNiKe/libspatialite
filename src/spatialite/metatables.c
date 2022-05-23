@@ -2,7 +2,7 @@
 
  metatables.c -- creating the metadata tables and related triggers
 
- version 5.0, 2020 August 1
+ version 4.3, 2015 June 29
 
  Author: Sandro Furieri a.furieri@lqt.it
 
@@ -24,15 +24,12 @@ The Original Code is the SpatiaLite library
 
 The Initial Developer of the Original Code is Alessandro Furieri
  
-Portions created by the Initial Developer are Copyright (C) 2008-2020
+Portions created by the Initial Developer are Copyright (C) 2008-2015
 the Initial Developer. All Rights Reserved.
 
 Contributor(s):
 Pepijn Van Eeckhoudt <pepijnvaneeckhoudt@luciad.com>
 (implementing Android support)
- 
-Mark Johnson <mj10777@googlemail.com>
-(checking triggers supporting a supposed Writable Spatial View)
 
 Alternatively, the contents of this file may be used under the terms of
 either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -72,15 +69,6 @@ the terms of any one of the MPL, the GPL or the LGPL.
 #ifdef _WIN32
 #define strcasecmp	_stricmp
 #endif /* not WIN32 */
-
-struct rtree_envelope
-{
-    int valid;
-    double minx;
-    double maxx;
-    double miny;
-    double maxy;
-};
 
 struct spatial_index_str
 {
@@ -232,13 +220,6 @@ create_views_geometry_columns (sqlite3 * sqlite)
     char sql[4186];
     char *errMsg = NULL;
     int ret;
-
-    if (sqlite3_db_readonly (sqlite, "MAIN") == 1)
-      {
-	  /* ignoring a read-only database */
-	  return 1;
-      }
-
 /* creating the VIEWS_GEOMETRY_COLUMNS table */
     strcpy (sql, "CREATE TABLE IF NOT EXISTS ");
     strcat (sql, "views_geometry_columns (\n");
@@ -522,13 +503,6 @@ create_virts_geometry_columns (sqlite3 * sqlite)
     char sql[4186];
     char *errMsg = NULL;
     int ret;
-
-    if (sqlite3_db_readonly (sqlite, "MAIN") == 1)
-      {
-	  /* ignoring a read-only database */
-	  return 1;
-      }
-
 /* creating the VIRTS_GEOMETRY_COLUMNS table */
     strcpy (sql, "CREATE TABLE IF NOT EXISTS ");
     strcat (sql, "virts_geometry_columns (\n");
@@ -732,13 +706,6 @@ create_geometry_columns_statistics (sqlite3 * sqlite)
     char sql[4186];
     char *errMsg = NULL;
     int ret;
-
-    if (sqlite3_db_readonly (sqlite, "MAIN") == 1)
-      {
-	  /* ignoring a read-only database */
-	  return 1;
-      }
-
 /* creating the GEOMETRY_COLUMNS_STATISTICS table */
     strcpy (sql, "CREATE TABLE IF NOT EXISTS ");
     strcat (sql, "geometry_columns_statistics (\n");
@@ -869,13 +836,6 @@ create_views_geometry_columns_statistics (sqlite3 * sqlite)
     char sql[4186];
     char *errMsg = NULL;
     int ret;
-
-    if (sqlite3_db_readonly (sqlite, "MAIN") == 1)
-      {
-	  /* ignoring a read-only database */
-	  return 1;
-      }
-
 /* creating the VIEWS_GEOMETRY_COLUMNS_STATISTICS table */
     strcpy (sql, "CREATE TABLE IF NOT EXISTS ");
     strcat (sql, "views_geometry_columns_statistics (\n");
@@ -1004,13 +964,6 @@ create_virts_geometry_columns_statistics (sqlite3 * sqlite)
     char sql[4186];
     char *errMsg = NULL;
     int ret;
-
-    if (sqlite3_db_readonly (sqlite, "MAIN") == 1)
-      {
-	  /* ignoring a read-only database */
-	  return 1;
-      }
-
 /* creating the VIRTS_GEOMETRY_COLUMNS_STATISTICS table */
     strcpy (sql, "CREATE TABLE IF NOT EXISTS ");
     strcat (sql, "virts_geometry_columns_statistics (\n");
@@ -1139,13 +1092,6 @@ create_geometry_columns_field_infos (sqlite3 * sqlite)
     char sql[4186];
     char *errMsg = NULL;
     int ret;
-
-    if (sqlite3_db_readonly (sqlite, "MAIN") == 1)
-      {
-	  /* ignoring a read-only database */
-	  return 1;
-      }
-
 /* creating the GEOMETRY_COLUMNS_FIELD_INFOS table */
     strcpy (sql, "CREATE TABLE IF NOT EXISTS ");
     strcat (sql, "geometry_columns_field_infos (\n");
@@ -1284,13 +1230,6 @@ create_views_geometry_columns_field_infos (sqlite3 * sqlite)
     char sql[4186];
     char *errMsg = NULL;
     int ret;
-
-    if (sqlite3_db_readonly (sqlite, "MAIN") == 1)
-      {
-	  /* ignoring a read-only database */
-	  return 1;
-      }
-
 /* creating the VIEWS_COLUMNS_FIELD_INFOS table */
     strcpy (sql, "CREATE TABLE IF NOT EXISTS ");
     strcat (sql, "views_geometry_columns_field_infos (\n");
@@ -1425,13 +1364,6 @@ create_virts_geometry_columns_field_infos (sqlite3 * sqlite)
     char sql[4186];
     char *errMsg = NULL;
     int ret;
-
-    if (sqlite3_db_readonly (sqlite, "MAIN") == 1)
-      {
-	  /* ignoring a read-only database */
-	  return 1;
-      }
-
 /* creating the VIRTS_GEOMETRY_COLUMNS_FIELD_INFOS table */
     strcpy (sql, "CREATE TABLE IF NOT EXISTS ");
     strcat (sql, "virts_geometry_columns_field_infos (\n");
@@ -1560,19 +1492,12 @@ create_virts_geometry_columns_field_infos (sqlite3 * sqlite)
     return 1;
 }
 
-SPATIALITE_PRIVATE int
-create_geometry_columns_time (sqlite3 * sqlite)
+static int
+create_geometry_columns_times (sqlite3 * sqlite)
 {
     char sql[4186];
     char *errMsg = NULL;
     int ret;
-
-    if (sqlite3_db_readonly (sqlite, "MAIN") == 1)
-      {
-	  /* ignoring a read-only database */
-	  return 1;
-      }
-
 /* creating the GEOMETRY_COLUMNS_TIME table */
     strcpy (sql, "CREATE TABLE IF NOT EXISTS ");
     strcat (sql, "geometry_columns_time (\n");
@@ -1706,13 +1631,6 @@ create_geometry_columns_auth (sqlite3 * sqlite)
     char sql[4186];
     char *errMsg = NULL;
     int ret;
-
-    if (sqlite3_db_readonly (sqlite, "MAIN") == 1)
-      {
-	  /* ignoring a read-only database */
-	  return 1;
-      }
-
 /* creating the GEOMETRY_COLUMNS_AUTH table */
     strcpy (sql, "CREATE TABLE IF NOT EXISTS ");
     strcat (sql, "geometry_columns_auth (\n");
@@ -1846,13 +1764,6 @@ create_views_geometry_columns_auth (sqlite3 * sqlite)
     char sql[4186];
     char *errMsg = NULL;
     int ret;
-
-    if (sqlite3_db_readonly (sqlite, "MAIN") == 1)
-      {
-	  /* ignoring a read-only database */
-	  return 1;
-      }
-
 /* creating the VIEWS_GEOMETRY_COLUMNS_AUTH table */
     strcpy (sql, "CREATE TABLE IF NOT EXISTS ");
     strcat (sql, "views_geometry_columns_auth (\n");
@@ -1979,13 +1890,6 @@ create_virts_geometry_columns_auth (sqlite3 * sqlite)
     char sql[4186];
     char *errMsg = NULL;
     int ret;
-
-    if (sqlite3_db_readonly (sqlite, "MAIN") == 1)
-      {
-	  /* ignoring a read-only database */
-	  return 1;
-      }
-
 /* creating the VIRTS_GEOMETRY_COLUMNS_AUTH table */
     strcpy (sql, "CREATE TABLE IF NOT EXISTS ");
     strcat (sql, "virts_geometry_columns_auth (\n");
@@ -2112,13 +2016,6 @@ create_geometry_columns_views (sqlite3 * sqlite)
     char sql[4186];
     char *errMsg = NULL;
     int ret;
-
-    if (sqlite3_db_readonly (sqlite, "MAIN") == 1)
-      {
-	  /* ignoring a read-only database */
-	  return 1;
-      }
-
 /* creating the VECTOR_LAYERS view */
     strcpy (sql, "CREATE VIEW  IF NOT EXISTS ");
     strcat (sql, "vector_layers AS\n");
@@ -2286,141 +2183,6 @@ create_geometry_columns_views (sqlite3 * sqlite)
     strcat (sql, "double_min AS double_min, ");
     strcat (sql, "double_max double_max\n");
     strcat (sql, "FROM virts_geometry_columns_field_infos");
-    ret = sqlite3_exec (sqlite, sql, NULL, NULL, &errMsg);
-    if (ret != SQLITE_OK)
-      {
-	  spatialite_e ("SQL error: %s: %s\n", sql, errMsg);
-	  sqlite3_free (errMsg);
-	  return 0;
-      }
-    return 1;
-}
-
-SPATIALITE_PRIVATE int
-create_data_licenses (sqlite3 * sqlite)
-{
-    char sql[4186];
-    char *errMsg = NULL;
-    int ret;
-
-    if (sqlite3_db_readonly (sqlite, "MAIN") == 1)
-      {
-	  /* ignoring a read-only database */
-	  return 1;
-      }
-
-/* creating the DATA_LICENSES table */
-    strcpy (sql, "CREATE TABLE IF NOT EXISTS data_licenses (\n");
-    strcat (sql, "\tid INTEGER PRIMARY KEY AUTOINCREMENT,\n");
-    strcat (sql, "\tname TEXT NOT NULL UNIQUE,\n");
-    strcat (sql, "\turl TEXT)");
-    ret = sqlite3_exec (sqlite, sql, NULL, NULL, &errMsg);
-    if (ret != SQLITE_OK)
-      {
-	  spatialite_e ("SQL error: %s: %s\n", sql, errMsg);
-	  sqlite3_free (errMsg);
-	  return 0;
-      }
-/* inserting the UNDEFINED license */
-    strcpy (sql, "INSERT OR IGNORE INTO data_licenses (id, name, url) ");
-    strcat (sql, "VALUES (0, 'Undefined', NULL)");
-    ret = sqlite3_exec (sqlite, sql, NULL, NULL, &errMsg);
-    if (ret != SQLITE_OK)
-      {
-	  spatialite_e ("SQL error: %s: %s\n", sql, errMsg);
-	  sqlite3_free (errMsg);
-	  return 0;
-      }
-/* inserting the PROPRIETARY license */
-    strcpy (sql, "INSERT OR IGNORE INTO data_licenses (id, name, url) ");
-    strcat (sql, "VALUES (1, 'Proprietary - Non Free', NULL)");
-    ret = sqlite3_exec (sqlite, sql, NULL, NULL, &errMsg);
-    if (ret != SQLITE_OK)
-      {
-	  spatialite_e ("SQL error: %s: %s\n", sql, errMsg);
-	  sqlite3_free (errMsg);
-	  return 0;
-      }
-/* inserting the PUBLIC DOMAIN license */
-    strcpy (sql, "INSERT OR IGNORE INTO data_licenses (id, name, url) ");
-    strcat (sql, "VALUES (2, 'PD - Public Domain', NULL)");
-    ret = sqlite3_exec (sqlite, sql, NULL, NULL, &errMsg);
-    if (ret != SQLITE_OK)
-      {
-	  spatialite_e ("SQL error: %s: %s\n", sql, errMsg);
-	  sqlite3_free (errMsg);
-	  return 0;
-      }
-/* inserting the CC0 1.0 license */
-    strcpy (sql, "INSERT OR IGNORE INTO data_licenses (id, name, url) ");
-    strcat (sql,
-	    "VALUES (3, 'CC0 1.0', 'https://creativecommons.org/publicdomain/zero/1.0/legalcode.txt')");
-    ret = sqlite3_exec (sqlite, sql, NULL, NULL, &errMsg);
-    if (ret != SQLITE_OK)
-      {
-	  spatialite_e ("SQL error: %s: %s\n", sql, errMsg);
-	  sqlite3_free (errMsg);
-	  return 0;
-      }
-/* inserting the CC BY 3.0 license */
-    strcpy (sql, "INSERT OR IGNORE INTO data_licenses (id, name, url) ");
-    strcat (sql,
-	    "VALUES (4, 'CC BY 3.0', 'https://creativecommons.org/licenses/by/3.0/legalcode.txt')");
-    ret = sqlite3_exec (sqlite, sql, NULL, NULL, &errMsg);
-    if (ret != SQLITE_OK)
-      {
-	  spatialite_e ("SQL error: %s: %s\n", sql, errMsg);
-	  sqlite3_free (errMsg);
-	  return 0;
-      }
-/* inserting the CC BY 4.0 license */
-    strcpy (sql, "INSERT OR IGNORE INTO data_licenses (id, name, url) ");
-    strcat (sql,
-	    "VALUES (5, 'CC BY 4.0', 'https://creativecommons.org/licenses/by/4.0/legalcode.txt')");
-    ret = sqlite3_exec (sqlite, sql, NULL, NULL, &errMsg);
-    if (ret != SQLITE_OK)
-      {
-	  spatialite_e ("SQL error: %s: %s\n", sql, errMsg);
-	  sqlite3_free (errMsg);
-	  return 0;
-      }
-/* inserting the CC BY-SA 3.0 license */
-    strcpy (sql, "INSERT OR IGNORE INTO data_licenses (id, name, url) ");
-    strcat (sql,
-	    "VALUES (6, 'CC BY-SA 3.0', 'https://creativecommons.org/licenses/by-sa/3.0/legalcode.txt')");
-    ret = sqlite3_exec (sqlite, sql, NULL, NULL, &errMsg);
-    if (ret != SQLITE_OK)
-      {
-	  spatialite_e ("SQL error: %s: %s\n", sql, errMsg);
-	  sqlite3_free (errMsg);
-	  return 0;
-      }
-/* inserting the CC BY-SA 4.0 license */
-    strcpy (sql, "INSERT OR IGNORE INTO data_licenses (id, name, url) ");
-    strcat (sql,
-	    "VALUES (7, 'CC BY-SA 4.0', 'https://creativecommons.org/licenses/by-sa/4.0/legalcode.txt')");
-    ret = sqlite3_exec (sqlite, sql, NULL, NULL, &errMsg);
-    if (ret != SQLITE_OK)
-      {
-	  spatialite_e ("SQL error: %s: %s\n", sql, errMsg);
-	  sqlite3_free (errMsg);
-	  return 0;
-      }
-/* inserting the CC BY-SA-NC 3.0 license */
-    strcpy (sql, "INSERT OR IGNORE INTO data_licenses (id, name, url) ");
-    strcat (sql,
-	    "VALUES (8, 'CC BY-SA-NC 3.0', 'https://creativecommons.org/licenses/by-nc-sa/3.0/legalcode.txt')");
-    ret = sqlite3_exec (sqlite, sql, NULL, NULL, &errMsg);
-    if (ret != SQLITE_OK)
-      {
-	  spatialite_e ("SQL error: %s: %s\n", sql, errMsg);
-	  sqlite3_free (errMsg);
-	  return 0;
-      }
-/* inserting the CC BY-SA-NC 4.0 license */
-    strcpy (sql, "INSERT OR IGNORE INTO data_licenses (id, name, url) ");
-    strcat (sql,
-	    "VALUES (9, 'CC BY-SA-NC 4.0', 'https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode.txt')");
     ret = sqlite3_exec (sqlite, sql, NULL, NULL, &errMsg);
     if (ret != SQLITE_OK)
       {
@@ -2777,7 +2539,7 @@ createAdvancedMetaData (void *p_sqlite)
 	return 0;
     if (!create_virts_geometry_columns_field_infos (sqlite))
 	return 0;
-    if (!create_geometry_columns_time (sqlite))
+    if (!create_geometry_columns_times (sqlite))
 	return 0;
     if (!create_geometry_columns_auth (sqlite))
 	return 0;
@@ -2786,8 +2548,6 @@ createAdvancedMetaData (void *p_sqlite)
     if (!create_virts_geometry_columns_auth (sqlite))
 	return 0;
     if (!create_geometry_columns_views (sqlite))
-	return 0;
-    if (!create_data_licenses (sqlite))
 	return 0;
     if (!create_sql_statements_log (sqlite))
 	return 0;
@@ -3015,326 +2775,6 @@ createGeometryColumns (void *p_sqlite)
       }
     updateSpatiaLiteHistory (sqlite, "geometry_columns", NULL,
 			     "trigger 'geometry_columns_coord_dimension_update' successfully created");
-    return 1;
-}
-
-SPATIALITE_PRIVATE int
-createTemporarySpatialRefSys (void *p_sqlite, const char *db_prefix)
-{
-    sqlite3 *sqlite = (sqlite3 *) p_sqlite;
-    char *sql_statement;
-    sqlite3_stmt *stmt;
-    int ret;
-    char *prefix;
-    int already_defined = 0;
-    char *errMsg = NULL;
-
-/* checking if already defined */
-    prefix = gaiaDoubleQuotedSql (db_prefix);
-    sql_statement = sqlite3_mprintf ("SELECT name "
-				     "FROM \"%s\".sqlite_master WHERE type = 'table' "
-				     "AND Lower(name) = 'spatial_ref_sys'",
-				     prefix);
-    free (prefix);
-/* compiling SQL prepared statement */
-    ret =
-	sqlite3_prepare_v2 (sqlite, sql_statement, strlen (sql_statement),
-			    &stmt, NULL);
-    sqlite3_free (sql_statement);
-    if (ret != SQLITE_OK)
-      {
-	  spatialite_e ("createTemporarySpatialRefSys: error %d \"%s\"\n",
-			sqlite3_errcode (sqlite), sqlite3_errmsg (sqlite));
-	  return 0;
-      }
-    sqlite3_reset (stmt);
-    sqlite3_clear_bindings (stmt);
-    while (1)
-      {
-	  /* scrolling the result set rows */
-	  ret = sqlite3_step (stmt);
-	  if (ret == SQLITE_DONE)
-	      break;		/* end of result set */
-	  if (ret == SQLITE_ROW)
-	      already_defined = 1;
-      }
-    sqlite3_finalize (stmt);
-
-    if (already_defined)
-	return 1;
-
-/* creating the SPATIAL_REF_SYS table */
-    prefix = gaiaDoubleQuotedSql (db_prefix);
-    sql_statement = sqlite3_mprintf ("CREATE TABLE \"%s\".spatial_ref_sys (\n"
-				     "srid INTEGER NOT NULL PRIMARY KEY,\n"
-				     "auth_name TEXT NOT NULL,\n"
-				     "auth_srid INTEGER NOT NULL,\n"
-				     "ref_sys_name TEXT NOT NULL DEFAULT 'Unknown',\n"
-				     "proj4text TEXT NOT NULL,\n"
-				     "srtext TEXT NOT NULL DEFAULT 'Undefined')",
-				     prefix);
-    free (prefix);
-    ret = sqlite3_exec (sqlite, sql_statement, NULL, NULL, &errMsg);
-    sqlite3_free (sql_statement);
-    if (ret != SQLITE_OK)
-	goto error;
-    prefix = gaiaDoubleQuotedSql (db_prefix);
-    sql_statement =
-	sqlite3_mprintf ("CREATE UNIQUE INDEX \"%s\".idx_spatial_ref_sys \n"
-			 "ON spatial_ref_sys (auth_srid, auth_name)", prefix);
-    free (prefix);
-    ret = sqlite3_exec (sqlite, sql_statement, NULL, NULL, &errMsg);
-    sqlite3_free (sql_statement);
-    if (ret != SQLITE_OK)
-	goto error;
-
-    sql_statement = sqlite3_mprintf ("SAVEPOINT tmp_spatial_ref_sys");
-    ret = sqlite3_exec (sqlite, sql_statement, NULL, NULL, &errMsg);
-    sqlite3_free (sql_statement);
-    if (ret != SQLITE_OK)
-	goto error;
-    prefix = gaiaDoubleQuotedSql (db_prefix);
-    sql_statement = sqlite3_mprintf ("INSERT INTO \"%s\".spatial_ref_sys "
-				     "(srid, auth_name, auth_srid, ref_sys_name, proj4text, srtext) "
-				     "SELECT srid, auth_name, auth_srid, ref_sys_name, proj4text, srtext "
-				     "FROM main.spatial_ref_sys", prefix);
-    free (prefix);
-    ret = sqlite3_exec (sqlite, sql_statement, NULL, NULL, &errMsg);
-    sqlite3_free (sql_statement);
-    if (ret != SQLITE_OK)
-	goto error;
-    sql_statement = sqlite3_mprintf ("RELEASE SAVEPOINT tmp_spatial_ref_sys");
-    ret = sqlite3_exec (sqlite, sql_statement, NULL, NULL, &errMsg);
-    sqlite3_free (sql_statement);
-    if (ret != SQLITE_OK)
-	goto error;
-
-    return 1;
-
-  error:
-    return 0;
-}
-
-SPATIALITE_PRIVATE int
-createTemporaryGeometryColumns (void *p_sqlite, const char *db_prefix)
-{
-    sqlite3 *sqlite = (sqlite3 *) p_sqlite;
-    char *sql;
-    char *errMsg = NULL;
-    int ret;
-    char *prefix;
-/* creating the GEOMETRY_COLUMNS table */
-    prefix = gaiaDoubleQuotedSql (db_prefix);
-    sql =
-	sqlite3_mprintf
-	("CREATE TABLE IF NOT EXISTS \"%s\".geometry_columns (\n"
-	 "f_table_name TEXT NOT NULL,\n" "f_geometry_column TEXT NOT NULL,\n"
-	 "geometry_type INTEGER NOT NULL,\n"
-	 "coord_dimension INTEGER NOT NULL,\n" "srid INTEGER NOT NULL,\n"
-	 "spatial_index_enabled INTEGER NOT NULL,\n"
-	 "CONSTRAINT pk_geom_cols PRIMARY KEY "
-	 "(f_table_name, f_geometry_column),\n"
-	 "CONSTRAINT fk_gc_srs FOREIGN KEY "
-	 "(srid) REFERENCES spatial_ref_sys (srid),\n"
-	 "CONSTRAINT ck_gc_rtree CHECK " "(spatial_index_enabled IN (0,1)))",
-	 prefix);
-    free (prefix);
-    ret = sqlite3_exec (sqlite, sql, NULL, NULL, &errMsg);
-    sqlite3_free (sql);
-    if (ret != SQLITE_OK)
-      {
-	  spatialite_e ("SQL error: %s: %s\n", sql, errMsg);
-	  sqlite3_free (errMsg);
-	  return 0;
-      }
-/* creating an INDEX corresponding to the SRID FK */
-    prefix = gaiaDoubleQuotedSql (db_prefix);
-    sql = sqlite3_mprintf ("CREATE INDEX IF NOT EXISTS \"%s\".idx_srid_geocols "
-			   "ON geometry_columns (srid)", prefix);
-    free (prefix);
-    ret = sqlite3_exec (sqlite, sql, NULL, NULL, &errMsg);
-    sqlite3_free (sql);
-    if (ret != SQLITE_OK)
-      {
-	  spatialite_e ("SQL error: %s: %s\n", sql, errMsg);
-	  sqlite3_free (errMsg);
-	  return 0;
-      }
-/* creating the GEOMETRY_COLUMNS triggers */
-    prefix = gaiaDoubleQuotedSql (db_prefix);
-    sql =
-	sqlite3_mprintf
-	("CREATE TRIGGER IF NOT EXISTS \"%s\".geometry_columns_f_table_name_insert\n"
-	 "BEFORE INSERT ON 'geometry_columns'\n" "FOR EACH ROW BEGIN\n"
-	 "SELECT RAISE(ABORT,'insert on geometry_columns violates constraint: "
-	 "f_table_name value must not contain a single quote')\n"
-	 "WHERE NEW.f_table_name LIKE ('%%''%%');\n"
-	 "SELECT RAISE(ABORT,'insert on geometry_columns violates constraint: "
-	 "f_table_name value must not contain a double quote')\n"
-	 "WHERE NEW.f_table_name LIKE ('%%\"%%');\n"
-	 "SELECT RAISE(ABORT,'insert on geometry_columns violates constraint: \n"
-	 "f_table_name value must be lower case')\n"
-	 "WHERE NEW.f_table_name <> lower(NEW.f_table_name);\n" "END", prefix);
-    free (prefix);
-    ret = sqlite3_exec (sqlite, sql, NULL, NULL, &errMsg);
-    sqlite3_free (sql);
-    if (ret != SQLITE_OK)
-      {
-	  spatialite_e ("SQL error: %s: %s\n", sql, errMsg);
-	  sqlite3_free (errMsg);
-	  return 0;
-      }
-    prefix = gaiaDoubleQuotedSql (db_prefix);
-    sql =
-	sqlite3_mprintf
-	("CREATE TRIGGER IF NOT EXISTS \"%s\".geometry_columns_f_table_name_update\n"
-	 "BEFORE UPDATE OF 'f_table_name' ON 'geometry_columns'\n"
-	 "FOR EACH ROW BEGIN\n"
-	 "SELECT RAISE(ABORT,'update on geometry_columns violates constraint: "
-	 "f_table_name value must not contain a single quote')\n"
-	 "WHERE NEW.f_table_name LIKE ('%%''%%');\n"
-	 "SELECT RAISE(ABORT,'update on geometry_columns violates constraint: "
-	 "f_table_name value must not contain a double quote')\n"
-	 "WHERE NEW.f_table_name LIKE ('%%\"%%');\n"
-	 "SELECT RAISE(ABORT,'update on geometry_columns violates constraint: "
-	 "f_table_name value must be lower case')\n"
-	 "WHERE NEW.f_table_name <> lower(NEW.f_table_name);\n" "END", prefix);
-    free (prefix);
-    ret = sqlite3_exec (sqlite, sql, NULL, NULL, &errMsg);
-    sqlite3_free (sql);
-    if (ret != SQLITE_OK)
-      {
-	  spatialite_e ("SQL error: %s: %s\n", sql, errMsg);
-	  sqlite3_free (errMsg);
-	  return 0;
-      }
-    prefix = gaiaDoubleQuotedSql (db_prefix);
-    sql =
-	sqlite3_mprintf
-	("CREATE TRIGGER IF NOT EXISTS \"%s\".geometry_columns_f_geometry_column_insert\n"
-	 "BEFORE INSERT ON 'geometry_columns'\n" "FOR EACH ROW BEGIN\n"
-	 "SELECT RAISE(ABORT,'insert on geometry_columns violates constraint: "
-	 "f_geometry_column value must not contain a single quote')\n"
-	 "WHERE NEW.f_geometry_column LIKE ('%%''%%');\n"
-	 "SELECT RAISE(ABORT,'insert on geometry_columns violates constraint: \n"
-	 "f_geometry_column value must not contain a double quote')\n"
-	 "WHERE NEW.f_geometry_column LIKE ('%%\"%%');\n"
-	 "SELECT RAISE(ABORT,'insert on geometry_columns violates constraint: "
-	 "f_geometry_column value must be lower case')\n"
-	 "WHERE NEW.f_geometry_column <> lower(NEW.f_geometry_column);\n" "END",
-	 prefix);
-    free (prefix);
-    ret = sqlite3_exec (sqlite, sql, NULL, NULL, &errMsg);
-    sqlite3_free (sql);
-    if (ret != SQLITE_OK)
-      {
-	  spatialite_e ("SQL error: %s: %s\n", sql, errMsg);
-	  sqlite3_free (errMsg);
-	  return 0;
-      }
-    prefix = gaiaDoubleQuotedSql (db_prefix);
-    sql =
-	sqlite3_mprintf
-	("CREATE TRIGGER IF NOT EXISTS \"%s\".geometry_columns_f_geometry_column_update\n"
-	 "BEFORE UPDATE OF 'f_geometry_column' ON 'geometry_columns'\n"
-	 "FOR EACH ROW BEGIN\n"
-	 "SELECT RAISE(ABORT,'update on geometry_columns violates constraint: "
-	 "f_geometry_column value must not contain a single quote')\n"
-	 "WHERE NEW.f_geometry_column LIKE ('%%''%%');\n"
-	 "SELECT RAISE(ABORT,'update on geometry_columns violates constraint: "
-	 "f_geometry_column value must not contain a double quote')\n"
-	 "WHERE NEW.f_geometry_column LIKE ('%%\"%%');\n"
-	 "SELECT RAISE(ABORT,'update on geometry_columns violates constraint: "
-	 "f_geometry_column value must be lower case')\n"
-	 "WHERE NEW.f_geometry_column <> lower(NEW.f_geometry_column);\n" "END",
-	 prefix);
-    free (prefix);
-    ret = sqlite3_exec (sqlite, sql, NULL, NULL, &errMsg);
-    sqlite3_free (sql);
-    if (ret != SQLITE_OK)
-      {
-	  spatialite_e ("SQL error: %s: %s\n", sql, errMsg);
-	  sqlite3_free (errMsg);
-	  return 0;
-      }
-    prefix = gaiaDoubleQuotedSql (db_prefix);
-    sql =
-	sqlite3_mprintf
-	("CREATE TRIGGER IF NOT EXISTS \"%s\".geometry_columns_geometry_type_insert\n"
-	 "BEFORE INSERT ON 'geometry_columns'\n" "FOR EACH ROW BEGIN\n"
-	 "SELECT RAISE(ABORT,'geometry_type must be one of " "0,1,2,3,4,5,6,7,"
-	 "1000,1001,1002,1003,1004,1005,1006,1007,"
-	 "2000,2001,2002,2003,2004,2005,2006,2007,"
-	 "3000,3001,3002,3003,3004,3005,3006,3007')\n"
-	 "WHERE NOT(NEW.geometry_type IN (0,1,2,3,4,5,6,7,"
-	 "1000,1001,1002,1003,1004,1005,1006,1007,"
-	 "2000,2001,2002,2003,2004,2005,2006,2007,"
-	 "3000,3001,3002,3003,3004,3005,3006,3007));\n" "END", prefix);
-    free (prefix);
-    ret = sqlite3_exec (sqlite, sql, NULL, NULL, &errMsg);
-    sqlite3_free (sql);
-    if (ret != SQLITE_OK)
-      {
-	  spatialite_e ("SQL error: %s: %s\n", sql, errMsg);
-	  sqlite3_free (errMsg);
-	  return 0;
-      }
-    prefix = gaiaDoubleQuotedSql (db_prefix);
-    sql =
-	sqlite3_mprintf
-	("CREATE TRIGGER IF NOT EXISTS \"%s\".geometry_columns_geometry_type_update\n"
-	 "BEFORE UPDATE OF 'geometry_type' ON 'geometry_columns'\n"
-	 "FOR EACH ROW BEGIN\n"
-	 "SELECT RAISE(ABORT,'geometry_type must be one of " "0,1,2,3,4,5,6,7,"
-	 "1000,1001,1002,1003,1004,1005,1006,1007,"
-	 "2000,2001,2002,2003,2004,2005,2006,2007,"
-	 "3000,3001,3002,3003,3004,3005,3006,3007')\n"
-	 "WHERE NOT(NEW.geometry_type IN (0,1,2,3,4,5,6,7,"
-	 "1000,1001,1002,1003,1004,1005,1006,1007,"
-	 "2000,2001,2002,2003,2004,2005,2006,2007,"
-	 "3000,3001,3002,3003,3004,3005,3006,3007));\n" "END", prefix);
-    free (prefix);
-    ret = sqlite3_exec (sqlite, sql, NULL, NULL, &errMsg);
-    sqlite3_free (sql);
-    if (ret != SQLITE_OK)
-      {
-	  spatialite_e ("SQL error: %s: %s\n", sql, errMsg);
-	  sqlite3_free (errMsg);
-	  return 0;
-      }
-    prefix = gaiaDoubleQuotedSql (db_prefix);
-    sql =
-	sqlite3_mprintf
-	("CREATE TRIGGER IF NOT EXISTS \"%s\".geometry_columns_coord_dimension_insert\n"
-	 "BEFORE INSERT ON 'geometry_columns'\n" "FOR EACH ROW BEGIN\n"
-	 "SELECT RAISE(ABORT,'coord_dimension must be one of 2,3,4')\n"
-	 "WHERE NOT(NEW.coord_dimension IN (2,3,4));\n" "END", prefix);
-    free (prefix);
-    ret = sqlite3_exec (sqlite, sql, NULL, NULL, &errMsg);
-    sqlite3_free (sql);
-    if (ret != SQLITE_OK)
-      {
-	  spatialite_e ("SQL error: %s: %s\n", sql, errMsg);
-	  sqlite3_free (errMsg);
-	  return 0;
-      }
-    prefix = gaiaDoubleQuotedSql (db_prefix);
-    sql =
-	sqlite3_mprintf
-	("CREATE TRIGGER IF NOT EXISTS \"%s\".geometry_columns_coord_dimension_update\n"
-	 "BEFORE UPDATE OF 'coord_dimension' ON 'geometry_columns'\n"
-	 "FOR EACH ROW BEGIN\n"
-	 "SELECT RAISE(ABORT,'coord_dimension must be one of 2,3,4')\n"
-	 "WHERE NOT(NEW.coord_dimension IN (2,3,4));\n" "END", prefix);
-    free (prefix);
-    ret = sqlite3_exec (sqlite, sql, NULL, NULL, &errMsg);
-    sqlite3_free (sql);
-    if (ret != SQLITE_OK)
-      {
-	  spatialite_e ("SQL error: %s: %s\n", sql, errMsg);
-	  sqlite3_free (errMsg);
-	  return 0;
-      }
     return 1;
 }
 
@@ -3810,7 +3250,7 @@ updateGeometryTriggers (void *p_sqlite, const char *table, const char *column)
 		  }
 
 		/* deleting the old INSERT trigger SPATIAL_INDEX [if any] */
-		raw = sqlite3_mprintf ("gii_%s_%s", p_table, p_column);
+		raw = sqlite3_mprintf ("gid_%s_%s", p_table, p_column);
 		quoted_trigger = gaiaDoubleQuotedSql (raw);
 		sqlite3_free (raw);
 		sql_statement =
@@ -4360,451 +3800,6 @@ updateGeometryTriggers (void *p_sqlite, const char *table, const char *column)
 }
 
 SPATIALITE_PRIVATE void
-updateTemporaryGeometryTriggers (void *p_sqlite, const char *db_prefix,
-				 const char *table, const char *column)
-{
-/* updates triggers for some Spatial Column - only on Attached DB based on :memory: */
-    sqlite3 *sqlite = (sqlite3 *) p_sqlite;
-    int ret;
-    int col_index;
-    int index;
-    int len;
-    char *errMsg = NULL;
-    char *sql_statement;
-    char *raw;
-    char *quoted_trigger;
-    char *quoted_rtree;
-    char *quoted_prefix;
-    char *quoted_table;
-    char *quoted_column;
-    char *p_table = NULL;
-    char *p_column = NULL;
-    sqlite3_stmt *stmt;
-    struct spatial_index_str *first_idx = NULL;
-    struct spatial_index_str *last_idx = NULL;
-    struct spatial_index_str *curr_idx;
-    struct spatial_index_str *next_idx;
-
-    if (!getRealSQLnamesTemporary
-	(sqlite, db_prefix, table, column, &p_table, &p_column))
-      {
-	  spatialite_e
-	      ("updateTemporaryTableTriggers() error: not existing Table or Column\n");
-	  return;
-      }
-    quoted_prefix = gaiaDoubleQuotedSql (db_prefix);
-    sql_statement = sqlite3_mprintf ("SELECT spatial_index_enabled "
-				     "FROM \"%s\".geometry_columns WHERE Lower(f_table_name) = Lower(?) "
-				     "AND Lower(f_geometry_column) = Lower(?)",
-				     quoted_prefix);
-    free (quoted_prefix);
-/* compiling SQL prepared statement */
-    ret =
-	sqlite3_prepare_v2 (sqlite, sql_statement, strlen (sql_statement),
-			    &stmt, NULL);
-    sqlite3_free (sql_statement);
-    if (ret != SQLITE_OK)
-      {
-	  spatialite_e ("updateTemporaryTableTriggers: error %d \"%s\"\n",
-			sqlite3_errcode (sqlite), sqlite3_errmsg (sqlite));
-	  return;
-      }
-    sqlite3_reset (stmt);
-    sqlite3_clear_bindings (stmt);
-    sqlite3_bind_text (stmt, 1, table, strlen (table), SQLITE_STATIC);
-    sqlite3_bind_text (stmt, 2, column, strlen (column), SQLITE_STATIC);
-    while (1)
-      {
-	  /* scrolling the result set rows */
-	  ret = sqlite3_step (stmt);
-	  if (ret == SQLITE_DONE)
-	      break;		/* end of result set */
-	  if (ret == SQLITE_ROW)
-	    {
-		col_index = sqlite3_column_int (stmt, 0);
-		index = 0;
-		if (col_index == 1)
-		    index = 1;
-
-		/* deleting the old INSERT trigger TYPE [if any] */
-		raw = sqlite3_mprintf ("ggi_%s_%s", p_table, p_column);
-		quoted_prefix = gaiaDoubleQuotedSql (db_prefix);
-		quoted_trigger = gaiaDoubleQuotedSql (raw);
-		sqlite3_free (raw);
-		sql_statement =
-		    sqlite3_mprintf ("DROP TRIGGER IF EXISTS \"%s\".\"%s\"",
-				     quoted_prefix, quoted_trigger);
-		free (quoted_prefix);
-		free (quoted_trigger);
-		ret = sqlite3_exec (sqlite, sql_statement, NULL, NULL, &errMsg);
-		sqlite3_free (sql_statement);
-		if (ret != SQLITE_OK)
-		    goto error;
-
-		/* inserting the INSERT trigger TYPE */
-		raw = sqlite3_mprintf ("ggi_%s_%s", p_table, p_column);
-		quoted_trigger = gaiaDoubleQuotedSql (raw);
-		sqlite3_free (raw);
-		quoted_prefix = gaiaDoubleQuotedSql (db_prefix);
-		quoted_table = gaiaDoubleQuotedSql (p_table);
-		quoted_column = gaiaDoubleQuotedSql (p_column);
-		sql_statement =
-		    sqlite3_mprintf
-		    ("CREATE TRIGGER \"%s\".\"%s\" BEFORE INSERT ON \"%s\"\n"
-		     "FOR EACH ROW BEGIN\n"
-		     "SELECT RAISE(ROLLBACK, '%q.%q violates Geometry constraint [geom-type or SRID not allowed]')\n"
-		     "WHERE (SELECT geometry_type FROM \"%s\".geometry_columns\n"
-		     "WHERE Lower(f_table_name) = Lower(%Q) AND "
-		     "Lower(f_geometry_column) = Lower(%Q)\n"
-		     "AND GeometryConstraints(NEW.\"%s\", geometry_type, srid) = 1) IS NULL;\nEND",
-		     quoted_prefix, quoted_trigger, quoted_table, p_table,
-		     p_column, db_prefix, p_table, p_column, quoted_column);
-		free (quoted_prefix);
-		free (quoted_trigger);
-		free (quoted_table);
-		free (quoted_column);
-		ret = sqlite3_exec (sqlite, sql_statement, NULL, NULL, &errMsg);
-		sqlite3_free (sql_statement);
-		if (ret != SQLITE_OK)
-		    goto error;
-
-		/* deleting the old UPDATE trigger TYPE [if any] */
-		raw = sqlite3_mprintf ("ggu_%s_%s", p_table, p_column);
-		quoted_trigger = gaiaDoubleQuotedSql (raw);
-		quoted_prefix = gaiaDoubleQuotedSql (db_prefix);
-		sqlite3_free (raw);
-		sql_statement =
-		    sqlite3_mprintf ("DROP TRIGGER IF EXISTS \"%s\".\"%s\"",
-				     quoted_prefix, quoted_trigger);
-		free (quoted_prefix);
-		free (quoted_trigger);
-		ret = sqlite3_exec (sqlite, sql_statement, NULL, NULL, &errMsg);
-		sqlite3_free (sql_statement);
-		if (ret != SQLITE_OK)
-		    goto error;
-
-		/* inserting the new UPDATE trigger TYPE */
-		raw = sqlite3_mprintf ("ggu_%s_%s", p_table, p_column);
-		quoted_trigger = gaiaDoubleQuotedSql (raw);
-		sqlite3_free (raw);
-		quoted_prefix = gaiaDoubleQuotedSql (db_prefix);
-		quoted_table = gaiaDoubleQuotedSql (p_table);
-		quoted_column = gaiaDoubleQuotedSql (p_column);
-		sql_statement =
-		    sqlite3_mprintf
-		    ("CREATE TRIGGER \"%s\".\"%s\" BEFORE UPDATE OF \"%s\" ON \"%s\"\n"
-		     "FOR EACH ROW BEGIN\n"
-		     "SELECT RAISE(ROLLBACK, '%q.%q violates Geometry constraint [geom-type or SRID not allowed]')\n"
-		     "WHERE (SELECT geometry_type FROM \"%s\".geometry_columns\n"
-		     "WHERE Lower(f_table_name) = Lower(%Q) AND "
-		     "Lower(f_geometry_column) = Lower(%Q)\n"
-		     "AND GeometryConstraints(NEW.\"%s\", geometry_type, srid) = 1) IS NULL;\nEND",
-		     quoted_prefix, quoted_trigger, quoted_column, quoted_table,
-		     p_table, p_column, db_prefix, p_table, p_column,
-		     quoted_column);
-		free (quoted_prefix);
-		free (quoted_trigger);
-		free (quoted_table);
-		free (quoted_column);
-		ret = sqlite3_exec (sqlite, sql_statement, NULL, NULL, &errMsg);
-		sqlite3_free (sql_statement);
-		if (ret != SQLITE_OK)
-		    goto error;
-
-		/* inserting SpatialIndex information into the linked list */
-		curr_idx = malloc (sizeof (struct spatial_index_str));
-		len = strlen (p_table);
-		curr_idx->TableName = malloc (len + 1);
-		strcpy (curr_idx->TableName, p_table);
-		len = strlen (p_column);
-		curr_idx->ColumnName = malloc (len + 1);
-		strcpy (curr_idx->ColumnName, p_column);
-		curr_idx->ValidRtree = (char) index;
-		curr_idx->ValidCache = '\0';
-		curr_idx->Next = NULL;
-		if (!first_idx)
-		    first_idx = curr_idx;
-		if (last_idx)
-		    last_idx->Next = curr_idx;
-		last_idx = curr_idx;
-
-		/* deleting the old INSERT trigger SPATIAL_INDEX [if any] */
-		raw = sqlite3_mprintf ("gii_%s_%s", p_table, p_column);
-		quoted_trigger = gaiaDoubleQuotedSql (raw);
-		quoted_prefix = gaiaDoubleQuotedSql (db_prefix);
-		sqlite3_free (raw);
-		sql_statement =
-		    sqlite3_mprintf ("DROP TRIGGER IF EXISTS \"%s\".\"%s\"",
-				     quoted_prefix, quoted_trigger);
-		free (quoted_prefix);
-		free (quoted_trigger);
-		ret = sqlite3_exec (sqlite, sql_statement, NULL, NULL, &errMsg);
-		sqlite3_free (sql_statement);
-		if (ret != SQLITE_OK)
-		    goto error;
-
-
-		/* deleting the old UPDATE trigger SPATIAL_INDEX [if any] */
-		raw = sqlite3_mprintf ("giu_%s_%s", p_table, p_column);
-		quoted_trigger = gaiaDoubleQuotedSql (raw);
-		quoted_prefix = gaiaDoubleQuotedSql (db_prefix);
-		sqlite3_free (raw);
-		sql_statement =
-		    sqlite3_mprintf ("DROP TRIGGER IF EXISTS \"%s\".\"%s\"",
-				     quoted_prefix, quoted_trigger);
-		free (quoted_prefix);
-		free (quoted_trigger);
-		ret = sqlite3_exec (sqlite, sql_statement, NULL, NULL, &errMsg);
-		sqlite3_free (sql_statement);
-		if (ret != SQLITE_OK)
-		    goto error;
-
-		/* deleting the old DELETE trigger SPATIAL_INDEX [if any] */
-		raw = sqlite3_mprintf ("gid_%s_%s", p_table, p_column);
-		quoted_trigger = gaiaDoubleQuotedSql (raw);
-		quoted_prefix = gaiaDoubleQuotedSql (db_prefix);
-		sqlite3_free (raw);
-		sql_statement =
-		    sqlite3_mprintf ("DROP TRIGGER IF EXISTS \"%s\".\"%s\"",
-				     quoted_prefix, quoted_trigger);
-		free (quoted_prefix);
-		free (quoted_trigger);
-		ret = sqlite3_exec (sqlite, sql_statement, NULL, NULL, &errMsg);
-		sqlite3_free (sql_statement);
-		if (ret != SQLITE_OK)
-		    goto error;
-
-		/* deleting the old INSERT trigger MBR_CACHE [if any] */
-		raw = sqlite3_mprintf ("gci_%s_%s", p_table, p_column);
-		quoted_trigger = gaiaDoubleQuotedSql (raw);
-		quoted_prefix = gaiaDoubleQuotedSql (db_prefix);
-		sqlite3_free (raw);
-		sql_statement =
-		    sqlite3_mprintf ("DROP TRIGGER IF EXISTS \"%s\".\"%s\"",
-				     quoted_prefix, quoted_trigger);
-		free (quoted_prefix);
-		free (quoted_trigger);
-		ret = sqlite3_exec (sqlite, sql_statement, NULL, NULL, &errMsg);
-		sqlite3_free (sql_statement);
-		if (ret != SQLITE_OK)
-		    goto error;
-
-		/* deleting the old UPDATE trigger MBR_CACHE [if any] */
-		raw = sqlite3_mprintf ("gcu_%s_%s", p_table, p_column);
-		quoted_trigger = gaiaDoubleQuotedSql (raw);
-		quoted_prefix = gaiaDoubleQuotedSql (db_prefix);
-		sqlite3_free (raw);
-		sql_statement =
-		    sqlite3_mprintf ("DROP TRIGGER IF EXISTS \"%s\".\"%s\"",
-				     quoted_prefix, quoted_trigger);
-		free (quoted_prefix);
-		free (quoted_trigger);
-		ret = sqlite3_exec (sqlite, sql_statement, NULL, NULL, &errMsg);
-		sqlite3_free (sql_statement);
-		if (ret != SQLITE_OK)
-		    goto error;
-
-		/* deleting the old UPDATE trigger MBR_CACHE [if any] */
-		raw = sqlite3_mprintf ("gcd_%s_%s", p_table, p_column);
-		quoted_trigger = gaiaDoubleQuotedSql (raw);
-		quoted_prefix = gaiaDoubleQuotedSql (db_prefix);
-		sqlite3_free (raw);
-		sql_statement =
-		    sqlite3_mprintf ("DROP TRIGGER IF EXISTS \"%s\".\"%s\"",
-				     quoted_prefix, quoted_trigger);
-		free (quoted_prefix);
-		free (quoted_trigger);
-		ret = sqlite3_exec (sqlite, sql_statement, NULL, NULL, &errMsg);
-		sqlite3_free (sql_statement);
-		if (ret != SQLITE_OK)
-		    goto error;
-
-		if (index)
-		  {
-		      /* inserting the new INSERT trigger RTree */
-		      raw = sqlite3_mprintf ("gii_%s_%s", p_table, p_column);
-		      quoted_trigger = gaiaDoubleQuotedSql (raw);
-		      sqlite3_free (raw);
-		      raw = sqlite3_mprintf ("idx_%s_%s", p_table, p_column);
-		      quoted_prefix = gaiaDoubleQuotedSql (db_prefix);
-		      quoted_rtree = gaiaDoubleQuotedSql (raw);
-		      quoted_table = gaiaDoubleQuotedSql (p_table);
-		      quoted_column = gaiaDoubleQuotedSql (p_column);
-		      sql_statement =
-			  sqlite3_mprintf
-			  ("CREATE TRIGGER \"%s\".\"%s\" AFTER INSERT ON \"%s\"\n"
-			   "FOR EACH ROW BEGIN\n"
-			   "DELETE FROM \"%s\" WHERE pkid=NEW.ROWID;\n"
-			   "SELECT TemporaryRTreeAlign(%Q, %Q, NEW.ROWID, NEW.\"%s\");\nEND",
-			   quoted_prefix, quoted_trigger, quoted_table,
-			   quoted_rtree, db_prefix, raw, quoted_column);
-		      sqlite3_free (raw);
-		      free (quoted_prefix);
-		      free (quoted_trigger);
-		      free (quoted_rtree);
-		      free (quoted_table);
-		      free (quoted_column);
-		      ret =
-			  sqlite3_exec (sqlite, sql_statement, NULL, NULL,
-					&errMsg);
-		      sqlite3_free (sql_statement);
-		      if (ret != SQLITE_OK)
-			  goto error;
-
-		      /* inserting the new UPDATE trigger RTree */
-		      raw = sqlite3_mprintf ("giu_%s_%s", p_table, p_column);
-		      quoted_trigger = gaiaDoubleQuotedSql (raw);
-		      sqlite3_free (raw);
-		      raw = sqlite3_mprintf ("idx_%s_%s", p_table, p_column);
-		      quoted_prefix = gaiaDoubleQuotedSql (db_prefix);
-		      quoted_rtree = gaiaDoubleQuotedSql (raw);
-		      quoted_table = gaiaDoubleQuotedSql (p_table);
-		      quoted_column = gaiaDoubleQuotedSql (p_column);
-		      sql_statement =
-			  sqlite3_mprintf
-			  ("CREATE TRIGGER \"%s\".\"%s\" AFTER UPDATE OF \"%s\" ON \"%s\"\n"
-			   "FOR EACH ROW BEGIN\n"
-			   "DELETE FROM \"%s\" WHERE pkid=NEW.ROWID;\n"
-			   "SELECT TemporaryRTreeAlign(%Q, %Q, NEW.ROWID, NEW.\"%s\");\nEND",
-			   quoted_prefix, quoted_trigger, quoted_column,
-			   quoted_table, quoted_rtree, db_prefix, raw,
-			   quoted_column);
-		      sqlite3_free (raw);
-		      free (quoted_prefix);
-		      free (quoted_trigger);
-		      free (quoted_rtree);
-		      free (quoted_table);
-		      free (quoted_column);
-		      ret =
-			  sqlite3_exec (sqlite, sql_statement, NULL, NULL,
-					&errMsg);
-		      sqlite3_free (sql_statement);
-		      if (ret != SQLITE_OK)
-			  goto error;
-
-		      /* inserting the new DELETE trigger RTree */
-		      raw = sqlite3_mprintf ("gid_%s_%s", p_table, p_column);
-		      quoted_trigger = gaiaDoubleQuotedSql (raw);
-		      sqlite3_free (raw);
-		      raw = sqlite3_mprintf ("idx_%s_%s", p_table, p_column);
-		      quoted_prefix = gaiaDoubleQuotedSql (db_prefix);
-		      quoted_rtree = gaiaDoubleQuotedSql (raw);
-		      sqlite3_free (raw);
-		      quoted_table = gaiaDoubleQuotedSql (p_table);
-		      quoted_column = gaiaDoubleQuotedSql (p_column);
-		      sql_statement =
-			  sqlite3_mprintf
-			  ("CREATE TRIGGER \"%s\".\"%s\" AFTER DELETE ON \"%s\"\n"
-			   "FOR EACH ROW BEGIN\n"
-			   "DELETE FROM \"%s\" WHERE pkid=OLD.ROWID;\nEND",
-			   quoted_prefix, quoted_trigger, quoted_table,
-			   quoted_rtree);
-		      free (quoted_prefix);
-		      free (quoted_trigger);
-		      free (quoted_rtree);
-		      free (quoted_table);
-		      free (quoted_column);
-		      ret =
-			  sqlite3_exec (sqlite, sql_statement, NULL, NULL,
-					&errMsg);
-		      sqlite3_free (sql_statement);
-		      if (ret != SQLITE_OK)
-			  goto error;
-		  }
-	    }
-      }
-    ret = sqlite3_finalize (stmt);
-/* now we'll adjust any related SpatialIndex as required */
-    curr_idx = first_idx;
-    while (curr_idx)
-      {
-	  if (curr_idx->ValidRtree)
-	    {
-		/* building RTree SpatialIndex */
-		int status;
-		raw = sqlite3_mprintf ("idx_%s_%s", curr_idx->TableName,
-				       curr_idx->ColumnName);
-		quoted_rtree = gaiaDoubleQuotedSql (raw);
-		quoted_prefix = gaiaDoubleQuotedSql (db_prefix);
-		sqlite3_free (raw);
-		sql_statement =
-		    sqlite3_mprintf ("CREATE VIRTUAL TABLE \"%s\".\"%s\" "
-				     "USING rtree(pkid, xmin, xmax, ymin, ymax)",
-				     quoted_prefix, quoted_rtree);
-		free (quoted_prefix);
-		free (quoted_rtree);
-		ret = sqlite3_exec (sqlite, sql_statement, NULL, NULL, &errMsg);
-		sqlite3_free (sql_statement);
-		if (ret != SQLITE_OK)
-		    goto error;
-		status = buildTemporarySpatialIndex (sqlite, db_prefix,
-						     (unsigned char
-						      *) (curr_idx->TableName),
-						     curr_idx->ColumnName);
-		if (status == 0)
-		    ;
-		else
-		  {
-		      if (status == -2)
-			  errMsg =
-			      sqlite3_mprintf
-			      ("TemporarySpatialIndex error: a physical column named ROWID shadows the real ROWID");
-		      else
-			  errMsg =
-			      sqlite3_mprintf
-			      ("TemporarySpatialIndex error: unable to rebuild the T*Tree");
-		      goto error;
-		  }
-	    }
-	  if (curr_idx->ValidCache)
-	    {
-		/* building MbrCache SpatialIndex */
-		raw = sqlite3_mprintf ("cache_%s_%s", curr_idx->TableName,
-				       curr_idx->ColumnName);
-		quoted_rtree = gaiaDoubleQuotedSql (raw);
-		sqlite3_free (raw);
-		quoted_prefix = gaiaDoubleQuotedSql (db_prefix);
-		quoted_table = gaiaDoubleQuotedSql (curr_idx->TableName);
-		quoted_column = gaiaDoubleQuotedSql (curr_idx->ColumnName);
-		sql_statement =
-		    sqlite3_mprintf ("CREATE VIRTUAL TABLE \"%s\".\"%s\" "
-				     "USING MbrCache(\"%s\", \"%s\")",
-				     quoted_prefix, quoted_rtree, quoted_table,
-				     quoted_column);
-		free (quoted_prefix);
-		free (quoted_rtree);
-		free (quoted_table);
-		free (quoted_column);
-		ret = sqlite3_exec (sqlite, sql_statement, NULL, NULL, &errMsg);
-		sqlite3_free (sql_statement);
-		if (ret != SQLITE_OK)
-		    goto error;
-	    }
-	  curr_idx = curr_idx->Next;
-      }
-    goto index_cleanup;
-  error:
-    spatialite_e ("updateTemporaryTableTriggers: \"%s\"\n", errMsg);
-    sqlite3_free (errMsg);
-  index_cleanup:
-    curr_idx = first_idx;
-    while (curr_idx)
-      {
-	  next_idx = curr_idx->Next;
-	  if (curr_idx->TableName)
-	      free (curr_idx->TableName);
-	  if (curr_idx->ColumnName)
-	      free (curr_idx->ColumnName);
-	  free (curr_idx);
-	  curr_idx = next_idx;
-      }
-    if (p_table)
-	free (p_table);
-    if (p_column)
-	free (p_column);
-}
-
-SPATIALITE_PRIVATE void
 buildSpatialIndex (void *p_sqlite, const unsigned char *table,
 		   const char *column)
 {
@@ -4821,11 +3816,6 @@ validateRowid (void *p_sqlite, const char *table)
     char *sql;
     int ret;
     const char *name;
-    const char *type;
-    const char *pk;
-    int rowid_pk = 0;
-    int int_pk = 0;
-    int pk_cols = 0;
     int i;
     char **results;
     int rows;
@@ -4846,90 +3836,11 @@ validateRowid (void *p_sqlite, const char *table)
 		name = results[(i * columns) + 1];
 		if (strcasecmp (name, "rowid") == 0)
 		    rowid = 1;
-		type = results[(i * columns) + 2];
-		if (strcasecmp (type, "INTEGER") == 0)
-		    int_pk = 1;
-		pk = results[(i * columns) + 5];
-		if (atoi (pk) != 0)
-		    pk_cols++;
-		if (strcasecmp (name, "rowid") == 0 && atoi (pk) != 0)
-		    rowid_pk = 1;
 	    }
       }
     sqlite3_free_table (results);
     if (rowid == 0)
 	return 1;
-    if (rowid_pk == 1 && pk_cols == 1 && int_pk == 1)
-      {
-	  /* OK, found: ROWID INTEGER PRIMARY KEY */
-	  return 1;
-      }
-    return 0;
-}
-
-SPATIALITE_PRIVATE int
-validateTemporaryRowid (void *p_sqlite, const char *db_prefix,
-			const char *table)
-{
-/* check for tables containing a physical column named ROWID */
-    sqlite3 *sqlite = (sqlite3 *) p_sqlite;
-    int rowid = 0;
-    char *sql;
-    int ret;
-    const char *name;
-    const char *type;
-    const char *pk;
-    int rowid_pk = 0;
-    int int_pk = 0;
-    int pk_cols = 0;
-    int i;
-    char **results;
-    int rows;
-    int columns;
-    char *quoted_prefix;
-    char *quoted_table;
-
-    if (db_prefix == NULL)
-	return 0;
-
-    quoted_prefix = gaiaDoubleQuotedSql (db_prefix);
-    quoted_table = gaiaDoubleQuotedSql (table);
-    sql =
-	sqlite3_mprintf ("PRAGMA \"%s\".table_info(\"%s\")", quoted_prefix,
-			 quoted_table);
-    ret = sqlite3_get_table (sqlite, sql, &results, &rows, &columns, NULL);
-    sqlite3_free (sql);
-    free (quoted_prefix);
-    free (quoted_table);
-    if (ret != SQLITE_OK)
-	return 0;
-    if (rows < 1)
-	;
-    else
-      {
-	  for (i = 1; i <= rows; i++)
-	    {
-		name = results[(i * columns) + 1];
-		if (strcasecmp (name, "rowid") == 0)
-		    rowid = 1;
-		type = results[(i * columns) + 2];
-		if (strcasecmp (type, "INTEGER") == 0)
-		    int_pk = 1;
-		pk = results[(i * columns) + 5];
-		if (atoi (pk) != 0)
-		    pk_cols++;
-		if (strcasecmp (name, "rowid") == 0 && atoi (pk) != 0)
-		    rowid_pk = 1;
-	    }
-      }
-    sqlite3_free_table (results);
-    if (rowid == 0)
-	return 1;
-    if (rowid_pk == 1 && pk_cols == 1 && int_pk == 1)
-      {
-	  /* OK, found: ROWID INTEGER PRIMARY KEY */
-	  return 1;
-      }
     return 0;
 }
 
@@ -4975,58 +3886,6 @@ buildSpatialIndexEx (void *p_sqlite, const unsigned char *table,
     if (ret != SQLITE_OK)
       {
 	  spatialite_e ("buildSpatialIndex error: \"%s\"\n", errMsg);
-	  sqlite3_free (errMsg);
-	  return -1;
-      }
-    return 0;
-}
-
-SPATIALITE_PRIVATE int
-buildTemporarySpatialIndex (void *p_sqlite, const char *db_prefix,
-			    const unsigned char *table, const char *column)
-{
-/* loading a SpatialIndex [RTree] */
-    sqlite3 *sqlite = (sqlite3 *) p_sqlite;
-    char *raw;
-    char *quoted_prefix;
-    char *quoted_rtree;
-    char *quoted_table;
-    char *quoted_column;
-    char *sql_statement;
-    char *errMsg = NULL;
-    int ret;
-
-    if (!validateTemporaryRowid (sqlite, db_prefix, (const char *) table))
-      {
-	  /* a physical column named "rowid" shadows the real ROWID */
-	  spatialite_e
-	      ("buildTemporarySpatialIndex error: a physical column named ROWID shadows the real ROWID\n");
-	  return -2;
-      }
-
-    raw = sqlite3_mprintf ("idx_%s_%s", table, column);
-    quoted_rtree = gaiaDoubleQuotedSql (raw);
-    sqlite3_free (raw);
-    quoted_prefix = gaiaDoubleQuotedSql (db_prefix);
-    quoted_table = gaiaDoubleQuotedSql ((const char *) table);
-    quoted_column = gaiaDoubleQuotedSql (column);
-    sql_statement = sqlite3_mprintf ("INSERT INTO \"%s\".\"%s\" "
-				     "(pkid, xmin, xmax, ymin, ymax) "
-				     "SELECT ROWID, MbrMinX(\"%s\"), MbrMaxX(\"%s\"), MbrMinY(\"%s\"), MbrMaxY(\"%s\") "
-				     "FROM \"%s\".\"%s\" WHERE MbrMinX(\"%s\") IS NOT NULL",
-				     quoted_prefix, quoted_rtree, quoted_column,
-				     quoted_column, quoted_column,
-				     quoted_column, quoted_prefix, quoted_table,
-				     quoted_column);
-    free (quoted_prefix);
-    free (quoted_rtree);
-    free (quoted_table);
-    free (quoted_column);
-    ret = sqlite3_exec (sqlite, sql_statement, NULL, NULL, &errMsg);
-    sqlite3_free (sql_statement);
-    if (ret != SQLITE_OK)
-      {
-	  spatialite_e ("buildTemporarySpatialIndex error: \"%s\"\n", errMsg);
 	  sqlite3_free (errMsg);
 	  return -1;
       }
@@ -5097,116 +3956,6 @@ getRealSQLnames (void *p_sqlite, const char *table, const char *column,
     if (ret != SQLITE_OK)
       {
 	  spatialite_e ("real_names: error %d \"%s\"\n",
-			sqlite3_errcode (sqlite), sqlite3_errmsg (sqlite));
-	  free (p_table);
-	  return 0;
-      }
-    while (1)
-      {
-	  /* scrolling the result set rows */
-	  ret = sqlite3_step (stmt);
-	  if (ret == SQLITE_DONE)
-	      break;		/* end of result set */
-	  if (ret == SQLITE_ROW)
-	    {
-		name = (const char *) sqlite3_column_text (stmt, 1);
-		len = sqlite3_column_bytes (stmt, 1);
-		if (strcasecmp (name, column) == 0)
-		  {
-		      if (p_column)
-			  free (p_column);
-		      p_column = malloc (len + 1);
-		      strcpy (p_column, name);
-		  }
-	    }
-      }
-    sqlite3_finalize (stmt);
-
-    if (p_column == NULL)
-      {
-	  free (p_table);
-	  return 0;
-      }
-
-    *real_table = p_table;
-    *real_column = p_column;
-    return 1;
-}
-
-SPATIALITE_PRIVATE int
-getRealSQLnamesTemporary (void *p_sqlite, const char *db_prefix,
-			  const char *table, const char *column,
-			  char **real_table, char **real_column)
-{
-/* attempting to retrieve the "real" table and column names (upper/lowercase) */
-    sqlite3 *sqlite = (sqlite3 *) p_sqlite;
-    char *p_table = NULL;
-    char *p_column = NULL;
-    char *sql_statement;
-    char *prefix;
-    char *quoted;
-    const char *name;
-    int len;
-    sqlite3_stmt *stmt;
-    int ret;
-
-    if (db_prefix == NULL)
-	return 0;
-
-    prefix = gaiaDoubleQuotedSql (db_prefix);
-    sql_statement = sqlite3_mprintf ("SELECT name "
-				     "FROM \"%s\".sqlite_master WHERE type = 'table' "
-				     "AND Lower(name) = Lower(?)", prefix);
-    free (prefix);
-/* compiling SQL prepared statement */
-    ret =
-	sqlite3_prepare_v2 (sqlite, sql_statement, strlen (sql_statement),
-			    &stmt, NULL);
-    sqlite3_free (sql_statement);
-    if (ret != SQLITE_OK)
-      {
-	  spatialite_e ("real_names temporary: error %d \"%s\"\n",
-			sqlite3_errcode (sqlite), sqlite3_errmsg (sqlite));
-	  return 0;
-      }
-    sqlite3_reset (stmt);
-    sqlite3_clear_bindings (stmt);
-    sqlite3_bind_text (stmt, 1, table, strlen (table), SQLITE_STATIC);
-    while (1)
-      {
-	  /* scrolling the result set rows */
-	  ret = sqlite3_step (stmt);
-	  if (ret == SQLITE_DONE)
-	      break;		/* end of result set */
-	  if (ret == SQLITE_ROW)
-	    {
-		name = (const char *) sqlite3_column_text (stmt, 0);
-		len = sqlite3_column_bytes (stmt, 0);
-		if (p_table)
-		    free (p_table);
-		p_table = malloc (len + 1);
-		strcpy (p_table, name);
-	    }
-      }
-    sqlite3_finalize (stmt);
-
-    if (p_table == NULL)
-	return 0;
-
-    prefix = gaiaDoubleQuotedSql (db_prefix);
-    quoted = gaiaDoubleQuotedSql (p_table);
-    sql_statement =
-	sqlite3_mprintf ("PRAGMA \"%s\".table_info(\"%s\")", prefix, quoted);
-    free (prefix);
-    free (quoted);
-/* compiling SQL prepared statement */
-    ret =
-	sqlite3_prepare_v2 (sqlite, sql_statement, strlen (sql_statement),
-			    &stmt, NULL);
-    sqlite3_free (sql_statement);
-    if (ret != SQLITE_OK)
-      {
-	  spatialite_e ("real_names temporary: error %d \"%s\"\n",
 			sqlite3_errcode (sqlite), sqlite3_errmsg (sqlite));
 	  free (p_table);
 	  return 0;
@@ -5532,71 +4281,8 @@ addVectorLayerExtent (void *x_list, const char *table_name,
 }
 
 static void
-doCheckWritableSpatialView (sqlite3 * handle, const char *view_name,
-			    int *has_trigger_insert, int *has_trigger_update,
-			    int *has_trigger_delete, int *is_read_only)
-{
-/*
-* checking if a supposed Writable Spatial View do 
-* effectively declares all expected Triggers
-* 
-* patch kindly submitted by Mark Johnson <mj10777@googlemail.com>
-* see ticket: https://www.gaia-gis.it/fossil/libspatialite/tktview/597fce55f2884668a24b591840162ffebda390e1
-*/
-    int ret;
-    char *sql;
-    sqlite3_stmt *stmt;
-
-/* Claims to be a Writable SpatialView, we shall see ... */
-    *has_trigger_insert = 0;
-    *has_trigger_update = 0;
-    *has_trigger_delete = 0;
-    *is_read_only = 1;
-
-    sql =
-	sqlite3_mprintf ("SELECT "
-			 "(SELECT Exists(SELECT rootpage FROM  sqlite_master "
-			 "WHERE (type = 'trigger' AND Lower(tbl_name) = Lower(%Q) AND "
-			 "(instr(upper(sql),'INSTEAD OF INSERT') > 0)))), "
-			 "(SELECT Exists(SELECT rootpage FROM  sqlite_master "
-			 "WHERE (type = 'trigger' AND Lower(tbl_name) = Lower(%Q) AND "
-			 "(instr(upper(sql),'INSTEAD OF UPDATE') > 0)))), "
-			 "(SELECT Exists(SELECT rootpage FROM  sqlite_master "
-			 "WHERE (type = 'trigger' AND Lower(tbl_name) = Lower(%Q) AND "
-			 "(instr(upper(sql),'INSTEAD OF DELETE') > 0))))",
-			 view_name, view_name, view_name);
-    ret = sqlite3_prepare_v2 (handle, sql, strlen (sql), &stmt, NULL);
-    sqlite3_free (sql);
-    if (ret == SQLITE_OK)
-      {
-	  while (sqlite3_step (stmt) == SQLITE_ROW)
-	    {
-		if (sqlite3_column_type (stmt, 0) != SQLITE_NULL)
-		  {
-		      if (sqlite3_column_int (stmt, 0) == 1)
-			  *has_trigger_insert = 1;
-		  }
-		if (sqlite3_column_type (stmt, 1) != SQLITE_NULL)
-		  {
-		      if (sqlite3_column_int (stmt, 1) == 1)
-			  *has_trigger_update = 1;
-		  }
-		if (sqlite3_column_type (stmt, 2) != SQLITE_NULL)
-		  {
-		      if (sqlite3_column_int (stmt, 2) == 1)
-			  *has_trigger_delete = 1;
-		  }
-	    }
-	  ret = sqlite3_finalize (stmt);
-      }
-    if (*has_trigger_insert || *has_trigger_update || *has_trigger_delete)
-	*is_read_only = 0;	/* Yes, this could be a functional Writable SpatialView */
-}
-
-static void
-addVectorLayerAuth (sqlite3 * handle, gaiaVectorLayersListPtr list,
-		    const char *table_name, const char *geometry_column,
-		    int read_only, int hidden)
+addVectorLayerAuth (gaiaVectorLayersListPtr list, const char *table_name,
+		    const char *geometry_column, int read_only, int hidden)
 {
 /* appending a LayerAuth object to the corresponding VectorLayer */
     gaiaVectorLayerPtr lyr = list->First;
@@ -5609,25 +4295,6 @@ addVectorLayerAuth (sqlite3 * handle, gaiaVectorLayersListPtr list,
 		lyr->AuthInfos = auth;
 		auth->IsReadOnly = read_only;
 		auth->IsHidden = hidden;
-		auth->HasTriggerInsert = 0;
-		auth->HasTriggerUpdate = 0;
-		auth->HasTriggerDelete = 0;
-		if ((lyr->LayerType == GAIA_VECTOR_VIEW) && (!auth->IsReadOnly))
-		  {
-		      int has_trigger_insert = 0;
-		      int has_trigger_update = 0;
-		      int has_trigger_delete = 0;
-		      int is_read_only = 1;
-		      doCheckWritableSpatialView (handle, table_name,
-						  &has_trigger_insert,
-						  &has_trigger_update,
-						  &has_trigger_delete,
-						  &is_read_only);
-		      auth->HasTriggerInsert = has_trigger_insert;
-		      auth->HasTriggerUpdate = has_trigger_update;
-		      auth->HasTriggerDelete = has_trigger_delete;
-		      auth->IsReadOnly = is_read_only;
-		  }
 		return;
 	    }
 	  lyr = lyr->Next;
@@ -5652,7 +4319,7 @@ freeLayerAttributeField (gaiaLayerAttributeFieldPtr fld)
 static void
 freeVectorLayer (gaiaVectorLayerPtr lyr)
 {
-/* destroying a VectorLayer object */
+/* destroyng a VectorLayer object */
     gaiaLayerAttributeFieldPtr fld;
     gaiaLayerAttributeFieldPtr fldn;
     if (!lyr)
@@ -5703,15 +4370,6 @@ gaiaGetVectorLayersList_v4 (sqlite3 * handle, const char *table,
     int ret;
     sqlite3_stmt *stmt;
     int error = 0;
-
-/* 
-* attempting first to recover all SpatialViews registered into 
-* views_geometry_columns but not into views_geometry_columns_auth
-*/
-    sql = "INSERT OR IGNORE INTO views_geometry_columns_auth "
-	"(view_name, view_geometry, hidden) "
-	"SELECT view_name, view_geometry, 0 FROM views_geometry_columns";
-    sqlite3_exec (handle, sql, NULL, NULL, NULL);
 
 /* querying the vector_layers view */
     if (table == NULL)
@@ -5905,8 +4563,8 @@ gaiaGetVectorLayersList_v4 (sqlite3 * handle, const char *table,
 		else
 		    hidden = sqlite3_column_int (stmt, 3);
 		if (!is_null)
-		    addVectorLayerAuth (handle, list, table_name,
-					geometry_column, read_only, hidden);
+		    addVectorLayerAuth (list, table_name, geometry_column,
+					read_only, hidden);
 	    }
       }
     ret = sqlite3_finalize (stmt);
@@ -6139,8 +4797,6 @@ get_table_layers_legacy (sqlite3 * handle, const char *table,
 		addVectorLayer (list, "SpatialTable", table_name,
 				geometry_column, geometry_type, srid,
 				spatial_index);
-		addVectorLayerAuth (handle, list, table_name, geometry_column,
-				    1, 0);
 	    }
 	  else
 	      error = 1;
@@ -6690,8 +5346,8 @@ get_table_auth_legacy (sqlite3 * handle, const char *table,
 		else
 		    hidden = sqlite3_column_int (stmt, 3);
 		if (!is_null)
-		    addVectorLayerAuth (handle, list, table_name,
-					geometry_column, read_only, hidden);
+		    addVectorLayerAuth (list, table_name, geometry_column,
+					read_only, hidden);
 	    }
       }
     ret = sqlite3_finalize (stmt);
@@ -7464,167 +6120,4 @@ gaiaStatisticsInvalidate (sqlite3 * sqlite, const char *table,
       }
     else
 	return 0;
-}
-
-static int
-rtree_bbox_callback (sqlite3_rtree_query_info * info)
-{
-/*
-
- R*Tree Query Callback function 
-
-----------------------------------------------------------
-
- this function will evaluate all first-level R*Tree Nodes
- (direct children of the Root Node) so to get the Full
- Extent of the R*Tree as a whole.
-
- further descending in the Tree's hierarchy will be
- carefully avoided, so to ensure that also in the case  
- of an R*Tree containing many million entries just few
- dozens of top level Nodes will require to be evaluated.
- 
-*/
-    double minx;
-    double maxx;
-    double miny;
-    double maxy;
-    struct rtree_envelope *data = (struct rtree_envelope *) (info->pContext);
-    if (info->nCoord != 4)
-      {
-	  /* invalid RTree; not 2D */
-	  goto end;
-      }
-
-/* fetching the Node's BBOX */
-    minx = info->aCoord[0];
-    maxx = info->aCoord[1];
-    miny = info->aCoord[2];
-    maxy = info->aCoord[3];
-
-/* updating the Full Extent BBOX */
-    if (data->valid == 0)
-      {
-	  /* first Node retrieved */
-	  data->valid = 1;
-	  data->minx = minx;
-	  data->maxx = maxx;
-	  data->miny = miny;
-	  data->maxy = maxy;
-      }
-    else
-      {
-	  /* any other further Node */
-	  if (minx < data->minx)
-	      data->minx = minx;
-	  if (maxx > data->maxx)
-	      data->maxx = maxx;
-	  if (miny < data->miny)
-	      data->miny = miny;
-	  if (maxy > data->maxy)
-	      data->maxy = maxy;
-      }
-
-  end:
-/* setting NOT_WITHIN so to stop further descending into the tree */
-    info->eWithin = NOT_WITHIN;
-    return SQLITE_OK;
-}
-
-SPATIALITE_DECLARE gaiaGeomCollPtr
-gaiaGetRTreeFullExtent (sqlite3 * db_handle, const char *db_prefix,
-			const char *name, int srid)
-{
-/* Will attempt to retrieve the Full Extent from an R*Tree - SpatiaLite */
-    char *sql;
-    int ret;
-    char *xprefix;
-    char *xname;
-    gaiaGeomCollPtr envelope;
-    gaiaPolygonPtr polyg;
-    gaiaRingPtr rect;
-    struct rtree_envelope data;
-
-    data.valid = 0;
-
-/* registering the Geometry Query Callback SQL function */
-    sqlite3_rtree_query_callback (db_handle, "rtree_bbox",
-				  rtree_bbox_callback, &data, NULL);
-
-/* executing the SQL Query statement */
-    xprefix = gaiaDoubleQuotedSql (db_prefix);
-    xname = gaiaDoubleQuotedSql (name);
-    sql =
-	sqlite3_mprintf
-	("SELECT pkid FROM \"%s\".\"%s\" WHERE pkid MATCH rtree_bbox(1)",
-	 xprefix, xname);
-    free (xprefix);
-    free (xname);
-    ret = sqlite3_exec (db_handle, sql, NULL, NULL, NULL);
-    sqlite3_free (sql);
-    if (ret != SQLITE_OK)
-	return NULL;
-    if (data.valid == 0)
-	return NULL;
-
-/* building the Envelope of the R*Tree */
-    envelope = gaiaAllocGeomColl ();
-    envelope->Srid = srid;
-    polyg = gaiaAddPolygonToGeomColl (envelope, 5, 0);
-    rect = polyg->Exterior;
-    gaiaSetPoint (rect->Coords, 0, data.minx, data.miny);	/* vertex # 1 */
-    gaiaSetPoint (rect->Coords, 1, data.maxx, data.miny);	/* vertex # 2 */
-    gaiaSetPoint (rect->Coords, 2, data.maxx, data.maxy);	/* vertex # 3 */
-    gaiaSetPoint (rect->Coords, 3, data.minx, data.maxy);	/* vertex # 4 */
-    gaiaSetPoint (rect->Coords, 4, data.minx, data.miny);	/* vertex # 5 [same as vertex # 1 to close the polygon] */
-    return envelope;
-}
-
-SPATIALITE_DECLARE gaiaGeomCollPtr
-gaiaGetGpkgRTreeFullExtent (sqlite3 * db_handle, const char *db_prefix,
-			    const char *name, int srid)
-{
-/* Will attempt to retrieve the Full Extent from an R*Tree - GeoPacage */
-    char *sql;
-    int ret;
-    char *xprefix;
-    char *xname;
-    gaiaGeomCollPtr envelope;
-    gaiaPolygonPtr polyg;
-    gaiaRingPtr rect;
-    struct rtree_envelope data;
-
-    data.valid = 0;
-
-/* registering the Geometry Query Callback SQL function */
-    sqlite3_rtree_query_callback (db_handle, "rtree_bbox",
-				  rtree_bbox_callback, &data, NULL);
-
-/* executing the SQL Query statement */
-    xprefix = gaiaDoubleQuotedSql (db_prefix);
-    xname = gaiaDoubleQuotedSql (name);
-    sql =
-	sqlite3_mprintf
-	("SELECT id FROM \"%s\".\"%s\" WHERE id MATCH rtree_bbox(1)",
-	 xprefix, xname);
-    free (xprefix);
-    free (xname);
-    ret = sqlite3_exec (db_handle, sql, NULL, NULL, NULL);
-    sqlite3_free (sql);
-    if (ret != SQLITE_OK)
-	return NULL;
-    if (data.valid == 0)
-	return NULL;
-
-/* building the Envelope of the R*Tree */
-    envelope = gaiaAllocGeomColl ();
-    envelope->Srid = srid;
-    polyg = gaiaAddPolygonToGeomColl (envelope, 5, 0);
-    rect = polyg->Exterior;
-    gaiaSetPoint (rect->Coords, 0, data.minx, data.miny);	/* vertex # 1 */
-    gaiaSetPoint (rect->Coords, 1, data.maxx, data.miny);	/* vertex # 2 */
-    gaiaSetPoint (rect->Coords, 2, data.maxx, data.maxy);	/* vertex # 3 */
-    gaiaSetPoint (rect->Coords, 3, data.minx, data.maxy);	/* vertex # 4 */
-    gaiaSetPoint (rect->Coords, 4, data.minx, data.miny);	/* vertex # 5 [same as vertex # 1 to close the polygon] */
-    return envelope;
 }

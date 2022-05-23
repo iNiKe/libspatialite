@@ -1,7 +1,0 @@
-RegisterTopoNetCoverage - NULL coverage
-:memory: #use in-memory database
-SELECT SE_RegisterTopoNetCoverage(NULL, 'network');
-1 # rows (not including the header row)
-1 # columns
-SE_RegisterTopoNetCoverage(NULL, 'network')
--1

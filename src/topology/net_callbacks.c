@@ -2,7 +2,7 @@
 
  net_callbacks.c -- implementation of Topology-Network callback functions
     
- version 5.0, 2020 August 1
+ version 4.3, 2015 August 11
 
  Author: Sandro Furieri a.furieri@lqt.it
 
@@ -24,7 +24,7 @@ The Original Code is the SpatiaLite library
 
 The Initial Developer of the Original Code is Alessandro Furieri
  
-Portions created by the Initial Developer are Copyright (C) 2015-2020
+Portions created by the Initial Developer are Copyright (C) 2015
 the Initial Developer. All Rights Reserved.
 
 Contributor(s): 
@@ -1257,7 +1257,6 @@ netcallback_insertNetNodes (const LWN_BE_NETWORK * lwn_net,
     int n_bytes;
     gaiaGeomCollPtr geom = NULL;
     int gpkg_mode = 0;
-    int tiny_point = 0;
     if (accessor == NULL)
 	return 0;
 
@@ -1270,7 +1269,6 @@ netcallback_insertNetNodes (const LWN_BE_NETWORK * lwn_net,
 	  struct splite_internal_cache *cache =
 	      (struct splite_internal_cache *) (accessor->cache);
 	  gpkg_mode = cache->gpkg_mode;
-	  tiny_point = cache->tinyPointEnabled;
       }
 
     for (i = 0; i < numelems; i++)
@@ -1298,8 +1296,7 @@ netcallback_insertNetNodes (const LWN_BE_NETWORK * lwn_net,
 		    gaiaAddPointToGeomColl (geom, nd->geom->x, nd->geom->y);
 		geom->Srid = accessor->srid;
 		geom->DeclaredType = GAIA_POINT;
-		gaiaToSpatiaLiteBlobWkbEx2 (geom, &p_blob, &n_bytes, gpkg_mode,
-					    tiny_point);
+		gaiaToSpatiaLiteBlobWkbEx (geom, &p_blob, &n_bytes, gpkg_mode);
 		gaiaFreeGeomColl (geom);
 		sqlite3_bind_blob (stmt, 2, p_blob, n_bytes, free);
 	    }
@@ -1480,7 +1477,6 @@ netcallback_insertLinks (const LWN_BE_NETWORK * lwn_net, LWN_LINK * links,
     unsigned char *p_blob;
     int n_bytes;
     int gpkg_mode = 0;
-    int tiny_point = 0;
     if (accessor == NULL)
 	return 0;
 
@@ -1493,7 +1489,6 @@ netcallback_insertLinks (const LWN_BE_NETWORK * lwn_net, LWN_LINK * links,
 	  struct splite_internal_cache *cache =
 	      (struct splite_internal_cache *) (accessor->cache);
 	  gpkg_mode = cache->gpkg_mode;
-	  tiny_point = cache->tinyPointEnabled;
       }
 
     for (i = 0; i < numelems; i++)
@@ -1514,8 +1509,7 @@ netcallback_insertLinks (const LWN_BE_NETWORK * lwn_net, LWN_LINK * links,
 	    {
 		/* transforming the LWN_LINE into a Geometry-Linestring */
 		geom = do_convert_lwnline_to_geom (lnk->geom, accessor->srid);
-		gaiaToSpatiaLiteBlobWkbEx2 (geom, &p_blob, &n_bytes, gpkg_mode,
-					    tiny_point);
+		gaiaToSpatiaLiteBlobWkbEx (geom, &p_blob, &n_bytes, gpkg_mode);
 		gaiaFreeGeomColl (geom);
 		sqlite3_bind_blob (stmt, 4, p_blob, n_bytes, free);
 	    }
@@ -1995,7 +1989,6 @@ netcallback_updateLinksById (const LWN_BE_NETWORK * lwn_net,
     unsigned char *p_blob;
     int n_bytes;
     int gpkg_mode = 0;
-    int tiny_point = 0;
     if (accessor == NULL)
 	return -1;
 
@@ -2004,7 +1997,6 @@ netcallback_updateLinksById (const LWN_BE_NETWORK * lwn_net,
 	  struct splite_internal_cache *cache =
 	      (struct splite_internal_cache *) (accessor->cache);
 	  gpkg_mode = cache->gpkg_mode;
-	  tiny_point = cache->tinyPointEnabled;
       }
 
 /* composing the SQL prepared statement */
@@ -2101,8 +2093,8 @@ netcallback_updateLinksById (const LWN_BE_NETWORK * lwn_net,
 		      geom =
 			  do_convert_lwnline_to_geom (upd_link->geom,
 						      accessor->srid);
-		      gaiaToSpatiaLiteBlobWkbEx2 (geom, &p_blob, &n_bytes,
-						  gpkg_mode, tiny_point);
+		      gaiaToSpatiaLiteBlobWkbEx (geom, &p_blob, &n_bytes,
+						 gpkg_mode);
 		      gaiaFreeGeomColl (geom);
 		      sqlite3_bind_blob (stmt, icol, p_blob, n_bytes, free);
 		  }

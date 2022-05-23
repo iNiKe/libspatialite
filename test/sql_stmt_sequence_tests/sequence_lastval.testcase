@@ -1,7 +1,0 @@
-sequence_lastval()
-:memory: #use in-memory database
-SELECT sequence_lastval()
-1 # rows (not including the header row)
-1 # columns
-sequence_lastval()
-(NULL)

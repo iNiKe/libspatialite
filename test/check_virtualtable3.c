@@ -65,6 +65,9 @@ main (int argc, char *argv[])
     int columns;
     void *cache = spatialite_alloc_connection ();
 
+    if (argc > 1 || argv[0] == NULL)
+	argc = 1;		/* silencing stupid compiler warnings */
+
     ret =
 	sqlite3_open_v2 (":memory:", &db_handle,
 			 SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL);
@@ -292,7 +295,7 @@ main (int argc, char *argv[])
 
     sql_statement =
 	sqlite3_mprintf
-	("select testcase1, testcase2 from dbftest where testcase1 < 'p';");
+	("select testcase1, testcase2 from dbftest where testcase1 < \"p\";");
     ret =
 	sqlite3_get_table (db_handle, sql_statement, &results, &rows, &columns,
 			   &err_msg);
@@ -332,7 +335,7 @@ main (int argc, char *argv[])
 
     sql_statement =
 	sqlite3_mprintf
-	("select testcase1, testcase2 from dbftest where testcase1 <= 'p';");
+	("select testcase1, testcase2 from dbftest where testcase1 <= \"p\";");
     ret =
 	sqlite3_get_table (db_handle, sql_statement, &results, &rows, &columns,
 			   &err_msg);
@@ -380,7 +383,7 @@ main (int argc, char *argv[])
 
     sql_statement =
 	sqlite3_mprintf
-	("select testcase1, testcase2 from dbftest where testcase1 > 'p';");
+	("select testcase1, testcase2 from dbftest where testcase1 > \"p\";");
     ret =
 	sqlite3_get_table (db_handle, sql_statement, &results, &rows, &columns,
 			   &err_msg);
@@ -439,7 +442,7 @@ main (int argc, char *argv[])
 
     sql_statement =
 	sqlite3_mprintf
-	("select testcase1, testcase2 from dbftest where testcase1 >= 'p';");
+	("select testcase1, testcase2 from dbftest where testcase1 >= \"p\";");
     ret =
 	sqlite3_get_table (db_handle, sql_statement, &results, &rows, &columns,
 			   &err_msg);
@@ -479,7 +482,7 @@ main (int argc, char *argv[])
 
     sql_statement =
 	sqlite3_mprintf
-	("select testcase1, testcase2 from dbftest where testcase1 = 'windward';");
+	("select testcase1, testcase2 from dbftest where testcase1 = \"windward\";");
     ret =
 	sqlite3_get_table (db_handle, sql_statement, &results, &rows, &columns,
 			   &err_msg);
@@ -719,7 +722,7 @@ main (int argc, char *argv[])
 
     sql_statement =
 	sqlite3_mprintf
-	("select PKUID, testcase1, testcase2 from dbftest where testcase1 LIKE 'wind%%';");
+	("select PKUID, testcase1, testcase2 from dbftest where testcase1 LIKE \"wind%%\";");
     ret =
 	sqlite3_get_table (db_handle, sql_statement, &results, &rows, &columns,
 			   &err_msg);
@@ -737,7 +740,7 @@ main (int argc, char *argv[])
 		   rows, columns);
 	  return -91;
       }
-    if (strcmp (results[0], "pkuid") != 0)
+    if (strcmp (results[0], "PKUID") != 0)
       {
 	  fprintf (stderr, "Unexpected error: header uid bad result: %s.\n",
 		   results[0]);
@@ -774,7 +777,7 @@ main (int argc, char *argv[])
     /* error cases */
     ret =
 	sqlite3_exec (db_handle,
-		      "create VIRTUAL TABLE toofewargs USING VirtualDBF('shapetest1.dbf');",
+		      "create VIRTUAL TABLE toofewargs USING VirtualDBF(\"shapetest1.dbf\");",
 		      NULL, NULL, &err_msg);
     if (ret != SQLITE_ERROR)
       {
@@ -785,18 +788,18 @@ main (int argc, char *argv[])
 
     ret =
 	sqlite3_exec (db_handle,
-		      "create VIRTUAL TABLE toomanyargs USING VirtualDBF('shapetest1.dbf', UTF-8, 1, UPPER, 1);",
+		      "create VIRTUAL TABLE toomanyargs USING VirtualDBF(\"shapetest1.dbf\", UTF-8, 1, 1);",
 		      NULL, NULL, &err_msg);
     if (ret != SQLITE_ERROR)
       {
-	  fprintf (stderr, "2 VirtualDBF unexpected result: %i\n", ret);
+	  fprintf (stderr, "VirtualDBF unexpected result: %i\n", ret);
 	  return -96;
       }
     sqlite3_free (err_msg);
 
     ret =
 	sqlite3_exec (db_handle,
-		      "create VIRTUAL TABLE nosuchfile USING VirtualDBF('not_a_file.dbf', UTF-8);",
+		      "create VIRTUAL TABLE nosuchfile USING VirtualDBF(\"not_a_file.dbf\", UTF-8);",
 		      NULL, NULL, &err_msg);
     if (ret != SQLITE_OK)
       {
@@ -837,7 +840,7 @@ main (int argc, char *argv[])
 		      NULL, NULL, &err_msg);
     if (ret != SQLITE_ERROR)
       {
-	  fprintf (stderr, "3 VirtualDBF unexpected result: %i\n", ret);
+	  fprintf (stderr, "VirtualDBF unexpected result: %i\n", ret);
 	  return -101;
       }
     sqlite3_free (err_msg);
@@ -845,9 +848,6 @@ main (int argc, char *argv[])
     sqlite3_close (db_handle);
     spatialite_cleanup_ex (cache);
 #endif /* end ICONV conditional */
-
-    if (argc > 1 || argv[0] == NULL)
-	argc = 1;		/* silencing stupid compiler warnings */
 
     spatialite_shutdown ();
     return 0;

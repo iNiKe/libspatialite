@@ -38,17 +38,12 @@ the terms of any one of the MPL, the GPL or the LGPL.
 */
 
 #include "spatialite/geopackage.h"
-#include "geopackage_internal.h"
-
-#if defined(_WIN32) && !defined(__MINGW32__)
-#include "config-msvc.h"
-#else
 #include "config.h"
-#endif
+#include "geopackage_internal.h"
 
 #ifdef ENABLE_GEOPACKAGE
 GEOPACKAGE_PRIVATE void
-fnct_gpkgInsertEpsgSRID (sqlite3_context * context, int argc,
+fnct_gpkgInsertEpsgSRID (sqlite3_context * context, int argc UNUSED,
 			 sqlite3_value ** argv)
 {
 /* SQL function:
@@ -68,9 +63,6 @@ fnct_gpkgInsertEpsgSRID (sqlite3_context * context, int argc,
     int srid;
     struct epsg_defs *first = NULL;
     struct epsg_defs *last = NULL;
-
-    if (argc == 0)
-	argc = 0;		/* suppressing stupid compiler warnings */
 
     if (sqlite3_value_type (argv[0]) != SQLITE_INTEGER)
       {
@@ -104,13 +96,11 @@ fnct_gpkgInsertEpsgSRID (sqlite3_context * context, int argc,
 	  sqlite3_result_error (context, sqlite3_errmsg (sqlite), -1);
 	  goto stop;
       }
-    sqlite3_bind_text (sql_stmt, 1,
-		       first->ref_sys_name,
+    sqlite3_bind_text (sql_stmt, 1, first->ref_sys_name,
 		       strlen (first->ref_sys_name), SQLITE_STATIC);
     sqlite3_bind_int (sql_stmt, 2, first->srid);
-    sqlite3_bind_text (sql_stmt, 3,
-		       first->auth_name,
-		       strlen (first->auth_name), SQLITE_STATIC);
+    sqlite3_bind_text (sql_stmt, 3, first->auth_name, strlen (first->auth_name),
+		       SQLITE_STATIC);
     sqlite3_bind_int (sql_stmt, 4, first->auth_srid);
     if (strlen (first->srs_wkt) == 0)
       {

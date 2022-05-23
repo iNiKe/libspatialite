@@ -1,7 +1,0 @@
-GetVirtualTableExtent() - Text VirtualTable name
-:memory: #use in-memory database
-SELECT GetVirtualTableExtent('example');
-1 # rows (not including the header row)
-1 # columns
-GetVirtualTableExtent('example')
-(NULL)

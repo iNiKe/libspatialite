@@ -80,9 +80,6 @@ execute_check (sqlite3 * sqlite, const char *sql, char **error)
     return SQLITE_ERROR;
 }
 
-#ifdef ENABLE_LIBXML2		/* only if LIBXML2 is supported */
-#ifndef OMIT_ICONV		/* only if ICONV is supported */
-
 static unsigned char *
 load_blob (const char *path, int *blob_len)
 {
@@ -273,189 +270,34 @@ check_vector (sqlite3 * handle, void *cache)
 	  return -15;
       }
 
-/* creating a SpatialView */
-    sql =
-	"CREATE VIEW spatialview1 AS SELECT id AS pkid, geom AS geometry FROM table1";
-    ret = sqlite3_exec (handle, sql, NULL, NULL, &err_msg);
-    if (ret != SQLITE_OK)
-      {
-	  fprintf (stderr, "Error Create SpatialView spatialview1: %s\n\n",
-		   err_msg);
-	  sqlite3_free (err_msg);
-	  return -16;
-      }
-    sql = "INSERT INTO views_geometry_columns (view_name, view_geometry, "
-	"view_rowid, f_table_name, f_geometry_column, read_only) "
-	"VALUES ('spatialview1', 'geometry', 'pkid', 'table1', 'geom', 1)";
-    ret = sqlite3_exec (handle, sql, NULL, NULL, &err_msg);
-    if (ret != SQLITE_OK)
-      {
-	  fprintf (stderr, "Error Register SpatialView spatialview1: %s\n\n",
-		   err_msg);
-	  sqlite3_free (err_msg);
-	  return -17;
-      }
-
-/* creating a VirtualShape */
-    sql =
-	"CREATE VIRTUAL TABLE shapetest USING VirtualShape('shp/merano-3d/roads', CP1252, 25832)";
-    ret = sqlite3_exec (handle, sql, NULL, NULL, &err_msg);
-    if (ret != SQLITE_OK)
-      {
-	  fprintf (stderr, "Error Create VirtualShape shapetest: %s\n",
-		   err_msg);
-	  sqlite3_free (err_msg);
-	  return -18;
-      }
-
 /* registering two Vector Coverages */
     sql = "SELECT SE_RegisterVectorCoverage('table1', 'table1', 'geom')";
     ret = execute_check (handle, sql, &err_msg);
-#ifdef ENABLE_RTTOPO
     if (ret != SQLITE_OK)
-#else
-    if (ret != SQLITE_ERROR)
-#endif
       {
 	  fprintf (stderr, "Error RegisterVectorCoverage table1: %s\n\n",
 		   err_msg);
 	  sqlite3_free (err_msg);
-	  return -19;
+	  return -16;
       }
     sql =
 	"SELECT SE_RegisterVectorCoverage('table2', 'table2', 'geom', 'title-2', 'abstract-2')";
     ret = execute_check (handle, sql, &err_msg);
-#ifdef ENABLE_RTTOPO
     if (ret != SQLITE_OK)
-#else
-    if (ret != SQLITE_ERROR)
-#endif
       {
 	  fprintf (stderr, "Error RegisterVectorCoverage table2: %s\n\n",
 		   err_msg);
 	  sqlite3_free (err_msg);
-	  return -20;
+	  return -17;
       }
     sql = "SELECT SE_SetVectorCoverageInfos('table1', 'title-1', 'abstract-1')";
     ret = execute_check (handle, sql, &err_msg);
-#ifdef ENABLE_RTTOPO
     if (ret != SQLITE_OK)
-#else
-    if (ret != SQLITE_ERROR)
-#endif
       {
-	  fprintf (stderr, "Error RegisterVectorCoverageInfos table1: %s\n\n",
+	  fprintf (stderr, "Error RegisterVectorCoverage table1: %s\n\n",
 		   err_msg);
 	  sqlite3_free (err_msg);
-	  return -21;
-      }
-    sql = "SELECT SE_SetVectorCoverageCopyright('table1', 'somebody')";
-    ret = execute_check (handle, sql, &err_msg);
-#ifdef ENABLE_RTTOPO
-    if (ret != SQLITE_OK)
-#else
-    if (ret != SQLITE_ERROR)
-#endif
-      {
-	  fprintf (stderr,
-		   "Error RegisterVectorCoverageCopyright #1 table1: %s\n\n",
-		   err_msg);
-	  sqlite3_free (err_msg);
-	  return -22;
-      }
-    sql =
-	"SELECT SE_SetVectorCoverageCopyright('table1', 'someone else', 'CC BY 3.0')";
-    ret = execute_check (handle, sql, &err_msg);
-#ifdef ENABLE_RTTOPO
-    if (ret != SQLITE_OK)
-#else
-    if (ret != SQLITE_ERROR)
-#endif
-      {
-	  fprintf (stderr,
-		   "Error RegisterVectorCoverageCopyright #2 table1: %s\n\n",
-		   err_msg);
-	  sqlite3_free (err_msg);
-	  return -23;
-      }
-    sql =
-	"SELECT SE_SetVectorCoverageCopyright('table1', NULL, 'CC BY-SA 4.0')";
-    ret = execute_check (handle, sql, &err_msg);
-#ifdef ENABLE_RTTOPO
-    if (ret != SQLITE_OK)
-#else
-    if (ret != SQLITE_ERROR)
-#endif
-      {
-	  fprintf (stderr,
-		   "Error RegisterVectorCoverageCopyright #3 table1: %s\n\n",
-		   err_msg);
-	  sqlite3_free (err_msg);
-	  return -24;
-      }
-
-/* registering two SpatialView Coverages */
-    sql =
-	"SELECT SE_RegisterSpatialViewCoverage('spatialview1', 'spatialview1', 'geometry')";
-    ret = execute_check (handle, sql, &err_msg);
-#ifdef ENABLE_RTTOPO
-    if (ret != SQLITE_OK)
-#else
-    if (ret != SQLITE_ERROR)
-#endif
-      {
-	  fprintf (stderr,
-		   "Error RegisterSpatialViewCoverage spatialview1: %s\n\n",
-		   err_msg);
-	  sqlite3_free (err_msg);
-	  return -25;
-      }
-    sql =
-	"SELECT SE_RegisterSpatialViewCoverage('spatialview2', 'spatialview1', 'geometry', 'title', 'abstract')";
-    ret = execute_check (handle, sql, &err_msg);
-#ifdef ENABLE_RTTOPO
-    if (ret != SQLITE_OK)
-#else
-    if (ret != SQLITE_ERROR)
-#endif
-      {
-	  fprintf (stderr,
-		   "Error RegisterSpatialViewCoverage spatialview2: %s\n\n",
-		   err_msg);
-	  sqlite3_free (err_msg);
-	  return -26;
-      }
-
-/* registering two VirtualShape Coverages */
-    sql =
-	"SELECT SE_RegisterVirtualShapeCoverage('shapetest1', 'shapetest', 'geometry')";
-    ret = execute_check (handle, sql, &err_msg);
-#ifdef ENABLE_RTTOPO
-    if (ret != SQLITE_OK)
-#else
-    if (ret != SQLITE_ERROR)
-#endif
-      {
-	  fprintf (stderr,
-		   "Error RegisterVirtualShapeCoverage shapetest1: %s\n\n",
-		   err_msg);
-	  sqlite3_free (err_msg);
-	  return -27;
-      }
-    sql =
-	"SELECT SE_RegisterVirtualShapeCoverage('shapetest2', 'shapetest', 'geometry', 'title', 'abstract')";
-    ret = execute_check (handle, sql, &err_msg);
-#ifdef ENABLE_RTTOPO
-    if (ret != SQLITE_OK)
-#else
-    if (ret != SQLITE_ERROR)
-#endif
-      {
-	  fprintf (stderr,
-		   "Error RegisterVirtualShapeCoverage spatialview2: %s\n\n",
-		   err_msg);
-	  sqlite3_free (err_msg);
-	  return -28;
+	  return -18;
       }
 
 /* testing Vector Styles */
@@ -467,12 +309,12 @@ check_vector (sqlite3 * handle, void *cache)
     if (blob == NULL)
       {
 	  fprintf (stderr, "this is not a well-formed XML !!!\n");
-	  return -29;
+	  return -20;
       }
     hexBlob = build_hex_blob (blob, blob_len);
     free (blob);
     if (hexBlob == NULL)
-	return -30;
+	return -21;
 
 /* Register Vector Styled Layer */
     sql = sqlite3_mprintf ("SELECT SE_RegisterVectorStyle(x%Q)", hexBlob);
@@ -482,7 +324,7 @@ check_vector (sqlite3 * handle, void *cache)
       {
 	  fprintf (stderr, "Error RegisterVectorStyle #1: %s\n\n", err_msg);
 	  sqlite3_free (err_msg);
-	  return -31;
+	  return -22;
       }
 
     sql = sqlite3_mprintf ("SELECT SE_RegisterVectorStyledLayer('table1',  1)");
@@ -493,7 +335,7 @@ check_vector (sqlite3 * handle, void *cache)
 	  fprintf (stderr, "Error RegisterVectorStyledLayer #1: %s\n\n",
 		   err_msg);
 	  sqlite3_free (err_msg);
-	  return -32;
+	  return -23;
       }
 
     sql =
@@ -506,24 +348,24 @@ check_vector (sqlite3 * handle, void *cache)
 	  fprintf (stderr, "Error RegisterVectorStyledLayer #2: %s\n\n",
 		   err_msg);
 	  sqlite3_free (err_msg);
-	  return -33;
+	  return -24;
       }
     free (hexBlob);
 
     xml = load_xml ("stazioni2_se.xml", &len);
     if (xml == NULL)
-	return -31;
+	return -25;
     gaiaXmlToBlob (cache, xml, len, 1, NULL, &blob, &blob_len, NULL, NULL);
     free (xml);
     if (blob == NULL)
       {
 	  fprintf (stderr, "this is not a well-formed XML !!!\n");
-	  return -35;
+	  return -26;
       }
     hexBlob = build_hex_blob (blob, blob_len);
     free (blob);
     if (hexBlob == NULL)
-	return -36;
+	return -27;
 
     sql = sqlite3_mprintf ("SELECT SE_RegisterVectorStyle(x%Q)", hexBlob);
     ret = execute_check (handle, sql, &err_msg);
@@ -532,7 +374,7 @@ check_vector (sqlite3 * handle, void *cache)
       {
 	  fprintf (stderr, "Error RegisterVectorStyle #2: %s\n\n", err_msg);
 	  sqlite3_free (err_msg);
-	  return -37;
+	  return -29;
       }
 
     sql = sqlite3_mprintf ("SELECT SE_RegisterVectorStyledLayer('table2', 2)");
@@ -543,7 +385,7 @@ check_vector (sqlite3 * handle, void *cache)
 	  fprintf (stderr, "Error RegisterVectorStyledLayer #3: %s\n\n",
 		   err_msg);
 	  sqlite3_free (err_msg);
-	  return -38;
+	  return -30;
       }
 
     sql = sqlite3_mprintf ("SELECT SE_RegisterVectorStyle(x%Q)", hexBlob);
@@ -553,7 +395,7 @@ check_vector (sqlite3 * handle, void *cache)
       {
 	  fprintf (stderr, "Error RegisterVectorStyle #3: %s\n\n",
 		   "expected failure");
-	  return -39;
+	  return -31;
       }
 
 /* Reload Vector Style */
@@ -564,7 +406,7 @@ check_vector (sqlite3 * handle, void *cache)
       {
 	  fprintf (stderr, "Error ReloadVectorStyle #1: %s\n\n",
 		   "expected failure");
-	  return -40;
+	  return -33;
       }
 
     sql = sqlite3_mprintf ("SELECT SE_ReloadVectorStyle(1, x%Q)", hexBlob);
@@ -574,7 +416,7 @@ check_vector (sqlite3 * handle, void *cache)
       {
 	  fprintf (stderr, "Error ReloadVectorStyle #2: %s\n\n",
 		   "expected failure");
-	  return -41;
+	  return -34;
       }
 
     sql =
@@ -586,7 +428,7 @@ check_vector (sqlite3 * handle, void *cache)
       {
 	  fprintf (stderr, "Error ReloadVectorStyle #4: %s\n\n",
 		   "expected failure");
-	  return -42;
+	  return -36;
       }
 
     sql =
@@ -598,24 +440,24 @@ check_vector (sqlite3 * handle, void *cache)
       {
 	  fprintf (stderr, "Error ReloadVectorStyle #5: %s\n\n",
 		   "expected failure");
-	  return -43;
+	  return -37;
       }
     free (hexBlob);
 
     xml = load_xml ("stazioni_se.xml", &len);
     if (xml == NULL)
-	return -44;
+	return -35;
     gaiaXmlToBlob (cache, xml, len, 1, NULL, &blob, &blob_len, NULL, NULL);
     free (xml);
     if (blob == NULL)
       {
 	  fprintf (stderr, "this is not a well-formed XML !!!\n");
-	  return -45;
+	  return -39;
       }
     hexBlob = build_hex_blob (blob, blob_len);
     free (blob);
     if (hexBlob == NULL)
-	return -46;
+	return -40;
     sql = sqlite3_mprintf ("SELECT SE_ReloadVectorStyle(1, x%Q)", hexBlob);
     ret = execute_check (handle, sql, &err_msg);
     sqlite3_free (sql);
@@ -623,7 +465,7 @@ check_vector (sqlite3 * handle, void *cache)
       {
 	  fprintf (stderr, "Error ReloadVectorStyle #7: %s\n\n", err_msg);
 	  sqlite3_free (err_msg);
-	  return -47;
+	  return -41;
       }
 
     sql =
@@ -635,7 +477,7 @@ check_vector (sqlite3 * handle, void *cache)
       {
 	  fprintf (stderr, "Error ReloadVectorStyle #8: %s\n\n",
 		   "expected failure");
-	  return -48;
+	  return -42;
       }
     free (hexBlob);
 
@@ -647,7 +489,7 @@ check_vector (sqlite3 * handle, void *cache)
       {
 	  fprintf (stderr, "Error UnRegisterVectorStyle #1: %s\n\n",
 		   "expected failure");
-	  return -49;
+	  return -43;
       }
 
     sql = sqlite3_mprintf ("SELECT SE_UnRegisterVectorStyle('alpha')");
@@ -657,7 +499,7 @@ check_vector (sqlite3 * handle, void *cache)
       {
 	  fprintf (stderr, "Error UnRegisterVectorStyle #2: %s\n\n",
 		   "expected failure");
-	  return -50;
+	  return -44;
       }
 
     sql =
@@ -669,7 +511,7 @@ check_vector (sqlite3 * handle, void *cache)
       {
 	  fprintf (stderr, "Error UnRegisterVectorStyle #3: %s\n\n",
 		   "expected failure");
-	  return -51;
+	  return -45;
       }
 
     sql =
@@ -681,24 +523,24 @@ check_vector (sqlite3 * handle, void *cache)
       {
 	  fprintf (stderr, "Error UnRegisterVectorStyle #5: %s\n\n", err_msg);
 	  sqlite3_free (err_msg);
-	  return -52;
+	  return -47;
       }
 
 /* Register Vector Styled Layer: again */
     xml = load_xml ("stazioni2_se.xml", &len);
     if (xml == NULL)
-	return -53;
+	return -48;
     gaiaXmlToBlob (cache, xml, len, 1, NULL, &blob, &blob_len, NULL, NULL);
     free (xml);
     if (blob == NULL)
       {
 	  fprintf (stderr, "this is not a well-formed XML !!!\n");
-	  return -54;
+	  return -49;
       }
     hexBlob = build_hex_blob (blob, blob_len);
     free (blob);
     if (hexBlob == NULL)
-	return -55;
+	return -50;
 
     sql = sqlite3_mprintf ("SELECT SE_RegisterVectorStyle(x%Q)", hexBlob);
     ret = execute_check (handle, sql, &err_msg);
@@ -707,7 +549,7 @@ check_vector (sqlite3 * handle, void *cache)
       {
 	  fprintf (stderr, "Error RegisterVectorStyle #3: %s\n\n", err_msg);
 	  sqlite3_free (err_msg);
-	  return -56;
+	  return -51;
       }
     free (hexBlob);
 
@@ -721,7 +563,7 @@ check_vector (sqlite3 * handle, void *cache)
 	  fprintf (stderr, "Error RegisterVectorStyledLayer #5: %s\n\n",
 		   err_msg);
 	  sqlite3_free (err_msg);
-	  return -57;
+	  return -53;
       }
 
 /* Unregister Vector Style Layer */
@@ -735,7 +577,7 @@ check_vector (sqlite3 * handle, void *cache)
 	  fprintf (stderr, "Error UnregisterVectorStyledLayer #1: %s\n\n",
 		   err_msg);
 	  sqlite3_free (err_msg);
-	  return -58;
+	  return -54;
       }
 
     sql =
@@ -747,7 +589,7 @@ check_vector (sqlite3 * handle, void *cache)
 	  fprintf (stderr, "Error UnregisterVectorStyledLayer #2: %s\n\n",
 		   err_msg);
 	  sqlite3_free (err_msg);
-	  return -59;
+	  return -55;
       }
 
 /* unregister External Graphic */
@@ -759,7 +601,7 @@ check_vector (sqlite3 * handle, void *cache)
 	  fprintf (stderr, "Error UnRegisterExternalGraphic #1: %s\n\n",
 		   err_msg);
 	  sqlite3_free (err_msg);
-	  return -60;
+	  return -56;
       }
     sql = sqlite3_mprintf ("SELECT SE_UnRegisterExternalGraphic('jeroboam')");
     ret = execute_check (handle, sql, NULL);
@@ -768,7 +610,7 @@ check_vector (sqlite3 * handle, void *cache)
       {
 	  fprintf (stderr, "Error UnRegisterExternalGraphic #2: %s\n\n",
 		   "expected failure");
-	  return -61;
+	  return -57;
       }
 
     return 0;
@@ -1071,10 +913,547 @@ check_raster (sqlite3 * handle, void *cache)
     return 0;
 }
 
-#endif
-#endif
+static int
+check_group (sqlite3 * handle, void *cache)
+{
+/* testing Group Styles */
+    int ret;
+    char *err_msg = NULL;
+    char *sql;
+    unsigned char *blob;
+    int blob_len;
+    char *hexBlob;
+    unsigned char *xml;
+    int len;
 
-#ifdef ENABLE_RTTOPO		/* only is RTTOPO is supported */
+/* testing Groups */
+    sql =
+	sqlite3_mprintf
+	("SELECT SE_RegisterStyledGroupRaster('group1', 'coverage_srtm1')");
+    ret = execute_check (handle, sql, &err_msg);
+    sqlite3_free (sql);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "Error RegisterStyledGroupRaster #1: %s\n\n",
+		   err_msg);
+	  sqlite3_free (err_msg);
+	  return -4;
+      }
+
+    sql =
+	sqlite3_mprintf
+	("SELECT SE_SetStyledGroupInfos('group1', 'title', 'abstract')");
+    ret = execute_check (handle, sql, &err_msg);
+    sqlite3_free (sql);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "Error SetStyledGroupInfos #1: %s\n\n", err_msg);
+	  sqlite3_free (err_msg);
+	  return -5;
+      }
+
+    sql =
+	sqlite3_mprintf
+	("SELECT SE_RegisterStyledGroupVector('group1', 'table1')");
+    ret = execute_check (handle, sql, &err_msg);
+    sqlite3_free (sql);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "Error RegisterStyledGroupVector #1: %s\n\n",
+		   err_msg);
+	  sqlite3_free (err_msg);
+	  return -6;
+      }
+
+    sql =
+	sqlite3_mprintf
+	("SELECT SE_RegisterStyledGroupVector('group1', 'table2')");
+    ret = execute_check (handle, sql, &err_msg);
+    sqlite3_free (sql);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "Error RegisterStyledGroupVector #2: %s\n\n",
+		   err_msg);
+	  sqlite3_free (err_msg);
+	  return -7;
+      }
+
+    sql =
+	sqlite3_mprintf
+	("SELECT SE_SetStyledGroupInfos('group1', 'changed title', 'changed abstract')");
+    ret = execute_check (handle, sql, &err_msg);
+    sqlite3_free (sql);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "Error SetStyledGroupInfos #2: %s\n\n", err_msg);
+	  sqlite3_free (err_msg);
+	  return -8;
+      }
+
+    sql =
+	sqlite3_mprintf
+	("SELECT SE_SetStyledGroupInfos('group2', 'title2', 'abstract2')");
+    ret = execute_check (handle, sql, &err_msg);
+    sqlite3_free (sql);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "Error SetStyledGroupInfos #3: %s\n\n", err_msg);
+	  sqlite3_free (err_msg);
+	  return -9;
+      }
+
+    sql =
+	sqlite3_mprintf
+	("SELECT SE_RegisterStyledGroupRaster('group2', 'coverage_srtm2')");
+    ret = execute_check (handle, sql, &err_msg);
+    sqlite3_free (sql);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "Error RegisterStyledGroupRaster #2: %s\n\n",
+		   err_msg);
+	  sqlite3_free (err_msg);
+	  return -10;
+      }
+
+    sql =
+	sqlite3_mprintf
+	("SELECT SE_RegisterStyledGroupVector('group2', 'table1')");
+    ret = execute_check (handle, sql, &err_msg);
+    sqlite3_free (sql);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "Error RegisterStyledGroupVector #3: %s\n\n",
+		   err_msg);
+	  sqlite3_free (err_msg);
+	  return -11;
+      }
+
+    sql =
+	sqlite3_mprintf
+	("SELECT SE_UnregisterStyledGroupVector('group2', 'table1')");
+    ret = execute_check (handle, sql, &err_msg);
+    sqlite3_free (sql);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "Error UnregisterStyledGroupVector #1: %s\n\n",
+		   err_msg);
+	  sqlite3_free (err_msg);
+	  return -12;
+      }
+
+    sql =
+	sqlite3_mprintf
+	("SELECT SE_RegisterStyledGroupVector('group2', 'table2')");
+    ret = execute_check (handle, sql, &err_msg);
+    sqlite3_free (sql);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "Error RegisterStyledGroupVector #4: %s\n\n",
+		   err_msg);
+	  sqlite3_free (err_msg);
+	  return -13;
+      }
+
+    sql =
+	sqlite3_mprintf
+	("SELECT SE_RegisterStyledGroupVector('group2', 'table1')");
+    ret = execute_check (handle, sql, &err_msg);
+    sqlite3_free (sql);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "Error RegisterStyledGroupVector #5: %s\n\n",
+		   err_msg);
+	  sqlite3_free (err_msg);
+	  return -14;
+      }
+
+    sql =
+	sqlite3_mprintf
+	("SELECT SE_UnregisterStyledGroupRaster('group2', 'coverage_srtm2')");
+    ret = execute_check (handle, sql, &err_msg);
+    sqlite3_free (sql);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "Error UnregisterStyledGroupRaster #2: %s\n\n",
+		   err_msg);
+	  sqlite3_free (err_msg);
+	  return -15;
+      }
+
+    sql =
+	sqlite3_mprintf
+	("SELECT SE_RegisterStyledGroupRaster('group2', 'coverage_srtm1')");
+    ret = execute_check (handle, sql, &err_msg);
+    sqlite3_free (sql);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "Error RegisterStyledGroupRaster #3: %s\n\n",
+		   err_msg);
+	  sqlite3_free (err_msg);
+	  return -16;
+      }
+
+    sql =
+	sqlite3_mprintf
+	("SELECT SE_RegisterStyledGroupRaster('group2', 'coverage_srtm2')");
+    ret = execute_check (handle, sql, &err_msg);
+    sqlite3_free (sql);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "Error RegisterStyledGroupRaster #4: %s\n\n",
+		   err_msg);
+	  sqlite3_free (err_msg);
+	  return -17;
+      }
+
+    sql = sqlite3_mprintf ("SELECT SE_UnregisterStyledGroupLayer(8)");
+    ret = execute_check (handle, sql, &err_msg);
+    sqlite3_free (sql);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "Error UnregisterStyledGroupLayer #3: %s\n\n",
+		   err_msg);
+	  sqlite3_free (err_msg);
+	  return -18;
+      }
+
+    sql =
+	sqlite3_mprintf
+	("SELECT SE_SetStyledGroupInfos('group3', 'title', 'abstract')");
+    ret = execute_check (handle, sql, &err_msg);
+    sqlite3_free (sql);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "Error SetStyledGroupInfos #4: %s\n\n", err_msg);
+	  sqlite3_free (err_msg);
+	  return -19;
+      }
+
+    sql =
+	sqlite3_mprintf
+	("SELECT SE_RegisterStyledGroupRaster('group3', 'coverage_srtm1')");
+    ret = execute_check (handle, sql, &err_msg);
+    sqlite3_free (sql);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "Error RegisterStyledGroup #10: %s\n\n", err_msg);
+	  sqlite3_free (err_msg);
+	  return -20;
+      }
+
+/* testing Paint Order */
+    sql = sqlite3_mprintf ("SELECT SE_SetStyledGroupLayerPaintOrder(7, 11)");
+    ret = execute_check (handle, sql, &err_msg);
+    sqlite3_free (sql);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "Error SetStyledGroupLayerPaintOrder #1: %s\n\n",
+		   err_msg);
+	  sqlite3_free (err_msg);
+	  return -21;
+      }
+
+    sql =
+	sqlite3_mprintf
+	("SELECT SE_SetStyledGroupVectorPaintOrder('group2', 'table2', 12)");
+    ret = execute_check (handle, sql, &err_msg);
+    sqlite3_free (sql);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "Error SetStyledGroupVectorPaintOrder #1: %s\n\n",
+		   err_msg);
+	  sqlite3_free (err_msg);
+	  return -22;
+      }
+
+    sql =
+	sqlite3_mprintf
+	("SELECT SE_SetStyledGroupRasterPaintOrder('group2', 'coverage_srtm2', 10)");
+    ret = execute_check (handle, sql, &err_msg);
+    sqlite3_free (sql);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "Error SetStyledGroupRasterPaintOrder #1: %s\n\n",
+		   err_msg);
+	  sqlite3_free (err_msg);
+	  return -23;
+      }
+
+    sql = sqlite3_mprintf ("SELECT SE_SetStyledGroupLayerPaintOrder(3, -1)");
+    ret = execute_check (handle, sql, &err_msg);
+    sqlite3_free (sql);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "Error SetStyledGroupLayerPaintOrder #2: %s\n\n",
+		   err_msg);
+	  sqlite3_free (err_msg);
+	  return -24;
+      }
+
+    sql =
+	sqlite3_mprintf
+	("SELECT SE_SetStyledGroupVectorPaintOrder('group1', 'table1', -1)");
+    ret = execute_check (handle, sql, &err_msg);
+    sqlite3_free (sql);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "Error SetStyledGroupLayerPaintOrder #3: %s\n\n",
+		   err_msg);
+	  sqlite3_free (err_msg);
+	  return -25;
+      }
+
+    sql =
+	sqlite3_mprintf
+	("SELECT SE_SetStyledGroupRasterPaintOrder('group1', 'coverage_srtm1', -1)");
+    ret = execute_check (handle, sql, &err_msg);
+    sqlite3_free (sql);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "Error SetStyledGroupRasterPaintOrder #2: %s\n\n",
+		   err_msg);
+	  sqlite3_free (err_msg);
+	  return -26;
+      }
+
+    sql = sqlite3_mprintf ("SELECT SE_UnregisterStyledGroup('group2')");
+    ret = execute_check (handle, sql, &err_msg);
+    sqlite3_free (sql);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "Error UnregisterStyledGroup #1: %s\n\n", err_msg);
+	  sqlite3_free (err_msg);
+	  return -27;
+      }
+
+    xml = load_xml ("sld_sample.xml", &len);
+    if (xml == NULL)
+	return -29;
+    gaiaXmlToBlob (cache, xml, len, 1, NULL, &blob, &blob_len, NULL, NULL);
+    free (xml);
+    if (blob == NULL)
+      {
+	  fprintf (stderr, "this is not a well-formed XML !!!\n");
+	  return -30;
+      }
+    hexBlob = build_hex_blob (blob, blob_len);
+    free (blob);
+    if (hexBlob == NULL)
+	return -31;
+
+/* Register Styled Group Style */
+    sql = sqlite3_mprintf ("SELECT SE_RegisterGroupStyle(x%Q)", hexBlob);
+    ret = execute_check (handle, sql, &err_msg);
+    sqlite3_free (sql);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "Error RegisterGroupStyle #1: %s\n\n", err_msg);
+	  sqlite3_free (err_msg);
+	  return -32;
+      }
+    free (hexBlob);
+
+    xml = load_xml ("sld_sample2.xml", &len);
+    if (xml == NULL)
+	return -33;
+    gaiaXmlToBlob (cache, xml, len, 1, NULL, &blob, &blob_len, NULL, NULL);
+    free (xml);
+    if (blob == NULL)
+      {
+	  fprintf (stderr, "this is not a well-formed XML !!!\n");
+	  return -34;
+      }
+    hexBlob = build_hex_blob (blob, blob_len);
+    free (blob);
+    if (hexBlob == NULL)
+	return -35;
+
+    sql = sqlite3_mprintf ("SELECT SE_RegisterGroupStyle(x%Q)", hexBlob);
+    ret = execute_check (handle, sql, &err_msg);
+    sqlite3_free (sql);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "Error RegisterGroupStyle #2: %s\n\n", err_msg);
+	  sqlite3_free (err_msg);
+	  return -36;
+      }
+
+    sql = sqlite3_mprintf ("SELECT SE_ReloadGroupStyle(1, x%Q)", hexBlob);
+    ret = execute_check (handle, sql, NULL);
+    sqlite3_free (sql);
+    if (ret == SQLITE_OK)
+      {
+	  fprintf (stderr, "Error ReloadGroupStyle #1: %s\n\n",
+		   "expected failure");
+	  return -37;
+      }
+
+    sql =
+	sqlite3_mprintf ("SELECT SE_ReloadGroupStyle('group style 1', x%Q)",
+			 hexBlob);
+    ret = execute_check (handle, sql, NULL);
+    sqlite3_free (sql);
+    if (ret == SQLITE_OK)
+      {
+	  fprintf (stderr, "Error ReloadGroupStyle #2: %s\n\n",
+		   "expected failure");
+	  return -38;
+      }
+
+    sql =
+	sqlite3_mprintf ("SELECT SE_ReloadGroupStyle('group style 2', x%Q)",
+			 hexBlob);
+    ret = execute_check (handle, sql, &err_msg);
+    sqlite3_free (sql);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "Error ReloadGroupStyle #3: %s\n\n", err_msg);
+	  sqlite3_free (err_msg);
+	  return -39;
+      }
+    free (hexBlob);
+
+    xml = load_xml ("sld_sample.xml", &len);
+    if (xml == NULL)
+	return -42;
+    gaiaXmlToBlob (cache, xml, len, 1, NULL, &blob, &blob_len, NULL, NULL);
+    free (xml);
+    if (blob == NULL)
+      {
+	  fprintf (stderr, "this is not a well-formed XML !!!\n");
+	  return -43;
+      }
+    hexBlob = build_hex_blob (blob, blob_len);
+    free (blob);
+    if (hexBlob == NULL)
+	return -44;
+
+    sql = sqlite3_mprintf ("SELECT SE_UnregisterGroupStyle('group style 1')");
+    ret = execute_check (handle, sql, &err_msg);
+    sqlite3_free (sql);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "Error UnregisterGroupStyle #2: %s\n\n", err_msg);
+	  sqlite3_free (err_msg);
+	  return -46;
+      }
+
+    sql = sqlite3_mprintf ("SELECT SE_RegisterGroupStyle(x%Q)", hexBlob);
+    ret = execute_check (handle, sql, &err_msg);
+    sqlite3_free (sql);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "Error RegisterGroupStyle #4: %s\n\n", err_msg);
+	  sqlite3_free (err_msg);
+	  return -47;
+      }
+    free (hexBlob);
+
+    /* testing Styled Group Styles */
+    sql = sqlite3_mprintf ("SELECT SE_RegisterStyledGroupStyle('group1', 2)");
+    ret = execute_check (handle, sql, &err_msg);
+    sqlite3_free (sql);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "Error RegisterStyledGroupStyle #2: %s\n\n",
+		   err_msg);
+	  sqlite3_free (err_msg);
+	  return -50;
+      }
+
+    sql =
+	sqlite3_mprintf
+	("SELECT SE_RegisterStyledGroupStyle('group1', 'group style 1')");
+    ret = execute_check (handle, sql, &err_msg);
+    sqlite3_free (sql);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "Error RegisterStyledGroupStyle #3: %s\n\n",
+		   err_msg);
+	  sqlite3_free (err_msg);
+	  return -51;
+      }
+
+    sql =
+	sqlite3_mprintf
+	("SELECT SE_RegisterStyledGroupStyle('group2', 'group style 1')");
+    ret = execute_check (handle, sql, &err_msg);
+    sqlite3_free (sql);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "Error RegisterStyledGroupStyle #3: %s\n\n",
+		   err_msg);
+	  sqlite3_free (err_msg);
+	  return -52;
+      }
+
+    sql = sqlite3_mprintf ("SELECT SE_UnRegisterStyledGroupStyle('group1', 3)");
+    ret = execute_check (handle, sql, &err_msg);
+    sqlite3_free (sql);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "Error UnRegisterStyledGroupStyle #1: %s\n\n",
+		   err_msg);
+	  sqlite3_free (err_msg);
+	  return -53;
+      }
+
+    sql =
+	sqlite3_mprintf
+	("SELECT SE_UnRegisterStyledGroupStyle('group2', 'group style 1')");
+    ret = execute_check (handle, sql, &err_msg);
+    sqlite3_free (sql);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "Error UnRegisterStyledGroupStyle #2: %s\n\n",
+		   err_msg);
+	  sqlite3_free (err_msg);
+	  return -54;
+      }
+
+    sql = sqlite3_mprintf ("SELECT SE_UnRegisterGroupStyle(2, 1)");
+    ret = execute_check (handle, sql, &err_msg);
+    sqlite3_free (sql);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "Error UnRegisterGroupStyle #3: %s\n\n", err_msg);
+	  sqlite3_free (err_msg);
+	  return -55;
+      }
+
+    sql =
+	sqlite3_mprintf ("SELECT SE_UnRegisterGroupStyle('group style 1', 1)");
+    ret = execute_check (handle, sql, &err_msg);
+    sqlite3_free (sql);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "Error UnRegisterGroupStyle #4: %s\n\n", err_msg);
+	  sqlite3_free (err_msg);
+	  return -56;
+      }
+
+    sql = sqlite3_mprintf ("SELECT SE_UnRegisterVectorStyle(1, 1)");
+    ret = execute_check (handle, sql, &err_msg);
+    sqlite3_free (sql);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "Error UnregisterVectorStyle #6: %s\n\n", err_msg);
+	  sqlite3_free (err_msg);
+	  return -57;
+      }
+
+    sql = sqlite3_mprintf ("SELECT SE_UnRegisterRasterStyle(1)");
+    ret = execute_check (handle, sql, NULL);
+    sqlite3_free (sql);
+    if (ret == SQLITE_OK)
+      {
+	  fprintf (stderr, "Error UnregisterRasterStyle #5: %s\n\n",
+		   "expected failure");
+	  return -58;
+      }
+
+    return 0;
+}
 
 static int
 check_extent (sqlite3 * handle)
@@ -1241,9 +1620,7 @@ check_extent (sqlite3 * handle)
 	  fprintf (stderr, "Error UpdateVectorCoverageExtent #1 %s\n\n",
 		   err_msg);
 	  sqlite3_free (err_msg);
-#ifndef PROJ_NEW		/* using old PROJ.4 */
 	  return -13;
-#endif
       }
 
     sql =
@@ -1311,9 +1688,7 @@ check_extent (sqlite3 * handle)
 	  fprintf (stderr, "Error UpdateVectorCoverageExtent #2 %s\n\n",
 		   err_msg);
 	  sqlite3_free (err_msg);
-#ifndef PROJ_NEW		/* using old PROJ.4 */
 	  return -19;
-#endif
       }
 
     sql = sqlite3_mprintf ("SELECT SE_UnRegisterVectorCoverage('table1')");
@@ -1372,15 +1747,11 @@ check_extent (sqlite3 * handle)
 	  fprintf (stderr, "Error UpdateVectorCoverageExtent #3 %s\n\n",
 		   err_msg);
 	  sqlite3_free (err_msg);
-#ifndef PROJ_NEW		/* using old PROJ.4 */
 	  return -25;
-#endif
       }
 
     return 0;
 }
-
-#endif
 
 int
 main (int argc, char *argv[])
@@ -1419,7 +1790,6 @@ main (int argc, char *argv[])
       }
 
 #ifdef ENABLE_LIBXML2		/* only if LIBXML2 is supported */
-#ifndef OMIT_ICONV		/* only if ICONV is supported */
 
 /* creating the Styling Tables */
     sql = "SELECT CreateStylingTables(1)";
@@ -1431,17 +1801,7 @@ main (int argc, char *argv[])
 	  return -3;
       }
 
-/* re-creating the Styling Triggers */
-    sql = "SELECT ReCreateStylingTriggers(1)";
-    ret = execute_check (handle, sql, &err_msg);
-    if (ret != SQLITE_OK)
-      {
-	  fprintf (stderr, "Error ReCreateStylingTriggers %s\n\n", err_msg);
-	  sqlite3_free (err_msg);
-	  return -4;
-      }
-
-    ret = check_vector (handle, cache); 
+    ret = check_vector (handle, cache);
     if (ret != 0)
 	return -100 - ret;
 
@@ -1449,13 +1809,14 @@ main (int argc, char *argv[])
     if (ret != 0)
 	return -200 - ret;
 
-#ifdef ENABLE_RTTOPO		/* only is RTTOPO is supported */
+    ret = check_group (handle, cache);
+    if (ret != 0)
+	return -300 - ret;
+
     ret = check_extent (handle);
     if (ret != 0)
 	return -400 - ret;
-#endif
 
-#endif
 #endif
 
     ret = sqlite3_close (handle);

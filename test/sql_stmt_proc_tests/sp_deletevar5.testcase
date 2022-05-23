@@ -1,7 +1,0 @@
-StoredVar_Delete - Text name
-:memory: #use in-memory database
-SELECT StoredVar_Delete('xname');
-1 # rows (not including the header row)
-1 # columns
-StoredVar_Delete('xname')
-0

@@ -2,7 +2,7 @@
 
  virtualshape.c -- SQLite3 extension [VIRTUAL TABLE accessing Shapefile]
 
- version 5.0, 2020 August 1
+ version 4.3, 2015 June 29
 
  Author: Sandro Furieri a.furieri@lqt.it
 
@@ -24,7 +24,7 @@ The Original Code is the SpatiaLite library
 
 The Initial Developer of the Original Code is Alessandro Furieri
  
-Portions created by the Initial Developer are Copyright (C) 2008-2020
+Portions created by the Initial Developer are Copyright (C) 2008-2015
 the Initial Developer. All Rights Reserved.
 
 Contributor(s):
@@ -47,7 +47,6 @@ the terms of any one of the MPL, the GPL or the LGPL.
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <float.h>
 
 #if defined(_WIN32) && !defined(__MINGW32__)
 #include "config-msvc.h"
@@ -81,11 +80,6 @@ typedef struct VirtualShapeStruct
     gaiaShapefilePtr Shp;	/* the Shapefile struct */
     int Srid;			/* the Shapefile SRID */
     int text_dates;
-    char *TableName;		/* the VirtualTable name */
-    double MinX;		/* the Shapefile Full Extent */
-    double MinY;
-    double MaxX;
-    double MaxY;
 } VirtualShape;
 typedef VirtualShape *VirtualShapePtr;
 
@@ -168,31 +162,6 @@ vshp_has_metadata (sqlite3 * db, int *geotype)
     return 0;
 }
 
-static char *
-convert_dbf_colname_case (const char *buf, int colname_case)
-{
-/* converts a DBF column-name to Lower- or Upper-case */
-    int len = strlen (buf);
-    char *clean = malloc (len + 1);
-    char *p = clean;
-    strcpy (clean, buf);
-    while (*p != '\0')
-      {
-	  if (colname_case == GAIA_DBF_COLNAME_LOWERCASE)
-	    {
-		if (*p >= 'A' && *p <= 'Z')
-		    *p = *p - 'A' + 'a';
-	    }
-	  if (colname_case == GAIA_DBF_COLNAME_UPPERCASE)
-	    {
-		if (*p >= 'a' && *p <= 'z')
-		    *p = *p - 'a' + 'A';
-	    }
-	  p++;
-      }
-    return clean;
-}
-
 static int
 vshp_create (sqlite3 * db, void *pAux, int argc, const char *const *argv,
 	     sqlite3_vtab ** ppVTab, char **pzErr)
@@ -203,8 +172,6 @@ vshp_create (sqlite3 * db, void *pAux, int argc, const char *const *argv,
     char path[2048];
     char encoding[128];
     const char *pEncoding = NULL;
-    char ColnameCase[128];
-    const char *pColnameCase;
     int len;
     const char *pPath = NULL;
     int srid;
@@ -215,17 +182,14 @@ vshp_create (sqlite3 * db, void *pAux, int argc, const char *const *argv,
     int dup;
     int idup;
     int text_dates = 0;
-    int colname_case = GAIA_DBF_COLNAME_LOWERCASE;
     char *xname;
     char **col_name = NULL;
     int geotype;
     gaiaOutBuffer sql_statement;
-    int ret;
-    sqlite3_stmt *stmt = NULL;
     if (pAux)
 	pAux = pAux;		/* unused arg warning suppression */
 /* checking for shapefile PATH */
-    if (argc == 6 || argc == 7 || argc == 8)
+    if (argc == 6 || argc == 7)
       {
 	  pPath = argv[3];
 	  len = strlen (pPath);
@@ -255,38 +219,14 @@ vshp_create (sqlite3 * db, void *pAux, int argc, const char *const *argv,
 	  srid = atoi (argv[5]);
 	  if (srid < 0)
 	      srid = -1;
-	  if (argc >= 7)
+	  if (argc == 7)
 	      text_dates = atoi (argv[6]);
-	  if (argc >= 8)
-	    {
-		pColnameCase = argv[7];
-		len = strlen (pColnameCase);
-		if ((*(pColnameCase + 0) == '\'' || *(pColnameCase + 0) == '"')
-		    && (*(pColnameCase + len - 1) == '\''
-			|| *(pColnameCase + len - 1) == '"'))
-		  {
-		      /* the charset-name is enclosed between quotes - we need to dequote it */
-		      strcpy (ColnameCase, pColnameCase + 1);
-		      len = strlen (ColnameCase);
-		      *(ColnameCase + len - 1) = '\0';
-		  }
-		else
-		    strcpy (ColnameCase, pColnameCase);
-		if (strcasecmp (ColnameCase, "uppercase") == 0
-		    || strcasecmp (ColnameCase, "upper") == 0)
-		    colname_case = GAIA_DBF_COLNAME_UPPERCASE;
-		else if (strcasecmp (ColnameCase, "samecase") == 0
-			 || strcasecmp (ColnameCase, "same") == 0)
-		    colname_case = GAIA_DBF_COLNAME_CASE_IGNORE;
-		else
-		    colname_case = GAIA_DBF_COLNAME_LOWERCASE;
-	    }
       }
     else
       {
 	  *pzErr =
 	      sqlite3_mprintf
-	      ("[VirtualShape module] CREATE VIRTUAL: illegal arg list {shp_path, encoding, srid [ , text_dates [ , colname_case ]] }");
+	      ("[VirtualShape module] CREATE VIRTUAL: illegal arg list {shp_path, encoding, srid}");
 	  return SQLITE_ERROR;
       }
     p_vt = (VirtualShapePtr) sqlite3_malloc (sizeof (VirtualShape));
@@ -298,13 +238,6 @@ vshp_create (sqlite3 * db, void *pAux, int argc, const char *const *argv,
     p_vt->db = db;
     p_vt->Shp = gaiaAllocShapefile ();
     p_vt->Srid = srid;
-    len = strlen (argv[2]);
-    p_vt->TableName = malloc (len + 1);
-    strcpy (p_vt->TableName, argv[2]);
-    p_vt->MinX = DBL_MAX;
-    p_vt->MinY = DBL_MAX;
-    p_vt->MaxX = -DBL_MAX;
-    p_vt->MaxY = -DBL_MAX;
     p_vt->text_dates = text_dates;
 /* trying to open files etc in order to ensure we actually have a genuine shapefile */
     gaiaOpenShpRead (p_vt->Shp, path, encoding, "UTF-8");
@@ -335,25 +268,12 @@ vshp_create (sqlite3 * db, void *pAux, int argc, const char *const *argv,
 	  /* fixing anyway the Geometry type for LINESTRING/MULTILINESTRING or POLYGON/MULTIPOLYGON */
 	  gaiaShpAnalyze (p_vt->Shp);
       }
-    p_vt->MinX = p_vt->Shp->MinX;
-    p_vt->MinY = p_vt->Shp->MinY;
-    p_vt->MaxX = p_vt->Shp->MaxX;
-    p_vt->MaxY = p_vt->Shp->MaxY;
 /* preparing the COLUMNs for this VIRTUAL TABLE */
     gaiaOutBufferInitialize (&sql_statement);
     xname = gaiaDoubleQuotedSql (argv[2]);
-    if (colname_case == GAIA_DBF_COLNAME_LOWERCASE)
-	sql =
-	    sqlite3_mprintf
-	    ("CREATE TABLE \"%s\" (pkuid INTEGER, geometry BLOB", xname);
-    else if (colname_case == GAIA_DBF_COLNAME_UPPERCASE)
-	sql =
-	    sqlite3_mprintf
-	    ("CREATE TABLE \"%s\" (PKUID INTEGER, GEOMETRY BLOB", xname);
-    else
-	sql =
-	    sqlite3_mprintf
-	    ("CREATE TABLE \"%s\" (PKUID INTEGER, Geometry BLOB", xname);
+    sql =
+	sqlite3_mprintf ("CREATE TABLE \"%s\" (PKUID INTEGER, Geometry BLOB",
+			 xname);
     free (xname);
     gaiaAppendToOutBuffer (&sql_statement, sql);
     sqlite3_free (sql);
@@ -372,9 +292,7 @@ vshp_create (sqlite3 * db, void *pAux, int argc, const char *const *argv,
     pFld = p_vt->Shp->Dbf->First;
     while (pFld)
       {
-	  char *casename = convert_dbf_colname_case (pFld->Name, colname_case);
-	  xname = gaiaDoubleQuotedSql (casename);
-	  free (casename);
+	  xname = gaiaDoubleQuotedSql (pFld->Name);
 	  dup = 0;
 	  for (idup = 0; idup < cnt; idup++)
 	    {
@@ -389,9 +307,7 @@ vshp_create (sqlite3 * db, void *pAux, int argc, const char *const *argv,
 	    {
 		free (xname);
 		sql = sqlite3_mprintf ("COL_%d", seed++);
-		casename = convert_dbf_colname_case (sql, colname_case);
 		xname = gaiaDoubleQuotedSql (sql);
-		free (casename);
 		sqlite3_free (sql);
 	    }
 	  if (pFld->Type == 'N')
@@ -640,23 +556,6 @@ vshp_create (sqlite3 * db, void *pAux, int argc, const char *const *argv,
 	  sqlite3_free (sql);
       }
 
-/* inserting into the connection cache: Virtual Extent */
-    sql = "SELECT \"*Add-VirtualTable+Extent\"(?, ?, ?, ?, ?, ?)";
-    ret = sqlite3_prepare_v2 (db, sql, strlen (sql), &stmt, NULL);
-    if (ret == SQLITE_OK)
-      {
-	  sqlite3_reset (stmt);
-	  sqlite3_clear_bindings (stmt);
-	  sqlite3_bind_text (stmt, 1, argv[2], strlen (argv[2]), SQLITE_STATIC);
-	  sqlite3_bind_double (stmt, 2, p_vt->MinX);
-	  sqlite3_bind_double (stmt, 3, p_vt->MinY);
-	  sqlite3_bind_double (stmt, 4, p_vt->MaxX);
-	  sqlite3_bind_double (stmt, 5, p_vt->MaxY);
-	  sqlite3_bind_int (stmt, 6, p_vt->Srid);
-	  ret = sqlite3_step (stmt);
-      }
-    sqlite3_finalize (stmt);
-
     return SQLITE_OK;
 }
 
@@ -706,30 +605,10 @@ static int
 vshp_disconnect (sqlite3_vtab * pVTab)
 {
 /* disconnects the virtual table */
-    int ret;
-    sqlite3_stmt *stmt;
-    const char *sql;
     VirtualShapePtr p_vt = (VirtualShapePtr) pVTab;
     if (p_vt->Shp)
 	gaiaFreeShapefile (p_vt->Shp);
-
-/* removing from the connection cache: Virtual Extent */
-    sql = "SELECT \"*Remove-VirtualTable+Extent\"(?)";
-    ret = sqlite3_prepare_v2 (p_vt->db, sql, strlen (sql), &stmt, NULL);
-    if (ret == SQLITE_OK)
-      {
-	  sqlite3_reset (stmt);
-	  sqlite3_clear_bindings (stmt);
-	  sqlite3_bind_text (stmt, 1, p_vt->TableName, strlen (p_vt->TableName),
-			     SQLITE_STATIC);
-	  ret = sqlite3_step (stmt);
-      }
-    sqlite3_finalize (stmt);
-
-    if (p_vt->TableName != NULL)
-	free (p_vt->TableName);
     sqlite3_free (p_vt);
-
     return SQLITE_OK;
 }
 
@@ -1070,12 +949,7 @@ vshp_eval_constraints (VirtualShapeCursorPtr cursor)
 					      break;
 #ifdef HAVE_DECL_SQLITE_INDEX_CONSTRAINT_LIKE
 					  case SQLITE_INDEX_CONSTRAINT_LIKE:
-					      ret =
-						  sqlite3_strlike (pC->txtValue,
-								   pFld->
-								   Value->TxtValue,
-								   0);
-					      if (ret == 0)
+					      if (ret >= 0)
 						  ok = 1;
 					      break;
 #endif

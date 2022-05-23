@@ -16,16 +16,7 @@ fprintf(stderr, .....
 with:
 spatialite_e(.....
 
-3.2) IMPORTANT NOTICE: to avoid duplicated link symbols
-you should carefully check the generated *.c  code,
-replacing these two function definitions:
-void ParseInit(void *yypParser)
-void ParseFinalize(void *p)
-with:
-static void ParseInit(void *yypParser)
-static void ParseFinalize(void *p)
-
-3.3) now you should copy this file into the parent dir:
+3.2) now you should copy this file into the parent dir:
 cp lex.VanuatuWkt.c ..
 
 
@@ -45,20 +36,11 @@ generated during the above step.
 
 3.1) IMPORTANT NOTICE: carefully check the generated *.c 
 code; you should manually replace any occurrence of:
-void ParseFinalize()
+fprintf(stderr, .....
 with:
 spatialite_e(.....
 
-3.2) IMPORTANT NOTICE: to avoid duplicated link symbols
-you should carefully check the generated *.c  code,
-replacing these two function definitions:
-void ParseInit(void *yypParser)
-void ParseFinalize(void *p)
-with:
-static void ParseInit(void *yypParser)
-static void ParseFinalize(void *p)
-
-3.3) now you should copy this file into the parent dir:
+3.2) now you should copy this file into the parent dir:
 cp lex.Ewkt.c ..
 
 
@@ -82,16 +64,7 @@ fprintf(stderr, .....
 with:
 spatialite_e(.....
 
-3.2) IMPORTANT NOTICE: to avoid duplicated link symbols
-you should carefully check the generated *.c  code,
-replacing these two function definitions:
-void ParseInit(void *yypParser)
-void ParseFinalize(void *p)
-with:
-static void ParseInit(void *yypParser)
-static void ParseFinalize(void *p)
-
-3.3) now you should copy this file into the parent dir:
+3.2) now you should copy this file into the parent dir:
 cp lex.geoJsonLexer.c ..
 
 
@@ -115,16 +88,7 @@ fprintf(stderr, .....
 with:
 spatialite_e(.....
 
-3.2) IMPORTANT NOTICE: to avoid duplicated link symbols
-you should carefully check the generated *.c  code,
-replacing these two function definitions:
-void ParseInit(void *yypParser)
-void ParseFinalize(void *p)
-with:
-static void ParseInit(void *yypParser)
-static void ParseFinalize(void *p)
-
-3.3) now you should copy this file into the parent dir:
+3.2) now you should copy this file into the parent dir:
 cp lex.Kml.c ..
 
 
@@ -148,14 +112,5 @@ fprintf(stderr, .....
 with:
 spatialite_e(.....
 
-3.2) IMPORTANT NOTICE: to avoid duplicated link symbols
-you should carefully check the generated *.c  code,
-replacing these two function definitions:
-void ParseInit(void *yypParser)
-void ParseFinalize(void *p)
-with:
-static void ParseInit(void *yypParser)
-static void ParseFinalize(void *p)
-
-3.3) now you should copy this file into the parent dir:
+3.2) now you should copy this file into the parent dir:
 cp lex.Gml.c ..

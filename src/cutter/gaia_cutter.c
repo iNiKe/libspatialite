@@ -2,7 +2,7 @@
 
  gaia_cutter.c -- implementation of the Cutter module
     
- version 5.0, 2020 August 1
+ version 4.3, 2015 July 2
 
  Author: Sandro Furieri a.furieri@lqt.it
 
@@ -62,8 +62,6 @@ CIG: 6038019AE5
 
 #if defined(_WIN32) && !defined(__MINGW32__)
 #include "process.h"
-#else
-#include "unistd.h"
 #endif
 
 #if defined(_WIN32) && !defined(__MINGW32__)
@@ -1201,11 +1199,7 @@ do_verify_blade_spatial_index (sqlite3 * handle, const char *db_prefix,
     int declared = 0;
     char *errMsg = NULL;
     time_t now;
-#if defined(_WIN32) && !defined(__MINGW32__)
-    int pid;
-#else
     pid_t pid;
-#endif
 
     xprefix = gaiaDoubleQuotedSql (db_prefix);
 
@@ -2166,14 +2160,12 @@ do_insert_output_row (struct output_table *tbl, const void *cache,
     unsigned char *blob;
     int size;
     int gpkg_mode = 0;
-    int tiny_point = 0;
 
     if (cache != NULL)
       {
 	  struct splite_internal_cache *pcache =
 	      (struct splite_internal_cache *) cache;
 	  gpkg_mode = pcache->gpkg_mode;
-	  tiny_point = pcache->tinyPointEnabled;
       }
 
     sqlite3_reset (stmt_out);
@@ -2276,7 +2268,7 @@ do_insert_output_row (struct output_table *tbl, const void *cache,
 	  do_update_message (message, "UNEXPECTED NULL OUTPUT GEOMETRY");
 	  return 0;
       }
-    gaiaToSpatiaLiteBlobWkbEx2 (geom, &blob, &size, gpkg_mode, tiny_point);
+    gaiaToSpatiaLiteBlobWkbEx (geom, &blob, &size, gpkg_mode);
     if (blob == NULL)
       {
 	  do_update_message (message, "UNEXPECTED NULL OUTPUT BLOB GEOMETRY");
@@ -2440,11 +2432,7 @@ do_prepare_temp_points (struct output_table *tbl, sqlite3 * handle,
     char *sql;
     char *prev;
     time_t now;
-#if defined(_WIN32) && !defined(__MINGW32__)
-    int pid;
-#else
     pid_t pid;
-#endif
     struct output_column *col;
     int comma = 0;
 
@@ -2604,11 +2592,7 @@ do_create_temp_linestrings (struct output_table *tbl, sqlite3 * handle,
     char *sql;
     char *prev;
     time_t now;
-#if defined(_WIN32) && !defined(__MINGW32__)
-    int pid;
-#else
     pid_t pid;
-#endif
     struct output_column *col;
     int comma = 0;
 
@@ -2719,11 +2703,7 @@ do_create_temp_polygons (struct output_table *tbl, sqlite3 * handle,
     char *sql;
     char *prev;
     time_t now;
-#if defined(_WIN32) && !defined(__MINGW32__)
-    int pid;
-#else
     pid_t pid;
-#endif
     struct output_column *col;
     int comma = 0;
 
@@ -2855,7 +2835,6 @@ do_insert_temporary_linestrings (struct output_table *tbl, sqlite3 * handle,
     unsigned char *blob;
     int size;
     int gpkg_mode = 0;
-    int tiny_point = 0;
     gaiaGeomCollPtr g;
 
     if (cache != NULL)
@@ -2863,7 +2842,6 @@ do_insert_temporary_linestrings (struct output_table *tbl, sqlite3 * handle,
 	  struct splite_internal_cache *pcache =
 	      (struct splite_internal_cache *) cache;
 	  gpkg_mode = pcache->gpkg_mode;
-	  tiny_point = pcache->tinyPointEnabled;
       }
 
     if (ngeom < 0)
@@ -2960,7 +2938,7 @@ do_insert_temporary_linestrings (struct output_table *tbl, sqlite3 * handle,
 	  sqlite3_bind_null (stmt_out, icol);
 	  icol++;
 	  /* binding Geometry */
-	  gaiaToSpatiaLiteBlobWkbEx2 (g, &blob, &size, gpkg_mode, tiny_point);
+	  gaiaToSpatiaLiteBlobWkbEx (g, &blob, &size, gpkg_mode);
 	  if (blob == NULL)
 	    {
 		do_update_message (message,
@@ -3004,14 +2982,12 @@ do_insert_temporary_linestring_intersection (struct output_table *tbl,
     unsigned char *blob;
     int size;
     int gpkg_mode = 0;
-    int tiny_point = 0;
 
     if (cache != NULL)
       {
 	  struct splite_internal_cache *pcache =
 	      (struct splite_internal_cache *) cache;
 	  gpkg_mode = pcache->gpkg_mode;
-	  tiny_point = pcache->tinyPointEnabled;
       }
 
     sqlite3_reset (stmt_out);
@@ -3089,7 +3065,7 @@ do_insert_temporary_linestring_intersection (struct output_table *tbl,
 	  col = col->next;
       }
     /* binding Nodes */
-    gaiaToSpatiaLiteBlobWkbEx2 (nodes, &blob, &size, gpkg_mode, tiny_point);
+    gaiaToSpatiaLiteBlobWkbEx (nodes, &blob, &size, gpkg_mode);
     if (blob == NULL)
       {
 	  do_update_message (message,
@@ -3125,7 +3101,6 @@ do_extract_linestring_nodes (const void *cache, sqlite3_stmt * stmt_nodes,
     int blade_blob_sz;
     int gpkg_mode = 0;
     int gpkg_amphibious = 0;
-    int tiny_point = 0;
 
     if (cache != NULL)
       {
@@ -3133,17 +3108,14 @@ do_extract_linestring_nodes (const void *cache, sqlite3_stmt * stmt_nodes,
 	      (struct splite_internal_cache *) cache;
 	  gpkg_mode = pcache->gpkg_mode;
 	  gpkg_amphibious = pcache->gpkg_amphibious_mode;
-	  tiny_point = pcache->tinyPointEnabled;
       }
 
     sqlite3_reset (stmt_nodes);
     sqlite3_clear_bindings (stmt_nodes);
     input_g = do_prepare_linestring (input_ln, srid);
-    gaiaToSpatiaLiteBlobWkbEx2 (input_g, &input_blob, &input_blob_sz, gpkg_mode,
-				tiny_point);
+    gaiaToSpatiaLiteBlobWkbEx (input_g, &input_blob, &input_blob_sz, gpkg_mode);
     gaiaFreeGeomColl (input_g);
-    gaiaToSpatiaLiteBlobWkbEx2 (blade_g, &blade_blob, &blade_blob_sz, gpkg_mode,
-				tiny_point);
+    gaiaToSpatiaLiteBlobWkbEx (blade_g, &blade_blob, &blade_blob_sz, gpkg_mode);
     sqlite3_bind_blob (stmt_nodes, 1, input_blob, input_blob_sz, free);
     sqlite3_bind_blob (stmt_nodes, 2, blade_blob, blade_blob_sz, free);
 
@@ -3695,7 +3667,6 @@ do_cut_tmp_linestrings (sqlite3 * handle, const void *cache,
     gaiaGeomCollPtr blade_g;
     int gpkg_amphibious = 0;
     int gpkg_mode = 0;
-    int tiny_point = 0;
 
     if (cache != NULL)
       {
@@ -3703,7 +3674,6 @@ do_cut_tmp_linestrings (sqlite3 * handle, const void *cache,
 	      (struct splite_internal_cache *) cache;
 	  gpkg_amphibious = pcache->gpkg_amphibious_mode;
 	  gpkg_mode = pcache->gpkg_mode;
-	  tiny_point = pcache->tinyPointEnabled;
       }
 
     blade_g = gaiaFromSpatiaLiteBlobWkbEx (blade_blob, blade_blob_sz,
@@ -3764,14 +3734,17 @@ do_cut_tmp_linestrings (sqlite3 * handle, const void *cache,
 			  gaiaGeometryIntersection_r (cache, input_g, blade_g);
 		      if (result != NULL)
 			{
-			    gaiaToSpatiaLiteBlobWkbEx2 (result, &blob, &blob_sz,
-							gpkg_mode, tiny_point);
+			    gaiaToSpatiaLiteBlobWkbEx (result, &blob, &blob_sz,
+						       gpkg_mode);
 			    gaiaFreeGeomColl (result);
-			    if (!do_update_tmp_cut_linestring
-				(handle, stmt_upd, pk, blob, blob_sz, message))
-				goto error;
 			}
 		      gaiaFreeGeomColl (input_g);
+		  }
+		if (blob != NULL)
+		  {
+		      if (!do_update_tmp_cut_linestring
+			  (handle, stmt_upd, pk, blob, blob_sz, message))
+			  goto error;
 		  }
 	    }
 	  else
@@ -4136,7 +4109,6 @@ do_insert_temporary_polygons (struct output_table *tbl, sqlite3 * handle,
     unsigned char *blob;
     int size;
     int gpkg_mode = 0;
-    int tiny_point = 0;
     gaiaGeomCollPtr g;
 
     if (cache != NULL)
@@ -4144,7 +4116,6 @@ do_insert_temporary_polygons (struct output_table *tbl, sqlite3 * handle,
 	  struct splite_internal_cache *pcache =
 	      (struct splite_internal_cache *) cache;
 	  gpkg_mode = pcache->gpkg_mode;
-	  tiny_point = pcache->tinyPointEnabled;
       }
 
     if (ngeom < 0)
@@ -4238,7 +4209,7 @@ do_insert_temporary_polygons (struct output_table *tbl, sqlite3 * handle,
 		col = col->next;
 	    }
 	  /* binding Geometry */
-	  gaiaToSpatiaLiteBlobWkbEx2 (g, &blob, &size, gpkg_mode, tiny_point);
+	  gaiaToSpatiaLiteBlobWkbEx (g, &blob, &size, gpkg_mode);
 	  if (blob == NULL)
 	    {
 		do_update_message (message,
@@ -4389,7 +4360,6 @@ do_populate_temp_polygons (struct output_table *tbl, sqlite3 * handle,
     int cast2d = 0;
     int cast3d = 0;
     int gpkg_mode = 0;
-    int tiny_point = 0;
 
     if (cache != NULL)
       {
@@ -4799,9 +4769,8 @@ do_populate_temp_polygons (struct output_table *tbl, sqlite3 * handle,
 		      int pg_blob_sz;
 		      gaiaGeomCollPtr pg_geom =
 			  do_prepare_polygon (pg, input_g->Srid);
-		      gaiaToSpatiaLiteBlobWkbEx2 (pg_geom, &pg_blob,
-						  &pg_blob_sz, gpkg_mode,
-						  tiny_point);
+		      gaiaToSpatiaLiteBlobWkbEx (pg_geom, &pg_blob, &pg_blob_sz,
+						 gpkg_mode);
 		      n_geom++;
 		      if (gaiaGeomCollPreparedIntersects
 			  (cache, pg_geom, pg_blob, pg_blob_sz, blade_g,
@@ -4894,7 +4863,6 @@ do_cut_tmp_polygons (sqlite3 * handle, const void *cache,
     gaiaGeomCollPtr blade_g;
     int gpkg_amphibious = 0;
     int gpkg_mode = 0;
-    int tiny_point = 0;
 
     if (cache != NULL)
       {
@@ -4902,7 +4870,6 @@ do_cut_tmp_polygons (sqlite3 * handle, const void *cache,
 	      (struct splite_internal_cache *) cache;
 	  gpkg_amphibious = pcache->gpkg_amphibious_mode;
 	  gpkg_mode = pcache->gpkg_mode;
-	  tiny_point = pcache->tinyPointEnabled;
       }
 
     blade_g = gaiaFromSpatiaLiteBlobWkbEx (blade_blob, blade_blob_sz,
@@ -4963,14 +4930,17 @@ do_cut_tmp_polygons (sqlite3 * handle, const void *cache,
 			  gaiaGeometryIntersection_r (cache, input_g, blade_g);
 		      if (result != NULL)
 			{
-			    gaiaToSpatiaLiteBlobWkbEx2 (result, &blob, &blob_sz,
-							gpkg_mode, tiny_point);
+			    gaiaToSpatiaLiteBlobWkbEx (result, &blob, &blob_sz,
+						       gpkg_mode);
 			    gaiaFreeGeomColl (result);
-			    if (!do_update_tmp_cut_polygon
-				(handle, stmt_upd, pk, blob, blob_sz, message))
-				goto error;
 			}
 		      gaiaFreeGeomColl (input_g);
+		  }
+		if (blob != NULL)
+		  {
+		      if (!do_update_tmp_cut_polygon
+			  (handle, stmt_upd, pk, blob, blob_sz, message))
+			  goto error;
 		  }
 	    }
 	  else
@@ -5325,7 +5295,6 @@ do_compute_diff_polygs (const void *cache, sqlite3_stmt * stmt_diff,
     int union_blob_sz;
     int gpkg_mode = 0;
     int gpkg_amphibious = 0;
-    int tiny_point = 0;
 
     if (cache != NULL)
       {
@@ -5333,17 +5302,14 @@ do_compute_diff_polygs (const void *cache, sqlite3_stmt * stmt_diff,
 	      (struct splite_internal_cache *) cache;
 	  gpkg_mode = pcache->gpkg_mode;
 	  gpkg_amphibious = pcache->gpkg_amphibious_mode;
-	  tiny_point = pcache->tinyPointEnabled;
       }
 
     sqlite3_reset (stmt_diff);
     sqlite3_clear_bindings (stmt_diff);
     input_g = do_prepare_polygon (input_pg, srid);
-    gaiaToSpatiaLiteBlobWkbEx2 (input_g, &input_blob, &input_blob_sz, gpkg_mode,
-				tiny_point);
+    gaiaToSpatiaLiteBlobWkbEx (input_g, &input_blob, &input_blob_sz, gpkg_mode);
     gaiaFreeGeomColl (input_g);
-    gaiaToSpatiaLiteBlobWkbEx2 (union_g, &union_blob, &union_blob_sz, gpkg_mode,
-				tiny_point);
+    gaiaToSpatiaLiteBlobWkbEx (union_g, &union_blob, &union_blob_sz, gpkg_mode);
     sqlite3_bind_blob (stmt_diff, 1, input_blob, input_blob_sz, SQLITE_STATIC);
     sqlite3_bind_blob (stmt_diff, 2, union_blob, union_blob_sz, SQLITE_STATIC);
     sqlite3_bind_blob (stmt_diff, 3, union_blob, union_blob_sz, SQLITE_STATIC);
@@ -6078,7 +6044,6 @@ do_compute_diff_lines (const void *cache, sqlite3_stmt * stmt_diff,
     int union_blob_sz;
     int gpkg_mode = 0;
     int gpkg_amphibious = 0;
-    int tiny_point = 0;
 
     if (cache != NULL)
       {
@@ -6086,17 +6051,14 @@ do_compute_diff_lines (const void *cache, sqlite3_stmt * stmt_diff,
 	      (struct splite_internal_cache *) cache;
 	  gpkg_mode = pcache->gpkg_mode;
 	  gpkg_amphibious = pcache->gpkg_amphibious_mode;
-	  tiny_point = pcache->tinyPointEnabled;
       }
 
     sqlite3_reset (stmt_diff);
     sqlite3_clear_bindings (stmt_diff);
     input_g = do_prepare_linestring (input_ln, srid);
-    gaiaToSpatiaLiteBlobWkbEx2 (input_g, &input_blob, &input_blob_sz, gpkg_mode,
-				tiny_point);
+    gaiaToSpatiaLiteBlobWkbEx (input_g, &input_blob, &input_blob_sz, gpkg_mode);
     gaiaFreeGeomColl (input_g);
-    gaiaToSpatiaLiteBlobWkbEx2 (union_g, &union_blob, &union_blob_sz, gpkg_mode,
-				tiny_point);
+    gaiaToSpatiaLiteBlobWkbEx (union_g, &union_blob, &union_blob_sz, gpkg_mode);
     sqlite3_bind_blob (stmt_diff, 1, input_blob, input_blob_sz, SQLITE_STATIC);
     sqlite3_bind_blob (stmt_diff, 2, union_blob, union_blob_sz, SQLITE_STATIC);
     sqlite3_bind_blob (stmt_diff, 3, union_blob, union_blob_sz, SQLITE_STATIC);
@@ -7102,45 +7064,8 @@ do_finish_output (struct output_table *tbl, sqlite3 * handle,
     char *prev;
     struct output_column *col;
     int comma = 0;
-    char *errMsg = NULL;
-
-/* creating the "tmpcutternull" Temporary Table */
-    xtable = gaiaDoubleQuotedSql (out_table);
-    sql = sqlite3_mprintf ("CREATE TEMPORARY TABLE TEMP.tmpcutternull AS "
-			   "SELECT rowid AS in_rowid FROM MAIN.\"%s\" WHERE ",
-			   xtable);
-    free (xtable);
-    prev = sql;
-    col = tbl->first;
-    while (col != NULL)
-      {
-	  /* Blade Primary Key Column(s) */
-	  if (col->role == GAIA_CUTTER_BLADE_PK)
-	    {
-		xcolumn2 = gaiaDoubleQuotedSql (col->real_name);
-		if (comma)
-		    sql =
-			sqlite3_mprintf ("%s AND \"%s\" IS NULL", prev,
-					 xcolumn2);
-		else
-		    sql = sqlite3_mprintf ("%s \"%s\" IS NULL", prev, xcolumn2);
-		free (xcolumn2);
-		comma = 1;
-		sqlite3_free (prev);
-		prev = sql;
-	    }
-	  col = col->next;
-      }
-    ret = sqlite3_exec (handle, sql, NULL, NULL, &errMsg);
-    sqlite3_free (sql);
-    if (ret != SQLITE_OK)
-      {
-	  sqlite3_free (errMsg);
-	  goto error;
-      }
 
 /* preparing the INPUT statement */
-    comma = 0;
     sql = sqlite3_mprintf ("SELECT");
     prev = sql;
     col = tbl->first;
@@ -7151,7 +7076,7 @@ do_finish_output (struct output_table *tbl, sqlite3 * handle,
 	    {
 		/* output table primary column */
 		xcolumn1 = gaiaDoubleQuotedSql (col->base_name);
-		sql = sqlite3_mprintf ("%s i.\"%s\"", prev, xcolumn1);
+		sql = sqlite3_mprintf ("%s \"%s\"", prev, xcolumn1);
 		sqlite3_free (prev);
 		free (xcolumn1);
 		prev = sql;
@@ -7228,11 +7153,6 @@ do_finish_output (struct output_table *tbl, sqlite3 * handle,
 	("%s AND ymin <= MbrMaxY(i.\"%s\") AND ymax >= MbrMinY(i.\"%s\")))",
 	 prev, xcolumn1, xcolumn1);
     free (xcolumn1);
-    sqlite3_free (prev);
-    prev = sql;
-    sql =
-	sqlite3_mprintf
-	("%s WHERE i.rowid IN (SELECT in_rowid FROM TEMP.tmpcutternull)", prev);
     sqlite3_free (prev);
 
 /* creating the OUTPUT prepared statement */
@@ -7395,15 +7315,8 @@ do_finish_output (struct output_table *tbl, sqlite3 * handle,
 	  else
 	      goto error;
       }
-
     sqlite3_finalize (stmt_in);
     sqlite3_finalize (stmt_out);
-
-/* dropping the "tmpcutternull" Temporary Table */
-    sql = "DROP TABLE TEMP.tmpcutternull";
-    ret = sqlite3_exec (handle, sql, NULL, NULL, &errMsg);
-    if (ret != SQLITE_OK)
-	sqlite3_free (errMsg);
     return;
 
   error:

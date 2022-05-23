@@ -1,7 +1,0 @@
-CreateTopoTables
-:memory: #use in-memory database
-SELECT CreateTopoTables();
-1 # rows (not including the header row)
-1 # columns
-CreateTopoTables()
-1

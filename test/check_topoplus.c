@@ -51,305 +51,6 @@ the terms of any one of the MPL, the GPL or the LGPL.
 #include "sqlite3.h"
 #include "spatialite.h"
 
-#ifdef ENABLE_RTTOPO		/* only if RTTOPO is enabled */
-#ifndef OMIT_ICONV		/* only if ICONV is enabled */
-
-static int
-do_level11_tests (sqlite3 * handle, int *retcode)
-{
-/* performing basic tests: Level 11 */
-    int ret;
-    char *err_msg = NULL;
-    int i;
-    char **results;
-    int rows;
-    int columns;
-    int changed_links = 0;
-
-/* creating a Network 2D */
-    ret =
-	sqlite3_exec (handle,
-		      "SELECT CreateNetwork('netsegments', 1, 4326, 0, 0)",
-		      NULL, NULL, &err_msg);
-    if (ret != SQLITE_OK)
-      {
-	  fprintf (stderr, "CreateNetwork() #5 error: %s\n", err_msg);
-	  sqlite3_free (err_msg);
-	  *retcode = -300;
-	  return 0;
-      }
-
-/* inserting four Nodes */
-    ret =
-	sqlite3_exec (handle,
-		      "SELECT ST_AddIsoNetNode('netsegments', MakePoint(-45, -45, 4326))",
-		      NULL, NULL, &err_msg);
-    if (ret != SQLITE_OK)
-      {
-	  fprintf (stderr, "ST_AddIsoNetNode() #1 error: %s\n", err_msg);
-	  sqlite3_free (err_msg);
-	  *retcode = -301;
-	  return 0;
-      }
-    ret =
-	sqlite3_exec (handle,
-		      "SELECT ST_AddIsoNetNode('netsegments', MakePoint(-45, 45, 4326))",
-		      NULL, NULL, &err_msg);
-    if (ret != SQLITE_OK)
-      {
-	  fprintf (stderr, "ST_AddIsoNetNode() #2 error: %s\n", err_msg);
-	  sqlite3_free (err_msg);
-	  *retcode = -302;
-	  return 0;
-      }
-    ret =
-	sqlite3_exec (handle,
-		      "SELECT ST_AddIsoNetNode('netsegments', MakePoint(45, -45, 4326))",
-		      NULL, NULL, &err_msg);
-    if (ret != SQLITE_OK)
-      {
-	  fprintf (stderr, "ST_AddIsoNetNode() #3 error: %s\n", err_msg);
-	  sqlite3_free (err_msg);
-	  *retcode = -303;
-	  return 0;
-      }
-    ret =
-	sqlite3_exec (handle,
-		      "SELECT ST_AddIsoNetNode('netsegments', MakePoint(45, 45, 4326))",
-		      NULL, NULL, &err_msg);
-    if (ret != SQLITE_OK)
-      {
-	  fprintf (stderr, "ST_AddIsoNetNode() #4 error: %s\n", err_msg);
-	  sqlite3_free (err_msg);
-	  *retcode = -304;
-	  return 0;
-      }
-
-/* inserting Links */
-    ret =
-	sqlite3_exec (handle,
-		      "SELECT ST_AddLink('netsegments', 1, 2, GeomFromText('LINESTRING(-45 -45,  -45 45)', 4326))",
-		      NULL, NULL, &err_msg);
-    if (ret != SQLITE_OK)
-      {
-	  fprintf (stderr, "ST_AddLink() #1 error: %s\n", err_msg);
-	  sqlite3_free (err_msg);
-	  *retcode = -305;
-	  return 0;
-      }
-    ret =
-	sqlite3_exec (handle,
-		      "SELECT ST_AddLink('netsegments', 3, 4, GeomFromText('LINESTRING(45 -45,  45 45)', 4326))",
-		      NULL, NULL, &err_msg);
-    if (ret != SQLITE_OK)
-      {
-	  fprintf (stderr, "ST_AddLink() #2 error: %s\n", err_msg);
-	  sqlite3_free (err_msg);
-	  *retcode = -306;
-	  return 0;
-      }
-    ret =
-	sqlite3_exec (handle,
-		      "SELECT ST_AddLink('netsegments', 1, 3, GeomFromText('LINESTRING(-45 -45,  45 -45)', 4326))",
-		      NULL, NULL, &err_msg);
-    if (ret != SQLITE_OK)
-      {
-	  fprintf (stderr, "ST_AddLink() #3 error: %s\n", err_msg);
-	  sqlite3_free (err_msg);
-	  *retcode = -307;
-	  return 0;
-      }
-    ret =
-	sqlite3_exec (handle,
-		      "SELECT ST_AddLink('netsegments', 2, 4, GeomFromText('LINESTRING(-45 45,  0 45, 45 45)', 4326))",
-		      NULL, NULL, &err_msg);
-    if (ret != SQLITE_OK)
-      {
-	  fprintf (stderr, "ST_AddLink() #4 error: %s\n", err_msg);
-	  sqlite3_free (err_msg);
-	  *retcode = -308;
-	  return 0;
-      }
-
-/* disambiguating segment Links */
-    ret = sqlite3_get_table
-	(handle,
-	 "SELECT TopoNet_DisambiguateSegmentLinks('netsegments')",
-	 &results, &rows, &columns, &err_msg);
-    if (ret != SQLITE_OK)
-      {
-	  fprintf (stderr, "TopoNet_DisambiguateSegmentLinks() #1 error: %s\n",
-		   err_msg);
-	  sqlite3_free (err_msg);
-	  *retcode = -309;
-	  return 0;
-      }
-    for (i = 1; i <= rows; i++)
-      {
-	  const char *value = results[(i * columns)];
-	  changed_links = atoi (value);
-      }
-    sqlite3_free_table (results);
-    if (changed_links != 3)
-      {
-	  fprintf (stderr,
-		   "TopoNet_DisambiguateSegmentLinks() #1 invalid count: %d\n",
-		   changed_links);
-	  *retcode = -310;
-	  return 0;
-      }
-
-    return 1;
-}
-
-static int
-do_level10_tests (sqlite3 * handle, int *retcode)
-{
-/* performing basic tests: Level 10 */
-    int ret;
-    char *err_msg = NULL;
-    int i;
-    char **results;
-    int rows;
-    int columns;
-    int changed_edges = 0;
-
-/* creating a Topology 2D */
-    ret =
-	sqlite3_exec (handle,
-		      "SELECT CreateTopology('segments', 4326, 0, 0)", NULL,
-		      NULL, &err_msg);
-    if (ret != SQLITE_OK)
-      {
-	  fprintf (stderr, "CreateTopology() #10 error: %s\n", err_msg);
-	  sqlite3_free (err_msg);
-	  *retcode = -300;
-	  return 0;
-      }
-
-/* inserting four Nodes */
-    ret =
-	sqlite3_exec (handle,
-		      "SELECT ST_AddIsoNode('segments', NULL, MakePoint(-45, -45, 4326))",
-		      NULL, NULL, &err_msg);
-    if (ret != SQLITE_OK)
-      {
-	  fprintf (stderr, "ST_AddIsoNode() #1 error: %s\n", err_msg);
-	  sqlite3_free (err_msg);
-	  *retcode = -301;
-	  return 0;
-      }
-    ret =
-	sqlite3_exec (handle,
-		      "SELECT ST_AddIsoNode('segments', NULL, MakePoint(-45, 45, 4326))",
-		      NULL, NULL, &err_msg);
-    if (ret != SQLITE_OK)
-      {
-	  fprintf (stderr, "ST_AddIsoNode() #2 error: %s\n", err_msg);
-	  sqlite3_free (err_msg);
-	  *retcode = -302;
-	  return 0;
-      }
-    ret =
-	sqlite3_exec (handle,
-		      "SELECT ST_AddIsoNode('segments', NULL, MakePoint(45, -45, 4326))",
-		      NULL, NULL, &err_msg);
-    if (ret != SQLITE_OK)
-      {
-	  fprintf (stderr, "ST_AddIsoNode() #3 error: %s\n", err_msg);
-	  sqlite3_free (err_msg);
-	  *retcode = -303;
-	  return 0;
-      }
-    ret =
-	sqlite3_exec (handle,
-		      "SELECT ST_AddIsoNode('segments', NULL, MakePoint(45, 45, 4326))",
-		      NULL, NULL, &err_msg);
-    if (ret != SQLITE_OK)
-      {
-	  fprintf (stderr, "ST_AddIsoNode() #4 error: %s\n", err_msg);
-	  sqlite3_free (err_msg);
-	  *retcode = -304;
-	  return 0;
-      }
-
-/* inserting Edges */
-    ret =
-	sqlite3_exec (handle,
-		      "SELECT ST_AddIsoEdge('segments', 1, 2, GeomFromText('LINESTRING(-45 -45,  -45 45)', 4326))",
-		      NULL, NULL, &err_msg);
-    if (ret != SQLITE_OK)
-      {
-	  fprintf (stderr, "ST_AddIsoEdge() #1 error: %s\n", err_msg);
-	  sqlite3_free (err_msg);
-	  *retcode = -305;
-	  return 0;
-      }
-    ret =
-	sqlite3_exec (handle,
-		      "SELECT ST_AddIsoEdge('segments', 3, 4, GeomFromText('LINESTRING(45 -45,  45 45)', 4326))",
-		      NULL, NULL, &err_msg);
-    if (ret != SQLITE_OK)
-      {
-	  fprintf (stderr, "ST_AddIsoEdge() #2 error: %s\n", err_msg);
-	  sqlite3_free (err_msg);
-	  *retcode = -306;
-	  return 0;
-      }
-    ret =
-	sqlite3_exec (handle,
-		      "SELECT ST_AddEdgeNewFaces('segments', 1, 3, GeomFromText('LINESTRING(-45 -45,  45 -45)', 4326))",
-		      NULL, NULL, &err_msg);
-    if (ret != SQLITE_OK)
-      {
-	  fprintf (stderr, "ST_AddEdgeNewFaces() #1 error: %s\n", err_msg);
-	  sqlite3_free (err_msg);
-	  *retcode = -307;
-	  return 0;
-      }
-    ret =
-	sqlite3_exec (handle,
-		      "SELECT ST_AddEdgeNewFaces('segments', 2, 4, GeomFromText('LINESTRING(-45 45,  0 45, 45 45)', 4326))",
-		      NULL, NULL, &err_msg);
-    if (ret != SQLITE_OK)
-      {
-	  fprintf (stderr, "ST_AddEdgeNewFaces() #2 error: %s\n", err_msg);
-	  sqlite3_free (err_msg);
-	  *retcode = -308;
-	  return 0;
-      }
-
-/* disambiguating segment Edges */
-    ret = sqlite3_get_table
-	(handle,
-	 "SELECT TopoGeo_DisambiguateSegmentEdges('segments')",
-	 &results, &rows, &columns, &err_msg);
-    if (ret != SQLITE_OK)
-      {
-	  fprintf (stderr, "TopoGeo_DisambiguateSegmentEdges() #1 error: %s\n",
-		   err_msg);
-	  sqlite3_free (err_msg);
-	  *retcode = -309;
-	  return 0;
-      }
-    for (i = 1; i <= rows; i++)
-      {
-	  const char *value = results[(i * columns)];
-	  changed_edges = atoi (value);
-      }
-    sqlite3_free_table (results);
-    if (changed_edges != 3)
-      {
-	  fprintf (stderr,
-		   "TopoGeo_DisambiguateSegmentEdges() #1 invalid count: %d\n",
-		   changed_edges);
-	  *retcode = -310;
-	  return 0;
-      }
-
-    return 1;
-}
-
 static int
 do_level9_tests (sqlite3 * handle, int *retcode)
 {
@@ -447,7 +148,7 @@ do_level9_tests (sqlite3 * handle, int *retcode)
       }
     if (strcmp
 	(err_msg,
-	 "SQL/MM Spatial exception - invalid Point (mismatching SRID or dimensions).")
+	 "SQL/MM Spatial exception - invalid Point (mismatching SRID od dimensions).")
 	!= 0)
       {
 	  fprintf (stderr,
@@ -473,7 +174,7 @@ do_level9_tests (sqlite3 * handle, int *retcode)
       }
     if (strcmp
 	(err_msg,
-	 "SQL/MM Spatial exception - invalid Point (mismatching SRID or dimensions).")
+	 "SQL/MM Spatial exception - invalid Point (mismatching SRID od dimensions).")
 	!= 0)
       {
 	  fprintf (stderr,
@@ -563,7 +264,7 @@ do_level9_tests (sqlite3 * handle, int *retcode)
       }
     if (strcmp
 	(err_msg,
-	 "SQL/MM Spatial exception - invalid Line (mismatching SRID or dimensions).")
+	 "SQL/MM Spatial exception - invalid Line (mismatching SRID od dimensions).")
 	!= 0)
       {
 	  fprintf (stderr,
@@ -590,7 +291,7 @@ do_level9_tests (sqlite3 * handle, int *retcode)
       }
     if (strcmp
 	(err_msg,
-	 "SQL/MM Spatial exception - invalid Line (mismatching SRID or dimensions).")
+	 "SQL/MM Spatial exception - invalid Line (mismatching SRID od dimensions).")
 	!= 0)
       {
 	  fprintf (stderr,
@@ -605,7 +306,7 @@ do_level9_tests (sqlite3 * handle, int *retcode)
 /* testing RemoveSmallFaces */
     ret =
 	sqlite3_exec (handle,
-		      "SELECT TopoGeo_RemoveSmallFaces('elba_clone', 0.7, 1000)",
+		      "SELECT TopoGeo_RemoveSmallFaces('elba_clone', 1000)",
 		      NULL, NULL, &err_msg);
     if (ret != SQLITE_OK)
       {
@@ -683,7 +384,7 @@ do_level8_tests (sqlite3 * handle, int *retcode)
 /* loading a Polygon GeoTable */
     ret =
 	sqlite3_exec (handle,
-		      "SELECT TopoGeo_FromGeoTableExt('diagnostic', 'inputDB', 'comuni', NULL, 'dustbin', 'dustbinview', 650)",
+		      "SELECT TopoGeo_FromGeoTableExt('diagnostic', 'inputDB', 'comuni', NULL, 0, 'dustbin', 'dustbinview', 650, -1)",
 		      NULL, NULL, &err_msg);
     if (ret == SQLITE_OK)
       {
@@ -711,14 +412,13 @@ do_level8_tests (sqlite3 * handle, int *retcode)
       {
 	  fprintf (stderr, "DETACH DATABASE error: %s\n", err_msg);
 	  sqlite3_free (err_msg);
-	  *retcode = -303;
-	  return 0;
+	  return -303;
       }
 
 /* attempting to load a Topology - non-existing Topology */
     ret =
 	sqlite3_exec (handle,
-		      "SELECT TopoGeo_FromGeoTableExt('wannebe', NULL, 'elba_ln', NULL, 'dustbin', 'dustbinview')",
+		      "SELECT TopoGeo_FromGeoTableExt('wannebe', NULL, 'elba_ln', NULL, 0, 'dustbin', 'dustbinview')",
 		      NULL, NULL, &err_msg);
     if (ret == SQLITE_OK)
       {
@@ -742,7 +442,7 @@ do_level8_tests (sqlite3 * handle, int *retcode)
 /* attempting to load a Topology - non-existing GeoTable */
     ret =
 	sqlite3_exec (handle,
-		      "SELECT TopoGeo_FromGeoTableExt('diagnostic', NULL, 'wannabe', NULL, 'dustbin', 'dustbinview')",
+		      "SELECT TopoGeo_FromGeoTableExt('diagnostic', NULL, 'wannabe', NULL, 0, 'dustbin', 'dustbinview')",
 		      NULL, NULL, &err_msg);
     if (ret == SQLITE_OK)
       {
@@ -766,7 +466,7 @@ do_level8_tests (sqlite3 * handle, int *retcode)
 /* attempting to load a Topology - wrong DB-prefix */
     ret =
 	sqlite3_exec (handle,
-		      "SELECT TopoGeo_FromGeoTableExt('diagnostic', 'lollypop', 'elba_ln', NULL, 'dustbin', 'dustbinview')",
+		      "SELECT TopoGeo_FromGeoTableExt('diagnostic', 'lollypop', 'elba_ln', NULL, 0, 'dustbin', 'dustbinview')",
 		      NULL, NULL, &err_msg);
     if (ret == SQLITE_OK)
       {
@@ -790,7 +490,7 @@ do_level8_tests (sqlite3 * handle, int *retcode)
 /* attempting to load a Topology - wrong geometry column */
     ret =
 	sqlite3_exec (handle,
-		      "SELECT TopoGeo_FromGeoTableExt('diagnostic', NULL, 'elba_ln', 'none', 'dustbin', 'dustbinview')",
+		      "SELECT TopoGeo_FromGeoTableExt('diagnostic', NULL, 'elba_ln', 'none', 0, 'dustbin', 'dustbinview')",
 		      NULL, NULL, &err_msg);
     if (ret == SQLITE_OK)
       {
@@ -814,7 +514,7 @@ do_level8_tests (sqlite3 * handle, int *retcode)
 /* attempting to load a Topology - mismatching SRID */
     ret =
 	sqlite3_exec (handle,
-		      "SELECT TopoGeo_FromGeoTableExt('badelba1', NULL, 'elba_ln', 'geometry', 'dustbin', 'dustbinview')",
+		      "SELECT TopoGeo_FromGeoTableExt('badelba1', NULL, 'elba_ln', 'geometry', 0, 'dustbin', 'dustbinview')",
 		      NULL, NULL, &err_msg);
     if (ret == SQLITE_OK)
       {
@@ -840,7 +540,7 @@ do_level8_tests (sqlite3 * handle, int *retcode)
 /* attempting to load a Topology - mismatching dims */
     ret =
 	sqlite3_exec (handle,
-		      "SELECT TopoGeo_FromGeoTableExt('badelba2', NULL, 'elba_ln', 'GEOMETRY', 'dustbin', 'dustbinview')",
+		      "SELECT TopoGeo_FromGeoTableExt('badelba2', NULL, 'elba_ln', 'GEOMETRY', 0, 'dustbin', 'dustbinview')",
 		      NULL, NULL, &err_msg);
     if (ret == SQLITE_OK)
       {
@@ -866,7 +566,7 @@ do_level8_tests (sqlite3 * handle, int *retcode)
 /* attempting to load a Topology - ambiguous geometry column */
     ret =
 	sqlite3_exec (handle,
-		      "SELECT TopoGeo_FromGeoTableExt('diagnostic', NULL, 'elba_pg', NULL, 'dustbin', 'dustbinview')",
+		      "SELECT TopoGeo_FromGeoTableExt('diagnostic', NULL, 'elba_pg', NULL, 0, 'dustbin', 'dustbinview')",
 		      NULL, NULL, &err_msg);
     if (ret == SQLITE_OK)
       {
@@ -902,7 +602,7 @@ do_level8_tests (sqlite3 * handle, int *retcode)
 /* attempting to load a Topology  */
     ret =
 	sqlite3_exec (handle,
-		      "SELECT TopoGeo_FromGeoTableExt('ext', NULL, 'export_elba1', NULL, 'dustbin', 'dustbinview')",
+		      "SELECT TopoGeo_FromGeoTableExt('ext', NULL, 'export_elba1', NULL, 0, 'dustbin', 'dustbinview')",
 		      NULL, NULL, &err_msg);
     if (ret != SQLITE_OK)
       {
@@ -915,7 +615,7 @@ do_level8_tests (sqlite3 * handle, int *retcode)
 /* attempting to load a Topology - already existing dustbin-table */
     ret =
 	sqlite3_exec (handle,
-		      "SELECT TopoGeo_FromGeoTableExt('ext', NULL, 'export_elba1', NULL, 'dustbin', 'dustbinview2')",
+		      "SELECT TopoGeo_FromGeoTableExt('ext', NULL, 'export_elba1', NULL, 0, 'dustbin', 'dustbinview2')",
 		      NULL, NULL, &err_msg);
     if (ret == SQLITE_OK)
       {
@@ -940,7 +640,7 @@ do_level8_tests (sqlite3 * handle, int *retcode)
 /* attempting to load a Topology - already existing dustbin-view */
     ret =
 	sqlite3_exec (handle,
-		      "SELECT TopoGeo_FromGeoTableExt('ext', NULL, 'export_elba1', NULL, 'dustbin2', 'dustbinview')",
+		      "SELECT TopoGeo_FromGeoTableExt('ext', NULL, 'export_elba1', NULL, 0, 'dustbin2', 'dustbinview')",
 		      NULL, NULL, &err_msg);
     if (ret == SQLITE_OK)
       {
@@ -998,7 +698,7 @@ do_level7_tests (sqlite3 * handle, int *retcode)
 /* loading a Polygon GeoTable */
     ret =
 	sqlite3_exec (handle,
-		      "SELECT TopoGeo_FromGeoTable('topocom', 'inputDB', 'comuni', NULL, 650)",
+		      "SELECT TopoGeo_FromGeoTable('topocom', 'inputDB', 'comuni', NULL, 0, 650, -1)",
 		      NULL, NULL, &err_msg);
     if (ret != SQLITE_OK)
       {
@@ -1015,8 +715,7 @@ do_level7_tests (sqlite3 * handle, int *retcode)
       {
 	  fprintf (stderr, "DETACH DATABASE error: %s\n", err_msg);
 	  sqlite3_free (err_msg);
-	  *retcode = -203;
-	  return 0;
+	  return -203;
       }
 
 /* creating a Topology 2D */
@@ -1033,7 +732,7 @@ do_level7_tests (sqlite3 * handle, int *retcode)
 /* loading a Polygon GeoTable */
     ret =
 	sqlite3_exec (handle,
-		      "SELECT TopoGeo_FromGeoTable('elbasplit', 'main', 'elba_pg', 'geometry', 256, 1000)",
+		      "SELECT TopoGeo_FromGeoTable('elbasplit', 'main', 'elba_pg', 'geometry', 0, 256, 1000)",
 		      NULL, NULL, &err_msg);
     if (ret != SQLITE_OK)
       {
@@ -1058,7 +757,7 @@ do_level7_tests (sqlite3 * handle, int *retcode)
 /* loading a Polygon GeoTable */
     ret =
 	sqlite3_exec (handle,
-		      "SELECT TopoGeo_FromGeoTable('elbalnsplit', 'main', 'elba_ln', 'geometry', 256, 500)",
+		      "SELECT TopoGeo_FromGeoTable('elbalnsplit', 'main', 'elba_ln', 'geometry', 0, 256, 500)",
 		      NULL, NULL, &err_msg);
     if (ret != SQLITE_OK)
       {
@@ -1081,19 +780,6 @@ do_level7_tests (sqlite3 * handle, int *retcode)
 	  return 0;
       }
 
-/* testing TopNet_LineLinksList - ok */
-    ret =
-	sqlite3_exec (handle,
-		      "SELECT TopoNet_LineLinksList('roads', NULL, 'roads', 'geometry', 'line_links_list')",
-		      NULL, NULL, &err_msg);
-    if (ret != SQLITE_OK)
-      {
-	  fprintf (stderr, "TopoNet_LineLinksList() #1 error: %s\n", err_msg);
-	  sqlite3_free (err_msg);
-	  *retcode = -209;
-	  return 0;
-      }
-
 /* testing TopoGeo_GetEdgeSeed */
     ret =
 	sqlite3_exec (handle,
@@ -1103,7 +789,7 @@ do_level7_tests (sqlite3 * handle, int *retcode)
       {
 	  fprintf (stderr, "TopoGeo_GetEdgeSeed() #1 error: %s\n", err_msg);
 	  sqlite3_free (err_msg);
-	  *retcode = -210;
+	  *retcode = -209;
 	  return 0;
       }
 
@@ -1116,7 +802,7 @@ do_level7_tests (sqlite3 * handle, int *retcode)
       {
 	  fprintf (stderr, "TopoGeo_GetFaceSeed() #1 error: %s\n", err_msg);
 	  sqlite3_free (err_msg);
-	  *retcode = -211;
+	  *retcode = -210;
 	  return 0;
       }
 
@@ -1129,7 +815,7 @@ do_level7_tests (sqlite3 * handle, int *retcode)
       {
 	  fprintf (stderr, "TopoGeo_GetLinkSeed() #1 error: %s\n", err_msg);
 	  sqlite3_free (err_msg);
-	  *retcode = -212;
+	  *retcode = -211;
 	  return 0;
       }
 
@@ -1142,7 +828,7 @@ do_level7_tests (sqlite3 * handle, int *retcode)
       {
 	  fprintf (stderr, "TopoGeo_UpdateSeeds() #1 error: %s\n", err_msg);
 	  sqlite3_free (err_msg);
-	  *retcode = -213;
+	  *retcode = -212;
 	  return 0;
       }
 
@@ -1155,7 +841,7 @@ do_level7_tests (sqlite3 * handle, int *retcode)
       {
 	  fprintf (stderr, "TopoNet_UpdateSeeds() #1 error: %s\n", err_msg);
 	  sqlite3_free (err_msg);
-	  *retcode = -214;
+	  *retcode = -213;
 	  return 0;
       }
 
@@ -1171,7 +857,7 @@ do_level7_tests (sqlite3 * handle, int *retcode)
       {
 	  fprintf (stderr, "UPDATE elbasplit error: %s\n", err_msg);
 	  sqlite3_free (err_msg);
-	  *retcode = -215;
+	  *retcode = -214;
 	  return 0;
       }
 
@@ -1184,7 +870,7 @@ do_level7_tests (sqlite3 * handle, int *retcode)
       {
 	  fprintf (stderr, "TopoGeo_UpdateSeeds() #2 error: %s\n", err_msg);
 	  sqlite3_free (err_msg);
-	  *retcode = -216;
+	  *retcode = -215;
 	  return 0;
       }
 
@@ -1197,7 +883,7 @@ do_level7_tests (sqlite3 * handle, int *retcode)
       {
 	  fprintf (stderr, "UPDATE roads error: %s\n", err_msg);
 	  sqlite3_free (err_msg);
-	  *retcode = -217;
+	  *retcode = -216;
 	  return 0;
       }
 
@@ -1210,7 +896,7 @@ do_level7_tests (sqlite3 * handle, int *retcode)
       {
 	  fprintf (stderr, "TopoNet_UpdateSeeds() #2 error: %s\n", err_msg);
 	  sqlite3_free (err_msg);
-	  *retcode = -218;
+	  *retcode = -217;
 	  return 0;
       }
 
@@ -1223,7 +909,7 @@ do_level7_tests (sqlite3 * handle, int *retcode)
       {
 	  fprintf (stderr, "TopoGeo_ToGeoTable() #1 error: %s\n", err_msg);
 	  sqlite3_free (err_msg);
-	  *retcode = -219;
+	  *retcode = -218;
 	  return 0;
       }
 
@@ -1236,7 +922,7 @@ do_level7_tests (sqlite3 * handle, int *retcode)
       {
 	  fprintf (stderr, "TopoGeo_ToGeoTable() #2 error: %s\n", err_msg);
 	  sqlite3_free (err_msg);
-	  *retcode = -220;
+	  *retcode = -219;
 	  return 0;
       }
 
@@ -1249,7 +935,7 @@ do_level7_tests (sqlite3 * handle, int *retcode)
       {
 	  fprintf (stderr, "TopoNet_ToGeoTable() #1 error: %s\n", err_msg);
 	  sqlite3_free (err_msg);
-	  *retcode = -221;
+	  *retcode = -220;
 	  return 0;
       }
 
@@ -1263,7 +949,7 @@ do_level7_tests (sqlite3 * handle, int *retcode)
 	  fprintf (stderr, "TopoGeo_ToGeoTableGeneralize() #1 error: %s\n",
 		   err_msg);
 	  sqlite3_free (err_msg);
-	  *retcode = -222;
+	  *retcode = -221;
 	  return 0;
       }
 
@@ -1277,7 +963,7 @@ do_level7_tests (sqlite3 * handle, int *retcode)
 	  fprintf (stderr, "TopoGeo_ToGeoTableGeneralize() #2 error: %s\n",
 		   err_msg);
 	  sqlite3_free (err_msg);
-	  *retcode = -223;
+	  *retcode = -222;
 	  return 0;
       }
 
@@ -1291,7 +977,7 @@ do_level7_tests (sqlite3 * handle, int *retcode)
 	  fprintf (stderr, "TopoNet_ToGeoTableGeneralize() #1 error: %s\n",
 		   err_msg);
 	  sqlite3_free (err_msg);
-	  *retcode = -224;
+	  *retcode = -223;
 	  return 0;
       }
 
@@ -1305,7 +991,7 @@ do_level7_tests (sqlite3 * handle, int *retcode)
 	  fprintf (stderr, "TopoNet_ToGeoTableGeneralize() #2 error: %s\n",
 		   err_msg);
 	  sqlite3_free (err_msg);
-	  *retcode = -225;
+	  *retcode = -224;
 	  return 0;
       }
 
@@ -1318,7 +1004,7 @@ do_level7_tests (sqlite3 * handle, int *retcode)
       {
 	  fprintf (stderr, "TopoGeo_CreateTopoLayer() #1 error: %s\n", err_msg);
 	  sqlite3_free (err_msg);
-	  *retcode = -226;
+	  *retcode = -225;
 	  return 0;
       }
 
@@ -1331,7 +1017,7 @@ do_level7_tests (sqlite3 * handle, int *retcode)
       {
 	  fprintf (stderr, "TopoGeo_ExportTopoLayer() #1 error: %s\n", err_msg);
 	  sqlite3_free (err_msg);
-	  *retcode = -227;
+	  *retcode = -226;
 	  return 0;
       }
 
@@ -1344,7 +1030,7 @@ do_level7_tests (sqlite3 * handle, int *retcode)
       {
 	  fprintf (stderr, "TopoGeo_RemoveTopoLayer() #1 error: %s\n", err_msg);
 	  sqlite3_free (err_msg);
-	  *retcode = -228;
+	  *retcode = -227;
 	  return 0;
       }
 
@@ -1357,7 +1043,7 @@ do_level7_tests (sqlite3 * handle, int *retcode)
       {
 	  fprintf (stderr, "TopoGeo_CreateTopoLayer() #2 error: %s\n", err_msg);
 	  sqlite3_free (err_msg);
-	  *retcode = -229;
+	  *retcode = -228;
 	  return 0;
       }
 
@@ -1370,7 +1056,7 @@ do_level7_tests (sqlite3 * handle, int *retcode)
       {
 	  fprintf (stderr, "TopoGeo_ExportTopoLayer() #2 error: %s\n", err_msg);
 	  sqlite3_free (err_msg);
-	  *retcode = -230;
+	  *retcode = -229;
 	  return 0;
       }
 
@@ -1385,7 +1071,7 @@ do_level7_tests (sqlite3 * handle, int *retcode)
 		   "TopoGeo_InsertFeatureFromTopoLayer() #1 error: %s\n",
 		   err_msg);
 	  sqlite3_free (err_msg);
-	  *retcode = -231;
+	  *retcode = -230;
 	  return 0;
       }
 
@@ -1398,7 +1084,7 @@ do_level7_tests (sqlite3 * handle, int *retcode)
       {
 	  fprintf (stderr, "ST_CreateTopoGeo() #1 error: %s\n", err_msg);
 	  sqlite3_free (err_msg);
-	  *retcode = -232;
+	  *retcode = -231;
 	  return 0;
       }
 
@@ -1410,7 +1096,7 @@ do_level7_tests (sqlite3 * handle, int *retcode)
     if (ret == SQLITE_OK)
       {
 	  fprintf (stderr, "ST_CreateTopoGeo() #2: expected failure\n");
-	  *retcode = -233;
+	  *retcode = -232;
 	  return 0;
       }
     if (strcmp (err_msg, "SQL/MM Spatial exception - non-empty topology.") != 0)
@@ -1418,7 +1104,7 @@ do_level7_tests (sqlite3 * handle, int *retcode)
 	  fprintf (stderr,
 		   "ST_CreateTopoGeo() #2: unexpected \"%s\"\n", err_msg);
 	  sqlite3_free (err_msg);
-	  *retcode = -234;
+	  *retcode = -233;
 	  return 0;
       }
     sqlite3_free (err_msg);
@@ -1432,7 +1118,7 @@ do_level7_tests (sqlite3 * handle, int *retcode)
       {
 	  fprintf (stderr, "ST_SpatNetFromGeom() #1 error: %s\n", err_msg);
 	  sqlite3_free (err_msg);
-	  *retcode = -235;
+	  *retcode = -234;
 	  return 0;
       }
 
@@ -1444,7 +1130,7 @@ do_level7_tests (sqlite3 * handle, int *retcode)
     if (ret == SQLITE_OK)
       {
 	  fprintf (stderr, "ST_SpatNetFromGeom() #2: expected failure\n");
-	  *retcode = -236;
+	  *retcode = -235;
 	  return 0;
       }
     if (strcmp (err_msg, "SQL/MM Spatial exception - non-empty network.") != 0)
@@ -1452,36 +1138,10 @@ do_level7_tests (sqlite3 * handle, int *retcode)
 	  fprintf (stderr,
 		   "ST_SpatNetFromGeom() #2: unexpected \"%s\"\n", err_msg);
 	  sqlite3_free (err_msg);
-	  *retcode = -237;
+	  *retcode = -236;
 	  return 0;
       }
     sqlite3_free (err_msg);
-
-/* testing TopoGeo_PolyFacesList - ok */
-    ret =
-	sqlite3_exec (handle,
-		      "SELECT TopoGeo_PolyFacesList('elbasplit', NULL, 'elba_pg', 'geometry', 'poly_faces_list')",
-		      NULL, NULL, &err_msg);
-    if (ret != SQLITE_OK)
-      {
-	  fprintf (stderr, "TopoGeo_PolyFacesList() #1 error: %s\n", err_msg);
-	  sqlite3_free (err_msg);
-	  *retcode = -238;
-	  return 0;
-      }
-
-/* testing TopoGeo_LineEdgesList - ok */
-    ret =
-	sqlite3_exec (handle,
-		      "SELECT TopoGeo_LineEdgesList('elbasplit', NULL, 'elba_ln', 'geometry', 'line_edges_list')",
-		      NULL, NULL, &err_msg);
-    if (ret != SQLITE_OK)
-      {
-	  fprintf (stderr, "TopoGeo_LineEdgesList() #1 error: %s\n", err_msg);
-	  sqlite3_free (err_msg);
-	  *retcode = -239;
-	  return 0;
-      }
 
     return 1;
 }
@@ -1544,46 +1204,13 @@ do_level6_tests (sqlite3 * handle, int *retcode)
       }
     ret =
 	sqlite3_exec (handle,
-		      "UPDATE elba_edge SET left_face = NULL WHERE left_face = 0",
-		      NULL, NULL, &err_msg);
-    if (ret != SQLITE_OK)
-      {
-	  fprintf (stderr, "UPDATE Edge #1 error: %s\n", err_msg);
-	  sqlite3_free (err_msg);
-	  *retcode = -185;
-	  return 0;
-      }
-    ret =
-	sqlite3_exec (handle,
-		      "UPDATE elba_edge SET right_face = NULL WHERE right_face = 0",
-		      NULL, NULL, &err_msg);
-    if (ret != SQLITE_OK)
-      {
-	  fprintf (stderr, "UPDATE Edge #2 error: %s\n", err_msg);
-	  sqlite3_free (err_msg);
-	  *retcode = -186;
-	  return 0;
-      }
-    ret =
-	sqlite3_exec (handle,
-		      "UPDATE elba_node SET containing_face = NULL WHERE containing_face = 0",
-		      NULL, NULL, &err_msg);
-    if (ret != SQLITE_OK)
-      {
-	  fprintf (stderr, "UPDATE Edge #2 error: %s\n", err_msg);
-	  sqlite3_free (err_msg);
-	  *retcode = -187;
-	  return 0;
-      }
-    ret =
-	sqlite3_exec (handle,
 		      "DELETE FROM elba_face WHERE face_id = 0",
 		      NULL, NULL, &err_msg);
     if (ret != SQLITE_OK)
       {
 	  fprintf (stderr, "DELETE FROM Face #1 error: %s\n", err_msg);
 	  sqlite3_free (err_msg);
-	  *retcode = -188;
+	  *retcode = -185;
 	  return 0;
       }
     ret =
@@ -1595,7 +1222,7 @@ do_level6_tests (sqlite3 * handle, int *retcode)
       {
 	  fprintf (stderr, "INSERT INTO Node #3 error: %s\n", err_msg);
 	  sqlite3_free (err_msg);
-	  *retcode = -189;
+	  *retcode = -186;
 	  return 0;
       }
     ret =
@@ -1606,7 +1233,7 @@ do_level6_tests (sqlite3 * handle, int *retcode)
       {
 	  fprintf (stderr, "INSERT INTO Face #2 error: %s\n", err_msg);
 	  sqlite3_free (err_msg);
-	  *retcode = -190;
+	  *retcode = -187;
 	  return 0;
       }
     ret =
@@ -1618,7 +1245,7 @@ do_level6_tests (sqlite3 * handle, int *retcode)
       {
 	  fprintf (stderr, "INSERT INTO Edge #1 error: %s\n", err_msg);
 	  sqlite3_free (err_msg);
-	  *retcode = -191;
+	  *retcode = -188;
 	  return 0;
       }
     ret =
@@ -1630,7 +1257,7 @@ do_level6_tests (sqlite3 * handle, int *retcode)
       {
 	  fprintf (stderr, "INSERT INTO Node #4 error: %s\n", err_msg);
 	  sqlite3_free (err_msg);
-	  *retcode = -192;
+	  *retcode = -189;
 	  return 0;
       }
     ret =
@@ -1641,7 +1268,7 @@ do_level6_tests (sqlite3 * handle, int *retcode)
       {
 	  fprintf (stderr, "INSERT INTO Face #3 error: %s\n", err_msg);
 	  sqlite3_free (err_msg);
-	  *retcode = -193;
+	  *retcode = -190;
 	  return 0;
       }
     ret =
@@ -1653,7 +1280,7 @@ do_level6_tests (sqlite3 * handle, int *retcode)
       {
 	  fprintf (stderr, "INSERT INTO Edge #2 error: %s\n", err_msg);
 	  sqlite3_free (err_msg);
-	  *retcode = -194;
+	  *retcode = -191;
 	  return 0;
       }
 
@@ -1666,7 +1293,7 @@ do_level6_tests (sqlite3 * handle, int *retcode)
       {
 	  fprintf (stderr, "ValidateTopoGeo() #2 error: %s\n", err_msg);
 	  sqlite3_free (err_msg);
-	  *retcode = -195;
+	  *retcode = -192;
 	  return 0;
       }
 
@@ -2038,7 +1665,7 @@ do_level2_tests (sqlite3 * handle, int *retcode)
 /* loading a Point GeoTable */
     ret =
 	sqlite3_exec (handle,
-		      "SELECT TopoGeo_FromGeoTable('elba', NULL, 'elba_pg', 'centroid')",
+		      "SELECT TopoGeo_FromGeoTable('elba', NULL, 'elba_pg', 'centroid', 0)",
 		      NULL, NULL, &err_msg);
     if (ret != SQLITE_OK)
       {
@@ -2051,7 +1678,7 @@ do_level2_tests (sqlite3 * handle, int *retcode)
 /* loading a Polygon GeoTable */
     ret =
 	sqlite3_exec (handle,
-		      "SELECT TopoGeo_FromGeoTable('elba', NULL, 'elba_pg', 'geometry')",
+		      "SELECT TopoGeo_FromGeoTable('elba', NULL, 'elba_pg', 'geometry', 0)",
 		      NULL, NULL, &err_msg);
     if (ret != SQLITE_OK)
       {
@@ -2074,7 +1701,7 @@ do_level1_tests (sqlite3 * handle, int *retcode)
 /* loading a Linestring GeoTable */
     ret =
 	sqlite3_exec (handle,
-		      "SELECT TopoGeo_FromGeoTable('elba', NULL, 'elba_ln', NULL)",
+		      "SELECT TopoGeo_FromGeoTable('elba', NULL, 'elba_ln', NULL, 0)",
 		      NULL, NULL, &err_msg);
     if (ret != SQLITE_OK)
       {
@@ -2087,7 +1714,7 @@ do_level1_tests (sqlite3 * handle, int *retcode)
 /* loading a Point GeoTable */
     ret =
 	sqlite3_exec (handle,
-		      "SELECT TopoGeo_FromGeoTable('elba', NULL, 'elba_pg', 'centroid')",
+		      "SELECT TopoGeo_FromGeoTable('elba', NULL, 'elba_pg', 'centroid', 0)",
 		      NULL, NULL, &err_msg);
     if (ret != SQLITE_OK)
       {
@@ -2839,7 +2466,7 @@ do_level0_tests (sqlite3 * handle, int *retcode)
 /* attempting to load a Topology - non-existing Topology */
     ret =
 	sqlite3_exec (handle,
-		      "SELECT TopoGeo_FromGeoTable('wannebe', NULL, 'elba_ln', NULL)",
+		      "SELECT TopoGeo_FromGeoTable('wannebe', NULL, 'elba_ln', NULL, 0)",
 		      NULL, NULL, &err_msg);
     if (ret == SQLITE_OK)
       {
@@ -2863,7 +2490,7 @@ do_level0_tests (sqlite3 * handle, int *retcode)
 /* attempting to load a Topology - non-existing GeoTable */
     ret =
 	sqlite3_exec (handle,
-		      "SELECT TopoGeo_FromGeoTable('elba', NULL, 'wannabe', NULL)",
+		      "SELECT TopoGeo_FromGeoTable('elba', NULL, 'wannabe', NULL, 0)",
 		      NULL, NULL, &err_msg);
     if (ret == SQLITE_OK)
       {
@@ -2887,7 +2514,7 @@ do_level0_tests (sqlite3 * handle, int *retcode)
 /* attempting to load a Topology - wrong DB-prefix */
     ret =
 	sqlite3_exec (handle,
-		      "SELECT TopoGeo_FromGeoTable('elba', 'lollypop', 'elba_ln', NULL)",
+		      "SELECT TopoGeo_FromGeoTable('elba', 'lollypop', 'elba_ln', NULL, 0)",
 		      NULL, NULL, &err_msg);
     if (ret == SQLITE_OK)
       {
@@ -2911,7 +2538,7 @@ do_level0_tests (sqlite3 * handle, int *retcode)
 /* attempting to load a Topology - wrong geometry column */
     ret =
 	sqlite3_exec (handle,
-		      "SELECT TopoGeo_FromGeoTable('elba', NULL, 'elba_ln', 'none')",
+		      "SELECT TopoGeo_FromGeoTable('elba', NULL, 'elba_ln', 'none', 0)",
 		      NULL, NULL, &err_msg);
     if (ret == SQLITE_OK)
       {
@@ -2935,7 +2562,7 @@ do_level0_tests (sqlite3 * handle, int *retcode)
 /* attempting to load a Topology - mismatching SRID */
     ret =
 	sqlite3_exec (handle,
-		      "SELECT TopoGeo_FromGeoTable('badelba1', NULL, 'elba_ln', 'geometry')",
+		      "SELECT TopoGeo_FromGeoTable('badelba1', NULL, 'elba_ln', 'geometry', 0)",
 		      NULL, NULL, &err_msg);
     if (ret == SQLITE_OK)
       {
@@ -2961,7 +2588,7 @@ do_level0_tests (sqlite3 * handle, int *retcode)
 /* attempting to load a Topology - mismatching dims */
     ret =
 	sqlite3_exec (handle,
-		      "SELECT TopoGeo_FromGeoTable('badelba2', NULL, 'elba_ln', 'GEOMETRY')",
+		      "SELECT TopoGeo_FromGeoTable('badelba2', NULL, 'elba_ln', 'GEOMETRY', 0)",
 		      NULL, NULL, &err_msg);
     if (ret == SQLITE_OK)
       {
@@ -2987,7 +2614,7 @@ do_level0_tests (sqlite3 * handle, int *retcode)
 /* attempting to load a Topology - ambiguous geometry column */
     ret =
 	sqlite3_exec (handle,
-		      "SELECT TopoGeo_FromGeoTable('elba', NULL, 'elba_pg', NULL)",
+		      "SELECT TopoGeo_FromGeoTable('elba', NULL, 'elba_pg', NULL, 0)",
 		      NULL, NULL, &err_msg);
     if (ret == SQLITE_OK)
       {
@@ -4263,16 +3890,12 @@ do_level0_tests (sqlite3 * handle, int *retcode)
     return 1;
 }
 
-#endif
-#endif
-
 int
 main (int argc, char *argv[])
 {
     int retcode = 0;
 
 #ifdef ENABLE_RTTOPO		/* only if RTTOPO is enabled */
-#ifndef	OMIT_ICONV		/* only if ICONV is enabled */
     int ret;
     sqlite3 *handle;
     char *err_msg = NULL;
@@ -4281,6 +3904,9 @@ main (int argc, char *argv[])
 #ifdef _WIN32
     char *env;
 #endif /* not WIN32 */
+
+    if (argc > 1 || argv[0] == NULL)
+	argc = 1;		/* silencing stupid compiler warnings */
 
     old_SPATIALITE_SECURITY_ENV = getenv ("SPATIALITE_SECURITY");
 #ifdef _WIN32
@@ -4309,15 +3935,6 @@ main (int argc, char *argv[])
 	  goto end;
       }
 
-    ret = sqlite3_exec (handle, "PRAGMA foreign_keys=1", NULL, NULL, &err_msg);
-    if (ret != SQLITE_OK)
-      {
-	  fprintf (stderr, "PRAGMA foreign_keys=1 error: %s\n", err_msg);
-	  sqlite3_free (err_msg);
-	  sqlite3_close (handle);
-	  return -2;
-      }
-
     ret =
 	sqlite3_exec (handle, "SELECT InitSpatialMetadata(1)", NULL, NULL,
 		      &err_msg);
@@ -4326,7 +3943,7 @@ main (int argc, char *argv[])
 	  fprintf (stderr, "InitSpatialMetadata() error: %s\n", err_msg);
 	  sqlite3_free (err_msg);
 	  sqlite3_close (handle);
-	  return -3;
+	  return -2;
       }
 
 /* importing Elba (polygons) from SHP */
@@ -4339,7 +3956,7 @@ main (int argc, char *argv[])
 	  fprintf (stderr, "ImportSHP() elba-pg error: %s\n", err_msg);
 	  sqlite3_free (err_msg);
 	  sqlite3_close (handle);
-	  return -4;
+	  return -3;
       }
 
 /* importing Elba (linestrings) from SHP */
@@ -4352,7 +3969,7 @@ main (int argc, char *argv[])
 	  fprintf (stderr, "ImportSHP() elba-ln error: %s\n", err_msg);
 	  sqlite3_free (err_msg);
 	  sqlite3_close (handle);
-	  return -5;
+	  return -4;
       }
 
 /* importing Merano Roads (linestrings) from SHP */
@@ -4362,10 +3979,10 @@ main (int argc, char *argv[])
 		      NULL, NULL, &err_msg);
     if (ret != SQLITE_OK)
       {
-	  fprintf (stderr, "ImportSHP() roads error: %s\n", err_msg);
+	  fprintf (stderr, "ImportSHP() elba-ln error: %s\n", err_msg);
 	  sqlite3_free (err_msg);
 	  sqlite3_close (handle);
-	  return -6;
+	  return -5;
       }
 
     if (old_SPATIALITE_SECURITY_ENV)
@@ -4399,7 +4016,7 @@ main (int argc, char *argv[])
 	  fprintf (stderr, "AddGeometryColumn elba-pg error: %s\n", err_msg);
 	  sqlite3_free (err_msg);
 	  sqlite3_close (handle);
-	  return -7;
+	  return -6;
       }
     ret =
 	sqlite3_exec (handle,
@@ -4475,7 +4092,7 @@ main (int argc, char *argv[])
 
 /* creating a Topology 3D (wrong dims) */
     ret =
-	sqlite3_exec (handle, "SELECT CreateTopology('badelba2', 32632, 1, 01)",
+	sqlite3_exec (handle, "SELECT CreateTopology('badelba2', 32632, 0, 1)",
 		      NULL, NULL, &err_msg);
     if (ret != SQLITE_OK)
       {
@@ -4636,24 +4253,12 @@ main (int argc, char *argv[])
     if (!do_level9_tests (handle, &retcode))
 	goto end;
 
-/* basic tests: level 10 */
-    if (!do_level10_tests (handle, &retcode))
-	goto end;
-
-/* basic tests: level 11 */
-    if (!do_level11_tests (handle, &retcode))
-	goto end;
-
   end:
     spatialite_finalize_topologies (cache);
     sqlite3_close (handle);
     spatialite_cleanup_ex (cache);
 
-#endif
 #endif /* end RTTOPO conditional */
-
-    if (argc > 1 || argv[0] == NULL)
-	argc = 1;		/* silencing stupid compiler warnings */
 
     spatialite_shutdown ();
     return retcode;

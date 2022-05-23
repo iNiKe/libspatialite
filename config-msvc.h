@@ -6,19 +6,16 @@
 */
 
 /* Should be defined in order to enable GCP support. */
-#define ENABLE_GCP 1
+/* #undef ENABLE_GCP */
 
 /* Should be defined in order to enable GeoPackage support. */
-#define ENABLE_GEOPACKAGE 1
+/* #undef ENABLE_GEOPACKAGE */
 
 /* Should be defined in order to enable LIBXML2 support. */
 #define ENABLE_LIBXML2 1
 
 /* Should be defined in order to enable RTTOPO support. */
 #define ENABLE_RTTOPO 1
-
-/* Should be defined in order to enable GEOS_370 support. */
-#define GEOS_370 1
 
 /* Should be defined in order to enable GEOS_ADVANCED support. */
 #define GEOS_ADVANCED 1
@@ -28,9 +25,6 @@
 
 /* Should be defined in order to enable GEOS_REENTRANT (fully thread-safe). */
 #define GEOS_REENTRANT 1
-
-/* depending on SQLite library version. */
-#define HAVE_DECL_SQLITE_INDEX_CONSTRAINT_LIKE 1
 
 /* Define to 1 if you have the <dlfcn.h> header file. */
 #define HAVE_DLFCN_H 1
@@ -65,8 +59,8 @@
 /* Define to 1 if you have the <inttypes.h> header file. */
 #define HAVE_INTTYPES_H 1
 
-/* Define to 1 if you have the <librttopo.h> header file. */
-#define HAVE_LIBRTTOPO_H 1
+/* Define to 1 if you have the <liblwgeom.h> header file. */
+/* #undef HAVE_LIBLWGEOM_H */
 
 /* Define to 1 if you have the `sqlite3' library (-lsqlite3). */
 #define HAVE_LIBSQLITE3 1
@@ -94,10 +88,7 @@
 #define HAVE_MEMSET 1
 
 /* Define to 1 if you have the <proj_api.h> header file. */
-/* #undef HAVE_PROJ_API_H */
-
-/* Define to 1 if you have the <proj.h> header file. */
-#define HAVE_PROJ_H 1
+#define HAVE_PROJ_API_H 1
 
 /* Define to 1 if you have the <sqlite3ext.h> header file. */
 #define HAVE_SQLITE3EXT_H 1
@@ -186,9 +177,6 @@
 /* Should be defined in order to disable ICONV support. */
 /* #undef OMIT_ICONV */
 
-/* Should be defined in order to disable KNN support. */
-/* #undef OMIT_KNN */
-
 /* Should be defined in order to disable MATHSQL support. */
 /* #undef OMIT_MATHSQL */
 
@@ -205,7 +193,7 @@
 #define PACKAGE_NAME "libspatialite"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "libspatialite 5.0.0-beta1"
+#define PACKAGE_STRING "libspatialite 4.4.0-RC1"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "libspatialite"
@@ -214,16 +202,16 @@
 #define PACKAGE_URL ""
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "5.0.0-beta1"
+#define PACKAGE_VERSION "4.4.0-RC1"
 
-/* Should be defined in order to enable PROJ.6 support. */
-#define PROJ_NEW 1
+/* Should be defined when linking liblwgeom from PostGIS 2.1 (or later). */
+/* #undefine POSTGIS_2_1 */
 
 /* Define to 1 if you have the ANSI C header files. */
 #define STDC_HEADERS 1
 
 /* Should contain a text-string describing the intended target CPU */
-#define TARGET_CPU "MS Windows"
+#define TARGET_CPU "Win32"
 
 /* Define to 1 if you can safely include both <sys/time.h> and <time.h>. */
 #define TIME_WITH_SYS_TIME 1
@@ -232,7 +220,7 @@
 /* #undef TM_IN_SYS_TIME */
 
 /* Version number of package */
-#define VERSION "5.0.0-beta1"
+#define VERSION "4.4.0-RC1"
 
 /* Must be =64 in order to enable huge-file support. */
 #define _FILE_OFFSET_BITS 64

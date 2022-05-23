@@ -1,7 +1,0 @@
-GetVirtualTableExtent() - BLOB VirtualTable name
-:memory: #use in-memory database
-SELECT GetVirtualTableExtent(zeroblob(10))
-1 # rows (not including the header row)
-1 # columns
-GetVirtualTableExtent(zeroblob(10))
-(NULL)

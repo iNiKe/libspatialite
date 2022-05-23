@@ -1,8 +1,0 @@
-ReCreateRasterCoveragesTriggers
-NEW:memory: #use in-memory database
-SELECT ReCreateRasterCoveragesTriggers();
-1 # rows (not including the header row)
-1 # columns
-ReCreateRasterCoveragesTriggers()
-1
-
