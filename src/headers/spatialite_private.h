@@ -1,7 +1,7 @@
 /* 
  spatialite.h -- Gaia spatial support for SQLite 
   
- version 4.3, 2015 June 29
+ version 5.0, 2020 August 1
 
  Author: Sandro Furieri a.furieri@lqt.it
 
@@ -23,7 +23,7 @@ The Original Code is the SpatiaLite library
 
 The Initial Developer of the Original Code is Alessandro Furieri
  
-Portions created by the Initial Developer are Copyright (C) 2008-2015
+Portions created by the Initial Developer are Copyright (C) 2008-2020
 the Initial Developer. All Rights Reserved.
 
 Contributor(s):
@@ -48,6 +48,7 @@ the terms of any one of the MPL, the GPL or the LGPL.
 #include <zlib.h>
 
 #include "spatialite/gg_sequence.h"
+#include "spatialite/sqlite.h"
 
 /**
  \file spatialite_private.h
@@ -134,7 +135,7 @@ extern "C"
 	struct splite_savepoint *next;
     };
 
-    struct splite_shp_extent
+    struct splite_vtable_extent
     {
 	char *table;
 	double minx;
@@ -142,8 +143,19 @@ extern "C"
 	double miny;
 	double maxy;
 	int srid;
-	struct splite_shp_extent *prev;
-	struct splite_shp_extent *next;
+	struct splite_vtable_extent *prev;
+	struct splite_vtable_extent *next;
+    };
+
+    struct gaia_variant_value
+    {
+	/* a struct/union intended to store a SQLite Variant Value */
+	int dataType;		/* one of SQLITE_NULL, SQLITE_INTEGER, SQLITE_FLOAT, SQLITE_TEXT or SQLITE_BLOB */
+	sqlite3_int64 intValue;
+	double dblValue;
+	char *textValue;
+	unsigned char *blobValue;
+	int size;
     };
 
 #define MAX_XMLSCHEMA_CACHE	16
@@ -174,6 +186,7 @@ extern "C"
 	char *gaia_geosaux_error_msg;
 	char *gaia_rttopo_error_msg;
 	char *gaia_rttopo_warning_msg;
+	char *gaia_proj_error_msg;
 	int silent_mode;
 	void *firstTopology;
 	void *lastTopology;
@@ -187,16 +200,28 @@ extern "C"
 	struct splite_savepoint *last_net_svpt;
 	gaiaSequencePtr first_seq;
 	gaiaSequencePtr last_seq;
-	struct splite_shp_extent *first_shp_extent;
-	struct splite_shp_extent *last_shp_extent;
+	struct splite_vtable_extent *first_vtable_extent;
+	struct splite_vtable_extent *last_vtable_extent;
 	int ok_last_used_sequence;
 	int last_used_sequence_val;
 	char *SqlProcLogfile;
+	int SqlProcLogfileAppend;
 	FILE *SqlProcLog;
 	int SqlProcContinue;
+	struct gaia_variant_value *SqlProcRetValue;
 	int tinyPointEnabled;
 	unsigned char magic2;
 	char *lastPostgreSqlError;
+	int buffer_end_cap_style;
+	int buffer_join_style;
+	double buffer_mitre_limit;
+	int buffer_quadrant_segments;
+	int proj6_cached;
+	void *proj6_cached_pj;
+	char *proj6_cached_string_1;
+	char *proj6_cached_string_2;
+	void *proj6_cached_area;
+	int is_pause_enabled;
     };
 
     struct epsg_defs
@@ -355,6 +380,13 @@ extern "C"
 
     SPATIALITE_PRIVATE int createGeometryColumns (void *p_sqlite);
 
+    SPATIALITE_PRIVATE int createTemporarySpatialRefSys (void *p_sqlite,
+							 const char *db_prefix);
+
+    SPATIALITE_PRIVATE int createTemporaryGeometryColumns (void *p_sqlite,
+							   const char
+							   *db_prefix);
+
     SPATIALITE_PRIVATE int check_layer_statistics (void *p_sqlite);
 
     SPATIALITE_PRIVATE int check_views_layer_statistics (void *p_sqlite);
@@ -365,12 +397,26 @@ extern "C"
 						    const char *table,
 						    const char *column);
 
+    SPATIALITE_PRIVATE void updateTemporaryGeometryTriggers (void *p_sqlite,
+							     const char
+							     *db_prefix,
+							     const char *table,
+							     const char
+							     *column);
+
     SPATIALITE_PRIVATE int upgradeGeometryTriggers (void *p_sqlite);
 
     SPATIALITE_PRIVATE int getRealSQLnames (void *p_sqlite, const char *table,
 					    const char *column,
 					    char **real_table,
 					    char **real_column);
+
+    SPATIALITE_PRIVATE int getRealSQLnamesTemporary (void *p_sqlite,
+						     const char *db_prefix,
+						     const char *table,
+						     const char *column,
+						     char **real_table,
+						     char **real_column);
 
     /* DEPRECATED - always use buildSpatialIndexEx */
     SPATIALITE_PRIVATE void buildSpatialIndex (void *p_sqlite,
@@ -381,7 +427,17 @@ extern "C"
 						const unsigned char *table,
 						const char *column);
 
+    SPATIALITE_PRIVATE int buildTemporarySpatialIndex (void *p_sqlite,
+						       const char *db_prefix,
+						       const unsigned char
+						       *table,
+						       const char *column);
+
     SPATIALITE_PRIVATE int validateRowid (void *p_sqlite, const char *table);
+
+    SPATIALITE_PRIVATE int validateTemporaryRowid (void *p_sqlite,
+						   const char *db_prefix,
+						   const char *table);
 
     SPATIALITE_PRIVATE int doComputeFieldInfos (void *p_sqlite,
 						const char *table,
@@ -390,6 +446,11 @@ extern "C"
 
     SPATIALITE_PRIVATE void getProjParams (void *p_sqlite, int srid,
 					   char **params);
+
+    SPATIALITE_PRIVATE void getProjWkt (void *p_sqlite, int srid, char **wkt);
+
+    SPATIALITE_PRIVATE void getProjAuthNameSrid (void *p_sqlite, int srid,
+						 char **auth_name_srid);
 
     SPATIALITE_PRIVATE int getEllipsoidParams (void *p_sqlite, int srid,
 					       double *a, double *b,
@@ -433,6 +494,10 @@ extern "C"
     SPATIALITE_PRIVATE int createStylingTables_ex (void *p_sqlite,
 						   int relaxed,
 						   int transaction);
+
+    SPATIALITE_PRIVATE int reCreateStylingTriggers (void *p_sqlite,
+						    int relaxed,
+						    int transaction);
 
     SPATIALITE_PRIVATE int register_external_graphic (void *p_sqlite,
 						      const char *xlink_href,
@@ -547,82 +612,18 @@ extern "C"
 							  *coverage_name,
 							  int transaction);
 
-    /* DEPRECATED - always use register_styled_group_ex */
-    SPATIALITE_PRIVATE int register_styled_group (void *p_sqlite,
-						  const char *group_name,
-						  const char *f_table_name,
-						  const char
-						  *f_geometry_column,
-						  const char *coverage_name,
-						  int paint_order);
+    SPATIALITE_PRIVATE int register_map_configuration (void *p_sqlite,
+						       const unsigned char
+						       *p_blob, int n_bytes);
 
-    SPATIALITE_PRIVATE int register_styled_group_ex (void *p_sqlite,
-						     const char *group_name,
-						     const char
-						     *vector_coverage_name,
-						     const char
-						     *raster_coverage_name);
+    SPATIALITE_PRIVATE int unregister_map_configuration (void *p_sqlite,
+							 int id,
+							 const char *name);
 
-    SPATIALITE_PRIVATE int set_styled_group_layer_paint_order (void *p_sqlite,
-							       int item_id,
-							       const char
-							       *group_name,
-							       const char
-							       *vector_coverage_name,
-							       const char
-							       *raster_coverage_name,
-							       int paint_order);
-
-    SPATIALITE_PRIVATE int unregister_styled_group (void *p_sqlite,
-						    const char *group_name);
-
-    SPATIALITE_PRIVATE int unregister_styled_group_layer (void *p_sqlite,
-							  int item_id,
-							  const char
-							  *group_name,
-							  const char
-							  *vector_coverage_name,
-							  const char
-							  *raster_coverage_name);
-
-    SPATIALITE_PRIVATE int styled_group_set_infos (void *p_sqlite,
-						   const char *group_name,
-						   const char *title,
-						   const char *abstract);
-
-    /* DEPRECATED - always use register_group_style_ex */
-    SPATIALITE_PRIVATE int register_group_style (void *p_sqlite,
-						 const char *group_name,
-						 int style_id,
-						 const unsigned char *p_blob,
-						 int n_bytes);
-
-    SPATIALITE_PRIVATE int register_group_style_ex (void *p_sqlite,
-						    const unsigned char
-						    *p_blob, int n_bytes);
-
-    SPATIALITE_PRIVATE int unregister_group_style (void *p_sqlite,
-						   int style_id,
-						   const char *style_name,
-						   int remove_all);
-
-    SPATIALITE_PRIVATE int reload_group_style (void *p_sqlite, int style_id,
-					       const char *style_name,
-					       const unsigned char *p_blob,
-					       int n_bytes);
-
-    SPATIALITE_PRIVATE int register_styled_group_style (void *p_sqlite,
-							const char
-							*group_name,
-							int style_id,
-							const char *style_name);
-
-    SPATIALITE_PRIVATE int unregister_styled_group_style (void *p_sqlite,
-							  const char
-							  *group_name,
-							  int style_id,
-							  const char
-							  *style_name);
+    SPATIALITE_PRIVATE int reload_map_configuration (void *p_sqlite, int id,
+						     const char *name,
+						     const unsigned char
+						     *p_blob, int n_bytes);
 
     SPATIALITE_PRIVATE int createIsoMetadataTables (void *p_sqlite,
 						    int relaxed);
@@ -638,12 +639,14 @@ extern "C"
 						  const char *fileIdentifier);
 
     SPATIALITE_PRIVATE int createRasterCoveragesTable (void *p_sqlite);
+    SPATIALITE_PRIVATE int reCreateRasterCoveragesTriggers (void *p_sqlite);
 
     SPATIALITE_PRIVATE int checkPopulatedCoverage (void *p_sqlite,
 						   const char *db_prefix,
 						   const char *coverage_name);
 
     SPATIALITE_PRIVATE int createVectorCoveragesTable (void *p_sqlite);
+    SPATIALITE_PRIVATE int reCreateVectorCoveragesTriggers (void *p_sqlite);
 
     SPATIALITE_PRIVATE int register_vector_coverage (void *p_sqlite,
 						     const char
@@ -668,15 +671,17 @@ extern "C"
 							   int is_queryable,
 							   int is_editable);
 
-    SPATIALITE_PRIVATE int register_virtual_shp_coverage (void *p_sqlite,
-							  const char
-							  *coverage_name,
-							  const char *virt_name,
-							  const char
-							  *virt_geometry,
-							  const char *title,
-							  const char *abstract,
-							  int is_queryable);
+    SPATIALITE_PRIVATE int register_virtual_table_coverage (void *p_sqlite,
+							    const char
+							    *coverage_name,
+							    const char
+							    *virt_name,
+							    const char
+							    *virt_geometry,
+							    const char *title,
+							    const char
+							    *abstract,
+							    int is_queryable);
 
     SPATIALITE_PRIVATE int register_topogeo_coverage (void *p_sqlite,
 						      const char
@@ -983,10 +988,17 @@ extern "C"
     SPATIALITE_PRIVATE void fnctaux_CreateTopoTables (const void *context,
 						      int argc,
 						      const void *argv);
+    SPATIALITE_PRIVATE void fnctaux_ReCreateTopoTriggers (const void *context,
+							  int argc,
+							  const void *argv);
 
     SPATIALITE_PRIVATE int do_create_topologies (void *sqlite_handle);
+    SPATIALITE_PRIVATE void drop_topologies_triggers (void *sqlite_handle);
+    SPATIALITE_PRIVATE int do_create_topologies_triggers (void *sqlite_handle);
 
     SPATIALITE_PRIVATE int do_create_networks (void *sqlite_handle);
+    SPATIALITE_PRIVATE void drop_networks_triggers (void *sqlite_handle);
+    SPATIALITE_PRIVATE int do_create_networks_triggers (void *sqlite_handle);
 
     SPATIALITE_PRIVATE void fnctaux_CreateTopology (const void *context,
 						    int argc, const void *argv);
@@ -1239,18 +1251,18 @@ extern "C"
     SPATIALITE_PRIVATE void rollback_topo_savepoint (const void *handle,
 						     const void *cache);
 
-    SPATIALITE_PRIVATE void add_shp_extent (const char *table, double minx,
-					    double miny, double maxx,
-					    double maxy, int srid,
-					    const void *cache);
-
-    SPATIALITE_PRIVATE void remove_shp_extent (const char *table,
+    SPATIALITE_PRIVATE void add_vtable_extent (const char *table, double minx,
+					       double miny, double maxx,
+					       double maxy, int srid,
 					       const void *cache);
 
-    SPATIALITE_PRIVATE int get_shp_extent (const char *table, double *minx,
-					   double *miny, double *maxx,
-					   double *maxy, int *srid,
-					   const void *cache);
+    SPATIALITE_PRIVATE void remove_vtable_extent (const char *table,
+						  const void *cache);
+
+    SPATIALITE_PRIVATE int get_vtable_extent (const char *table, double *minx,
+					      double *miny, double *maxx,
+					      double *maxy, int *srid,
+					      const void *cache);
 
 /* Topology-Network SQL functions */
     SPATIALITE_PRIVATE void fnctaux_GetLastNetworkException (const void
@@ -1432,6 +1444,91 @@ extern "C"
 
     SPATIALITE_PRIVATE void gaia_sql_proc_set_error (const void *p_cache,
 						     const char *errmsg);
+
+    SPATIALITE_PRIVATE struct gaia_variant_value *gaia_alloc_variant ();
+
+    SPATIALITE_PRIVATE void gaia_free_variant (struct gaia_variant_value
+					       *variant);
+
+    SPATIALITE_PRIVATE void gaia_set_variant_null (struct gaia_variant_value
+						   *variant);
+
+    SPATIALITE_PRIVATE void gaia_set_variant_int64 (struct gaia_variant_value
+						    *variant,
+						    sqlite3_int64 value);
+
+    SPATIALITE_PRIVATE void gaia_set_variant_double (struct gaia_variant_value
+						     *variant, double value);
+
+    SPATIALITE_PRIVATE int gaia_set_variant_text (struct gaia_variant_value
+						  *variant, const char *value,
+						  int size);
+
+    SPATIALITE_PRIVATE int gaia_set_variant_blob (struct gaia_variant_value
+						  *variant,
+						  const unsigned char *value,
+						  int size);
+
+#ifdef _WIN32
+    SPATIALITE_PRIVATE void splite_pause_windows (void);
+#else
+    SPATIALITE_PRIVATE void splite_pause_signal (void);
+#endif
+
+    SPATIALITE_PRIVATE void finalize_topologies (const void *p_cache);
+
+    SPATIALITE_PRIVATE int create_data_licenses (sqlite3 * sqlite);
+
+    SPATIALITE_PRIVATE int create_geometry_columns_time (sqlite3 * sqlite);
+
+    SPATIALITE_PRIVATE int create_spatial_ref_sys_aux (sqlite3 * handle);
+
+    SPATIALITE_PRIVATE int create_raster_coverages (sqlite3 * sqlite);
+
+    SPATIALITE_PRIVATE int create_vector_coverages (sqlite3 * sqlite);
+
+    SPATIALITE_PRIVATE int create_wms_tables (sqlite3 * sqlite);
+
+    SPATIALITE_PRIVATE int create_external_graphics (sqlite3 * sqlite);
+
+    SPATIALITE_PRIVATE int create_fonts (sqlite3 * sqlite);
+
+    SPATIALITE_PRIVATE int create_raster_styles (sqlite3 * sqlite, int relaxed);
+
+    SPATIALITE_PRIVATE int create_raster_styled_layers (sqlite3 * sqlite);
+
+    SPATIALITE_PRIVATE int create_vector_styles (sqlite3 * sqlite, int relaxed);
+
+    SPATIALITE_PRIVATE int create_vector_styled_layers (sqlite3 * sqlite);
+
+    SPATIALITE_PRIVATE int create_iso_metadata (sqlite3 * sqlite, int relaxed);
+
+    SPATIALITE_PRIVATE int create_iso_metadata_reference (sqlite3 * sqlite);
+
+    SPATIALITE_PRIVATE int create_iso_metadata_view (sqlite3 * sqlite);
+
+    SPATIALITE_PRIVATE int create_rl2map_configurations (sqlite3 * sqlite,
+							 int relaxed);
+
+    SPATIALITE_PRIVATE int create_rl2map_configurations_view (sqlite3 * sqlite);
+
+    SPATIALITE_PRIVATE int create_external_graphics_view (sqlite3 * sqlite);
+
+    SPATIALITE_PRIVATE int create_fonts_view (sqlite3 * sqlite);
+
+    SPATIALITE_PRIVATE int create_raster_styled_layers_view (sqlite3 * sqlite);
+
+    SPATIALITE_PRIVATE int create_raster_styles_view (sqlite3 * sqlite);
+
+    SPATIALITE_PRIVATE int create_vector_styles_view (sqlite3 * sqlite);
+
+    SPATIALITE_PRIVATE int create_vector_styled_layers_view (sqlite3 * sqlite);
+
+    SPATIALITE_PRIVATE int createMissingSystemTables (sqlite3 * sqlite,
+						      const void *cache,
+						      int relaxed,
+						      int transaction,
+						      char **err_msg);
 
 #ifdef __cplusplus
 }

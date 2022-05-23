@@ -2,7 +2,7 @@
 
  gg_geometries.c -- Gaia geometric objects
   
- version 4.3, 2015 June 29
+ version 5.0, 2020 August 1
 
  Author: Sandro Furieri a.furieri@lqt.it
 
@@ -24,7 +24,7 @@ The Original Code is the SpatiaLite library
 
 The Initial Developer of the Original Code is Alessandro Furieri
  
-Portions created by the Initial Developer are Copyright (C) 2008-2015
+Portions created by the Initial Developer are Copyright (C) 2008-2020
 the Initial Developer. All Rights Reserved.
 
 Contributor(s):
@@ -2617,6 +2617,46 @@ gaiaMRangeLinestring (gaiaLinestringPtr line, double *min, double *max)
 }
 
 GAIAGEO_DECLARE void
+gaiaMRangeLinestringEx (gaiaLinestringPtr line, double nodata, double *min,
+			double *max)
+{
+/* computes the M-range [min/max] for this linestring (NODATA flavor) */
+    int iv;
+    double x;
+    double y;
+    double z;
+    double m;
+    *min = DBL_MAX;
+    *max = -DBL_MAX;
+    for (iv = 0; iv < line->Points; iv++)
+      {
+	  m = 0.0;
+	  if (line->DimensionModel == GAIA_XY_Z)
+	    {
+		gaiaGetPointXYZ (line->Coords, iv, &x, &y, &z);
+	    }
+	  else if (line->DimensionModel == GAIA_XY_M)
+	    {
+		gaiaGetPointXYM (line->Coords, iv, &x, &y, &m);
+	    }
+	  else if (line->DimensionModel == GAIA_XY_Z_M)
+	    {
+		gaiaGetPointXYZM (line->Coords, iv, &x, &y, &z, &m);
+	    }
+	  else
+	    {
+		gaiaGetPoint (line->Coords, iv, &x, &y);
+	    }
+	  if (m == nodata)
+	      continue;
+	  if (m < *min)
+	      *min = m;
+	  if (m > *max)
+	      *max = m;
+      }
+}
+
+GAIAGEO_DECLARE void
 gaiaMRangeRing (gaiaRingPtr rng, double *min, double *max)
 {
 /* computes the M-range [min/max] for this ring */
@@ -2654,6 +2694,45 @@ gaiaMRangeRing (gaiaRingPtr rng, double *min, double *max)
 }
 
 GAIAGEO_DECLARE void
+gaiaMRangeRingEx (gaiaRingPtr rng, double nodata, double *min, double *max)
+{
+/* computes the M-range [min/max] for this ring (NODATA flavor) */
+    int iv;
+    double x;
+    double y;
+    double z;
+    double m;
+    *min = DBL_MAX;
+    *max = -DBL_MAX;
+    for (iv = 0; iv < rng->Points; iv++)
+      {
+	  m = 0.0;
+	  if (rng->DimensionModel == GAIA_XY_Z)
+	    {
+		gaiaGetPointXYZ (rng->Coords, iv, &x, &y, &z);
+	    }
+	  else if (rng->DimensionModel == GAIA_XY_M)
+	    {
+		gaiaGetPointXYM (rng->Coords, iv, &x, &y, &m);
+	    }
+	  else if (rng->DimensionModel == GAIA_XY_Z_M)
+	    {
+		gaiaGetPointXYZM (rng->Coords, iv, &x, &y, &z, &m);
+	    }
+	  else
+	    {
+		gaiaGetPoint (rng->Coords, iv, &x, &y);
+	    }
+	  if (m == nodata)
+	      continue;
+	  if (m < *min)
+	      *min = m;
+	  if (m > *max)
+	      *max = m;
+      }
+}
+
+GAIAGEO_DECLARE void
 gaiaMRangePolygon (gaiaPolygonPtr polyg, double *min, double *max)
 {
 /* computes the M-range [min/max] for this polygon */
@@ -2673,6 +2752,34 @@ gaiaMRangePolygon (gaiaPolygonPtr polyg, double *min, double *max)
       {
 	  rng = polyg->Interiors + ib;
 	  gaiaMRangeRing (rng, &r_min, &r_max);
+	  if (r_min < *min)
+	      *min = r_min;
+	  if (r_max > *max)
+	      *max = r_max;
+      }
+}
+
+GAIAGEO_DECLARE void
+gaiaMRangePolygonEx (gaiaPolygonPtr polyg, double nodata, double *min,
+		     double *max)
+{
+/* computes the M-range [min/max] for this polygon (NODATA flavor) */
+    gaiaRingPtr rng;
+    int ib;
+    double r_min;
+    double r_max;
+    *min = DBL_MAX;
+    *max = -DBL_MAX;
+    rng = polyg->Exterior;
+    gaiaMRangeRingEx (rng, nodata, &r_min, &r_max);
+    if (r_min < *min)
+	*min = r_min;
+    if (r_max > *max)
+	*max = r_max;
+    for (ib = 0; ib < polyg->NumInteriors; ib++)
+      {
+	  rng = polyg->Interiors + ib;
+	  gaiaMRangeRingEx (rng, nodata, &r_min, &r_max);
 	  if (r_min < *min)
 	      *min = r_min;
 	  if (r_max > *max)
@@ -2728,6 +2835,56 @@ gaiaMRangeGeometry (gaiaGeomCollPtr geom, double *min, double *max)
 }
 
 GAIAGEO_DECLARE void
+gaiaMRangeGeometryEx (gaiaGeomCollPtr geom, double nodata, double *min,
+		      double *max)
+{
+/* computes the M-range [min/max] for this geometry */
+    gaiaPointPtr point = NULL;
+    gaiaLinestringPtr line = NULL;
+    gaiaPolygonPtr polyg = NULL;
+    double m;
+    double r_min;
+    double r_max;
+    *min = DBL_MAX;
+    *max = -DBL_MAX;
+    point = geom->FirstPoint;
+    while (point)
+      {
+	  m = 0.0;
+	  if (point->DimensionModel == GAIA_XY_M
+	      || point->DimensionModel == GAIA_XY_Z_M)
+	      m = point->M;
+	  if (m == nodata)
+	      continue;
+	  if (m < *min)
+	      *min = m;
+	  if (m > *max)
+	      *max = m;
+	  point = point->Next;
+      }
+    line = geom->FirstLinestring;
+    while (line)
+      {
+	  gaiaMRangeLinestringEx (line, nodata, &r_min, &r_max);
+	  if (r_min < *min)
+	      *min = r_min;
+	  if (r_max > *max)
+	      *max = r_max;
+	  line = line->Next;
+      }
+    polyg = geom->FirstPolygon;
+    while (polyg)
+      {
+	  gaiaMRangePolygonEx (polyg, nodata, &r_min, &r_max);
+	  if (r_min < *min)
+	      *min = r_min;
+	  if (r_max > *max)
+	      *max = r_max;
+	  polyg = polyg->Next;
+      }
+}
+
+GAIAGEO_DECLARE void
 gaiaZRangeLinestring (gaiaLinestringPtr line, double *min, double *max)
 {
 /* computes the Z-range [min/max] for this linestring */
@@ -2758,6 +2915,47 @@ gaiaZRangeLinestring (gaiaLinestringPtr line, double *min, double *max)
 	    {
 		gaiaGetPoint (line->Coords, iv, &x, &y);
 	    }
+	  if (z < *min)
+	      *min = z;
+	  if (z > *max)
+	      *max = z;
+      }
+}
+
+GAIAGEO_DECLARE void
+gaiaZRangeLinestringEx (gaiaLinestringPtr line, double nodata, double *min,
+			double *max)
+{
+/* computes the Z-range [min/max] for this linestring (NODATA flavor) */
+    int iv;
+    double x;
+    double y;
+    double z;
+    double m;
+    *min = DBL_MAX;
+    *max = -DBL_MAX;
+    for (iv = 0; iv < line->Points; iv++)
+      {
+	  z = 0.0;
+	  m = 0.0;
+	  if (line->DimensionModel == GAIA_XY_Z)
+	    {
+		gaiaGetPointXYZ (line->Coords, iv, &x, &y, &z);
+	    }
+	  else if (line->DimensionModel == GAIA_XY_M)
+	    {
+		gaiaGetPointXYM (line->Coords, iv, &x, &y, &m);
+	    }
+	  else if (line->DimensionModel == GAIA_XY_Z_M)
+	    {
+		gaiaGetPointXYZM (line->Coords, iv, &x, &y, &z, &m);
+	    }
+	  else
+	    {
+		gaiaGetPoint (line->Coords, iv, &x, &y);
+	    }
+	  if (z == nodata)
+	      continue;
 	  if (z < *min)
 	      *min = z;
 	  if (z > *max)
@@ -2804,6 +3002,46 @@ gaiaZRangeRing (gaiaRingPtr rng, double *min, double *max)
 }
 
 GAIAGEO_DECLARE void
+gaiaZRangeRingEx (gaiaRingPtr rng, double nodata, double *min, double *max)
+{
+/* computes the Z-range [min/max] for this ring (NODATA flavor) */
+    int iv;
+    double x;
+    double y;
+    double z;
+    double m;
+    *min = DBL_MAX;
+    *max = -DBL_MAX;
+    for (iv = 0; iv < rng->Points; iv++)
+      {
+	  z = 0.0;
+	  m = 0.0;
+	  if (rng->DimensionModel == GAIA_XY_Z)
+	    {
+		gaiaGetPointXYZ (rng->Coords, iv, &x, &y, &z);
+	    }
+	  else if (rng->DimensionModel == GAIA_XY_M)
+	    {
+		gaiaGetPointXYM (rng->Coords, iv, &x, &y, &m);
+	    }
+	  else if (rng->DimensionModel == GAIA_XY_Z_M)
+	    {
+		gaiaGetPointXYZM (rng->Coords, iv, &x, &y, &z, &m);
+	    }
+	  else
+	    {
+		gaiaGetPoint (rng->Coords, iv, &x, &y);
+	    }
+	  if (z == nodata)
+	      continue;
+	  if (z < *min)
+	      *min = z;
+	  if (z > *max)
+	      *max = z;
+      }
+}
+
+GAIAGEO_DECLARE void
 gaiaZRangePolygon (gaiaPolygonPtr polyg, double *min, double *max)
 {
 /* computes the Z-range [min/max] for this polygon */
@@ -2823,6 +3061,34 @@ gaiaZRangePolygon (gaiaPolygonPtr polyg, double *min, double *max)
       {
 	  rng = polyg->Interiors + ib;
 	  gaiaZRangeRing (rng, &r_min, &r_max);
+	  if (r_min < *min)
+	      *min = r_min;
+	  if (r_max > *max)
+	      *max = r_max;
+      }
+}
+
+GAIAGEO_DECLARE void
+gaiaZRangePolygonEx (gaiaPolygonPtr polyg, double nodata, double *min,
+		     double *max)
+{
+/* computes the Z-range [min/max] for this polygon (NODATA flavor) */
+    gaiaRingPtr rng;
+    int ib;
+    double r_min;
+    double r_max;
+    *min = DBL_MAX;
+    *max = -DBL_MAX;
+    rng = polyg->Exterior;
+    gaiaZRangeRingEx (rng, nodata, &r_min, &r_max);
+    if (r_min < *min)
+	*min = r_min;
+    if (r_max > *max)
+	*max = r_max;
+    for (ib = 0; ib < polyg->NumInteriors; ib++)
+      {
+	  rng = polyg->Interiors + ib;
+	  gaiaZRangeRingEx (rng, nodata, &r_min, &r_max);
 	  if (r_min < *min)
 	      *min = r_min;
 	  if (r_max > *max)
@@ -2869,6 +3135,56 @@ gaiaZRangeGeometry (gaiaGeomCollPtr geom, double *min, double *max)
     while (polyg)
       {
 	  gaiaZRangePolygon (polyg, &r_min, &r_max);
+	  if (r_min < *min)
+	      *min = r_min;
+	  if (r_max > *max)
+	      *max = r_max;
+	  polyg = polyg->Next;
+      }
+}
+
+GAIAGEO_DECLARE void
+gaiaZRangeGeometryEx (gaiaGeomCollPtr geom, double nodata, double *min,
+		      double *max)
+{
+/* computes the Z-range [min/max] for this geometry (NODATA flavor) */
+    gaiaPointPtr point = NULL;
+    gaiaLinestringPtr line = NULL;
+    gaiaPolygonPtr polyg = NULL;
+    double z;
+    double r_min;
+    double r_max;
+    *min = DBL_MAX;
+    *max = -DBL_MAX;
+    point = geom->FirstPoint;
+    while (point)
+      {
+	  z = 0.0;
+	  if (point->DimensionModel == GAIA_XY_Z
+	      || point->DimensionModel == GAIA_XY_Z_M)
+	      z = point->Z;
+	  if (z == nodata)
+	      continue;
+	  if (z < *min)
+	      *min = z;
+	  if (z > *max)
+	      *max = z;
+	  point = point->Next;
+      }
+    line = geom->FirstLinestring;
+    while (line)
+      {
+	  gaiaZRangeLinestringEx (line, nodata, &r_min, &r_max);
+	  if (r_min < *min)
+	      *min = r_min;
+	  if (r_max > *max)
+	      *max = r_max;
+	  line = line->Next;
+      }
+    polyg = geom->FirstPolygon;
+    while (polyg)
+      {
+	  gaiaZRangePolygonEx (polyg, nodata, &r_min, &r_max);
 	  if (r_min < *min)
 	      *min = r_min;
 	  if (r_max > *max)
@@ -4709,6 +5025,8 @@ gaiaInterpolatePoint (const void *p_cache, gaiaGeomCollPtr line,
     double m0;
     double progressive_length;
     double pl0;
+    double length;
+    double normalized_len;
 
     if (!line)
 	return 0;
@@ -4742,9 +5060,18 @@ gaiaInterpolatePoint (const void *p_cache, gaiaGeomCollPtr line,
 
 /* locating the Point along the Line */
     if (p_cache != NULL)
-	fraction = gaiaLineLocatePoint_r (p_cache, line, point);
+      {
+	  if (!gaiaGeomCollLengthOrPerimeter_r (p_cache, line, 0, &length))
+	      return 0;
+	  fraction = gaiaLineLocatePoint_r (p_cache, line, point);
+      }
     else
-	fraction = gaiaLineLocatePoint (line, point);
+      {
+	  if (!gaiaGeomCollLengthOrPerimeter (line, 0, &length))
+	      return 0;
+	  fraction = gaiaLineLocatePoint (line, point);
+      }
+    normalized_len = length * fraction;
 
     pL = line->FirstLinestring;
     if (fraction <= 0.0)
@@ -4795,20 +5122,23 @@ gaiaInterpolatePoint (const void *p_cache, gaiaGeomCollPtr line,
 
 	  if (iv != 0)
 	    {
-		progressive_length +=
+		double length =
 		    sqrt (((x0 - x) * (x0 - x)) + ((y0 - y) * (y0 - y)));
-		if (progressive_length == fraction)
+		progressive_length += length;
+
+		if (progressive_length == normalized_len)
 		  {
 		      /* special case: exactly intercepting a vertex */
 		      *m_value = m;
 		      return 1;
 		  }
-		if (progressive_length > fraction)
+		if (progressive_length > normalized_len)
 		  {
 		      /* interpolating the M-Value */
 		      double interval = m - m0;
-		      double diff = fraction - pl0;
-		      *m_value = m0 + (interval * diff);
+		      double diff = normalized_len - pl0;
+		      double ratio = diff / length;
+		      *m_value = m0 + (interval * ratio);
 		      break;
 		  }
 	    }
@@ -5083,7 +5413,7 @@ gaiaTrajectoryInterpolatePoint (gaiaGeomCollPtr geom, double m_value)
     point->Srid = geom->Srid;
     point->DeclaredType = GAIA_POINT;
 
-    ln = geom->FirstLinestring;	
+    ln = geom->FirstLinestring;
 /* testing if m < StartPoint */
     if (ln->DimensionModel == GAIA_XY_Z_M)
       {
@@ -5121,6 +5451,7 @@ gaiaTrajectoryInterpolatePoint (gaiaGeomCollPtr geom, double m_value)
 	  return point;
       }
 
+    prev_m = 0.0 - DBL_MAX;
     ln = geom->FirstLinestring;
     for (iv = 0; iv < ln->Points; iv++)
       {

@@ -2,7 +2,7 @@
 
  table_cloner.c -- Cloning a Table
 
- version 4.3, 2015 June 29
+ version 5.0, 2020 August 1
 
  Author: Sandro Furieri a.furieri@lqt.it
 
@@ -24,7 +24,7 @@ The Original Code is the SpatiaLite library
 
 The Initial Developer of the Original Code is Alessandro Furieri
  
-Portions created by the Initial Developer are Copyright (C) 2008-2015
+Portions created by the Initial Developer are Copyright (C) 2008-2020
 the Initial Developer. All Rights Reserved.
 
 Contributor(s):
@@ -206,6 +206,7 @@ create_column (sqlite3 * sqlite, const char *table, struct aux_column *column)
     free (xtable);
     free (xcolumn);
     ret = sqlite3_exec (sqlite, sql, NULL, NULL, &err_msg);
+    sqlite3_free (sql);
     if (ret != SQLITE_OK)
       {
 	  spatialite_e ("ALTER TABLE ADD COLUMN error: %s\n", err_msg);
@@ -421,6 +422,7 @@ create_geometry (sqlite3 * sqlite, const char *table, struct aux_column *column)
     free (xtable);
     free (xcolumn);
     ret = sqlite3_exec (sqlite, sql, NULL, NULL, &err_msg);
+    sqlite3_free (sql);
     if (ret != SQLITE_OK)
       {
 	  spatialite_e ("ADD GEOMETRY COLUMN error: %s\n", err_msg);
@@ -438,6 +440,7 @@ create_geometry (sqlite3 * sqlite, const char *table, struct aux_column *column)
 	  free (xtable);
 	  free (xcolumn);
 	  ret = sqlite3_exec (sqlite, sql, NULL, NULL, &err_msg);
+	  sqlite3_free (sql);
 	  if (ret != SQLITE_OK)
 	    {
 		spatialite_e ("CREATE SPATIAL INDEX error: %s\n", err_msg);
@@ -916,6 +919,7 @@ create_output_table (struct aux_cloner *cloner)
 	  constraint =
 	      sqlite3_mprintf ("idx_%s_%d", cloner->out_table, fk_no++);
 	  xconstraint = gaiaDoubleQuotedSql (constraint);
+	  sqlite3_free (constraint);
 	  xtable = gaiaDoubleQuotedSql (cloner->out_table);
 	  if (index->unique)
 	      sql =
@@ -992,7 +996,6 @@ copy_rows (struct aux_cloner *cloner)
 
 /* composing the SELECT statement */
     sql = sqlite3_mprintf ("SELECT ");
-    prev_sql = sql;
     column = cloner->first_col;
     while (column != NULL)
       {
@@ -1003,6 +1006,7 @@ copy_rows (struct aux_cloner *cloner)
 		continue;
 	    }
 	  xcolumn = gaiaDoubleQuotedSql (column->name);
+	  prev_sql = sql;
 	  if (first)
 	    {
 		sql = sqlite3_mprintf ("%s\"%s\"", prev_sql, xcolumn);
@@ -1017,8 +1021,10 @@ copy_rows (struct aux_cloner *cloner)
       }
     xdb_prefix = gaiaDoubleQuotedSql (cloner->db_prefix);
     xtable = gaiaDoubleQuotedSql (cloner->in_table);
+    prev_sql = sql;
     sql =
 	sqlite3_mprintf ("%s FROM \"%s\".\"%s\"", prev_sql, xdb_prefix, xtable);
+    sqlite3_free (prev_sql);
     free (xdb_prefix);
     free (xtable);
 /* compiling the SELECT FROM statement */
@@ -2315,7 +2321,7 @@ gaiaAuxClonerExecute (const void *handle)
 	  if (!upgrade_output_table (cloner))
 	    {
 		spatialite_e
-		    ("CloneTable: unable to updgrade the output table \"%s\"\n",
+		    ("CloneTable: unable to upgrade the output table \"%s\"\n",
 		     cloner->out_table);
 		return 0;
 	    }

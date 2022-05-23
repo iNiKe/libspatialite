@@ -9,8 +9,14 @@
 /* Should be defined in order to enable LIBXML2 support. */
 #undef ENABLE_LIBXML2
 
+/* Should be defined in order to enable MiniZIP support. */
+#undef ENABLE_MINIZIP
+
 /* Should be defined in order to enable RTTOPO support. */
 #undef ENABLE_RTTOPO
+
+/* Should be defined in order to enable GEOS_370 support. */
+#undef GEOS_370
 
 /* Should be defined in order to enable GEOS_ADVANCED support. */
 #undef GEOS_ADVANCED
@@ -85,8 +91,14 @@
 /* Define to 1 if you have the `memset' function. */
 #undef HAVE_MEMSET
 
+/* Define to 1 if you have the <minizip/unzip.h> header file. */
+#undef HAVE_MINIZIP_UNZIP_H
+
 /* Define to 1 if you have the <proj_api.h> header file. */
 #undef HAVE_PROJ_API_H
+
+/* Define to 1 if you have the <proj.h> header file. */
+#undef HAVE_PROJ_H
 
 /* Define to 1 if you have the <sqlite3ext.h> header file. */
 #undef HAVE_SQLITE3EXT_H
@@ -204,6 +216,9 @@
 
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
+
+/* Should be defined in order to enable PROJ.6 support. */
+#undef PROJ_NEW
 
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS

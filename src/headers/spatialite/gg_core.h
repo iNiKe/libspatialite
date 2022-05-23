@@ -1,7 +1,7 @@
 /*
  gg_core.h -- Gaia common support for geometries: core functions
   
- version 4.3, 2015 June 29
+ version 5.0, 2020 August 1
 
  Author: Sandro Furieri a.furieri@lqt.it
 
@@ -23,7 +23,7 @@ The Original Code is the SpatiaLite library
 
 The Initial Developer of the Original Code is Alessandro Furieri
  
-Portions created by the Initial Developer are Copyright (C) 2008-2015
+Portions created by the Initial Developer are Copyright (C) 2008-2020
 the Initial Developer. All Rights Reserved.
 
 Contributor(s):
@@ -1719,7 +1719,7 @@ extern "C"
  \sa gaiaIsValidTrajectory, gaiaFreeGeomColl
 
  \note you are responsible to destroy (before or after) any allocated Geometry,
- this including any Geometry returned by gaiaLineInterpolatePoint()\n
+ this including any Geometry returned by gaiaTrajectoryInterpolatePoint()\n
  not reentrant and thread unsafe.
  
  \note a Geometry is considered to be a valid Trajectory if it contains
@@ -2247,6 +2247,33 @@ extern "C"
  */
     GAIAGEO_DECLARE gaiaGeomCollPtr gaiaMakePolygon (gaiaGeomCollPtr exterior,
 						     gaiaGeomCollPtr interiors);
+
+/**
+ Computes the Curvosity Index for some Linestrings
+
+ \param p_cache a memory pointer returned by spatialite_alloc_connection()
+ \param line a generic Linestring.
+ \param extra_points number of points to be interpolated at regular
+ distance into the reference line.
+
+ \return the calculated Curvosity Index (expected to be in the range between 0.0 and 1.0).
+ */
+    GAIAGEO_DECLARE double gaiaCurvosityIndex (const void *p_cache,
+					       gaiaLinestringPtr line,
+					       int extra_points);
+
+/**
+ Computes the Uphill and Downhill total Height for some 3D Linestrings
+
+ \param line a generic Linestring.
+ \param up on completion this variable will contain the total Uphill Height.\n
+ Will always be ZERO for any 2D Linestring.
+ \param down on completion this variable will contain the total Downhill Height.\n
+ Will always be ZERO for any 2D Linestring.
+
+ */
+    GAIAGEO_DECLARE void gaiaUpDownHeight (gaiaLinestringPtr line, double *up,
+					   double *down);
 
 #ifdef __cplusplus
 }

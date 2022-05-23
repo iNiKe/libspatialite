@@ -1,7 +1,7 @@
 /*
  gg_const.h -- Gaia common support for geometries: constants
   
- version 4.3, 2015 June 29
+ version 5.0, 2020 August 1
 
  Author: Sandro Furieri a.furieri@lqt.it
 
@@ -23,7 +23,7 @@ The Original Code is the SpatiaLite library
 
 The Initial Developer of the Original Code is Alessandro Furieri
  
-Portions created by the Initial Developer are Copyright (C) 2008-2015
+Portions created by the Initial Developer are Copyright (C) 2008-2020
 the Initial Developer. All Rights Reserved.
 
 Contributor(s):
@@ -434,6 +434,16 @@ extern "C"
 #define GAIA_DBF_COLNAME_LOWERCASE	1
 /** Convert all DBF column names to UpperCase */
 #define GAIA_DBF_COLNAME_UPPERCASE	2
+
+/* constants used for PROJ.6 WKT styles */
+/** WKT style is ISO-2018 */
+#define GAIA_PROJ_WKT_ISO_2018	1
+/** WKT style is ISO-2015 */
+#define GAIA_PROJ_WKT_ISO_2015	2
+/** WKT style is GDAL */
+#define GAIA_PROJ_WKT_GDAL	3
+/** WKT style is ESRI */
+#define GAIA_PROJ_WKT_ESRI	4
 
 /* macros */
 /**

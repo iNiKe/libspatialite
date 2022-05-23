@@ -2,7 +2,7 @@
 
  virtualknn.c -- SQLite3 extension [VIRTUAL TABLE RTree metahandler]
 
- version 4.4, 2015 November 27
+ version 5.0, 2020 August 1
 
  Author: Sandro Furieri a.furieri@lqt.it
 
@@ -24,7 +24,7 @@ The Original Code is the SpatiaLite library
 
 The Initial Developer of the Original Code is Alessandro Furieri
  
-Portions created by the Initial Developer are Copyright (C) 2015
+Portions created by the Initial Developer are Copyright (C) 2015-2020
 the Initial Developer. All Rights Reserved.
 
 Contributor(s):
@@ -240,6 +240,7 @@ vknn_empty_context (VKnnContextPtr ctx)
     ctx->rtree_miny = -DBL_MAX;
     ctx->rtree_maxx = DBL_MAX;
     ctx->rtree_maxy = DBL_MAX;
+    ctx->level = 0;
     ctx->current_level = 0;
     ctx->max_items = 0;
     ctx->knn_array = NULL;
@@ -1539,6 +1540,8 @@ vknn_filter (sqlite3_vtab_cursor * pCursor, int idxNum, const char *idxStr,
 			       quoted_db, idx_nameQ);
 	  free (quoted_db);
       }
+    sqlite3_free (idx_name);
+    free (idx_nameQ);
     ret =
 	sqlite3_prepare_v2 (knn->db, sql_statement, strlen (sql_statement),
 			    &stmt_rtree_count, NULL);

@@ -1,7 +1,7 @@
 /*
  gg_structs.h -- Gaia common support for geometries: structures
   
- version 4.3, 2015 June 29
+ version 5.0, 2020 August 1
 
  Author: Sandro Furieri a.furieri@lqt.it
 
@@ -23,7 +23,7 @@ The Original Code is the SpatiaLite library
 
 The Initial Developer of the Original Code is Alessandro Furieri
  
-Portions created by the Initial Developer are Copyright (C) 2008-2015
+Portions created by the Initial Developer are Copyright (C) 2008-2020
 the Initial Developer. All Rights Reserved.
 
 Contributor(s):
@@ -56,6 +56,7 @@ the terms of any one of the MPL, the GPL or the LGPL.
 #endif
 
 #include <sys/types.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C"
@@ -66,7 +67,7 @@ extern "C"
 #ifdef _WIN32			/* windows */
 #define gaia_off_t	__int64
 #define gaia_fseek	_fseeki64
-#else /* not windows */
+#else				/* not windows */
 #define gaia_off_t	off_t
 #define gaia_fseek	fseeko
 #endif
@@ -360,6 +361,24 @@ extern "C"
     typedef gaiaDbfList *gaiaDbfListPtr;
 
 /**
+ A Memory based File
+ */
+    typedef struct gaiaMemFileStruct
+    {
+/* Memory File Type */
+	char *path;
+	void *buf;
+	uint32_t size;
+	uint32_t offset;
+    } gaiaMemFile;
+/** 
+ Typedef for Memory File structure
+
+ \sa gaiaMemFile
+ */
+    typedef gaiaMemFile *gaiaMemFilePtr;
+
+/**
  Container for DBF file handling
  */
     typedef struct gaiaDbfStruct
@@ -373,6 +392,8 @@ extern "C"
 	char *Path;		/* the DBF path */
 /** FILE handle */
 	FILE *flDbf;		/* the DBF file handle */
+/** Memory based DBF file */
+	gaiaMemFilePtr memDbf;	/* the DBF memory file */
 /** list of DBF fields */
 	gaiaDbfListPtr Dbf;	/* the DBF attributes list */
 /** I/O buffer */
@@ -417,6 +438,12 @@ extern "C"
 	FILE *flShp;		/* the SHP file handle */
 /** FILE handle to DBF file */
 	FILE *flDbf;		/* the DBF file handle */
+/** Memory based SHX file */
+	gaiaMemFilePtr memShx;	/* the SHX memory file */
+/** Memory based SHP file */
+	gaiaMemFilePtr memShp;	/* the SHP memory file */
+/** Memory based DBF file */
+	gaiaMemFilePtr memDbf;	/* the DBF memory file */
 /** the SHP shape code */
 	int Shape;		/* the SHAPE code for the whole shapefile */
 /** list of DBF fields */
@@ -827,6 +854,24 @@ extern "C"
  \sa gaiaVectorLayersList
  */
     typedef gaiaVectorLayersList *gaiaVectorLayersListPtr;
+
+/**
+ BBOX corresponding to PROJ.6 AREA
+ */
+    typedef struct gaiaProjAreaStr
+    {
+	double WestLongitude;
+	double SouthLatitude;
+	double EastLongitude;
+	double NorthLatitude;
+    } gaiaProjArea;
+
+/**
+ Typedef for BBOX corresponding to PROJ.6 AREA
+
+ \sa gaiaProjArea
+ */
+    typedef gaiaProjArea *gaiaProjAreaPtr;
 
 #ifdef __cplusplus
 }

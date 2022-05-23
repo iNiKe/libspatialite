@@ -665,6 +665,18 @@ EXTRA_DIST = addpoint10.testcase \
 	compressgeometry9.testcase \
 	createrastercoverages.testcase \
 	createuuid1.testcase \
+	curvosity1.testcase \
+	curvosity2.testcase \
+	curvosity3.testcase \
+	curvosity4.testcase \
+	curvosity5.testcase \
+	curvosity6.testcase \
+	curvosity7.testcase \
+	curvosity8.testcase \
+	curvosity9.testcase \
+	curvosity10.testcase \
+	curvosity11.testcase \
+	curvosity12.testcase \
 	datalic_register1.testcase \
 	datalic_register2.testcase \
 	datalic_register3.testcase \
@@ -742,6 +754,14 @@ EXTRA_DIST = addpoint10.testcase \
 	dissolve8.testcase \
 	dissolve9.testcase \
 	dm_m.testcase \
+	downhill1.testcase \
+	downhill2.testcase \
+	downhill3.testcase \
+	downhill4.testcase \
+	downhill5.testcase \
+	downhill6.testcase \
+	downhill7.testcase \
+	downhill8.testcase \
 	DSC_1467.JPG \
 	DSCN0042.JPG \
 	dropgeo1.testcase \
@@ -753,6 +773,19 @@ EXTRA_DIST = addpoint10.testcase \
 	dropgeo7.testcase \
 	dropgeo8.testcase \
 	dropgeo9.testcase \
+	droptable1.testcase \
+	droptable2.testcase \
+	droptable3.testcase \
+	droptable4.testcase \
+	droptable5.testcase \
+	droptable6.testcase \
+	droptable7.testcase \
+	droptable8.testcase \
+	droptable9.testcase \
+	droptable10.testcase \
+	droptable11.testcase \
+	droptable12.testcase \
+	droptable13.testcase \
 	elemgeo1.testcase \
 	elemgeo2.testcase \
 	elemgeo3.testcase \
@@ -1403,11 +1436,11 @@ EXTRA_DIST = addpoint10.testcase \
 	getmimetype3.testcase \
 	getmimetype4.testcase \
 	getmimetype5.testcase \
-	getshapefileextent1.testcase \
-	getshapefileextent2.testcase \
-	getshapefileextent3.testcase \
-	getshapefileextent4.testcase \
-	getshapefileextent5.testcase \
+	getvtableextent1.testcase \
+	getvtableextent2.testcase \
+	getvtableextent3.testcase \
+	getvtableextent4.testcase \
+	getvtableextent5.testcase \
 	gml10.testcase \
 	gml11.testcase \
 	gml12.testcase \
@@ -1563,6 +1596,39 @@ EXTRA_DIST = addpoint10.testcase \
 	linesfromrings5.testcase \
 	linesfromrings6.testcase \
 	linesfromrings7.testcase \
+	linesegavg1.testcase \
+	linesegavg2.testcase \
+	linesegavg3.testcase \
+	linesegavg4.testcase \
+	linesegavg5.testcase \
+	linesegavg6.testcase \
+	linesegavg7.testcase \
+	linesegavg8.testcase \
+	linesegavg9.testcase \
+	linesegmax1.testcase \
+	linesegmax2.testcase \
+	linesegmax3.testcase \
+	linesegmax4.testcase \
+	linesegmax5.testcase \
+	linesegmax6.testcase \
+	linesegmax7.testcase \
+	linesegmax8.testcase \
+	linesegmax9.testcase \
+	linesegmin1.testcase \
+	linesegmin2.testcase \
+	linesegmin3.testcase \
+	linesegmin4.testcase \
+	linesegmin5.testcase \
+	linesegmin6.testcase \
+	linesegmin7.testcase \
+	linesegmin8.testcase \
+	linesegmin9.testcase \
+	linesegmin10.testcase \
+	linesegmin11.testcase \
+	linesegmin12.testcase \
+	linesegmin13.testcase \
+	linesegmin14.testcase \
+	linesegmin15.testcase \
 	link_m.testcase \
 	locatemeasure10.testcase \
 	locatemeasure11.testcase \
@@ -1990,6 +2056,7 @@ EXTRA_DIST = addpoint10.testcase \
 	polygcw6.testcase \
 	polygonfromtext1.testcase \
 	polygonfromtext2.testcase \
+	recreaterastercoverages.testcase \
 	reflectcoords10.testcase \
 	reflectcoords11.testcase \
 	reflectcoords12.testcase \
@@ -2007,6 +2074,12 @@ EXTRA_DIST = addpoint10.testcase \
 	reflectcoords7.testcase \
 	reflectcoords8.testcase \
 	reflectcoords9.testcase \
+	remextrasp1.testcase \
+	remextrasp2.testcase \
+	remextrasp3.testcase \
+	remextrasp4.testcase \
+	remextrasp5.testcase \
+	remextrasp6.testcase \
 	removedupl1.testcase \
 	removedupl2.testcase \
 	removedupl3.testcase \
@@ -2466,6 +2539,11 @@ EXTRA_DIST = addpoint10.testcase \
 	todms11.testcase \
 	todms12.testcase \
 	todms13.testcase \
+	todms14.testcase \
+	todms15.testcase \
+	todms16.testcase \
+	todms17.testcase \
+	todms18.testcase \
 	fromdms1.testcase \
 	fromdms2.testcase \
 	fromdms3.testcase \
@@ -2513,7 +2591,6 @@ EXTRA_DIST = addpoint10.testcase \
 	sriddatum3.testcase \
 	sriddatum4.testcase \
 	sriddatum5.testcase \
-	sriddatum6.testcase \
 	sridunit1.testcase \
 	sridunit2.testcase \
 	sridunit3.testcase \
@@ -2525,31 +2602,26 @@ EXTRA_DIST = addpoint10.testcase \
 	sridprojection3.testcase \
 	sridprojection4.testcase \
 	sridprojection5.testcase \
-	sridprojection6.testcase \
 	sridax1name1.testcase \
 	sridax1name2.testcase \
 	sridax1name3.testcase \
 	sridax1name4.testcase \
 	sridax1name5.testcase \
-	sridax1name6.testcase \
 	sridax1orient1.testcase \
 	sridax1orient2.testcase \
 	sridax1orient3.testcase \
 	sridax1orient4.testcase \
 	sridax1orient5.testcase \
-	sridax1orient6.testcase \
 	sridax2name1.testcase \
 	sridax2name2.testcase \
 	sridax2name3.testcase \
 	sridax2name4.testcase \
 	sridax2name5.testcase \
-	sridax2name6.testcase \
 	sridax2orient1.testcase \
 	sridax2orient2.testcase \
 	sridax2orient3.testcase \
 	sridax2orient4.testcase \
 	sridax2orient5.testcase \
-	sridax2orient6.testcase \
 	stringlist1.testcase \
 	stringlist2.testcase \
 	stringlist3.testcase \
@@ -2577,6 +2649,22 @@ EXTRA_DIST = addpoint10.testcase \
 	trajectorypoint10.testcase \
 	trajectorypoint11.testcase \
 	trajectorypoint12.testcase \
+	uphill1.testcase \
+	uphill2.testcase \
+	uphill3.testcase \
+	uphill4.testcase \
+	uphill5.testcase \
+	uphill6.testcase \
+	uphill7.testcase \
+	uphill8.testcase \
+	updown1.testcase \
+	updown2.testcase \
+	updown3.testcase \
+	updown4.testcase \
+	updown5.testcase \
+	updown6.testcase \
+	updown7.testcase \
+	updown8.testcase \
 	wms_defaultsetting1.testcase \
 	wms_defaultsetting2.testcase \
 	wms_defaultsetting3.testcase \

@@ -2,7 +2,7 @@
 
  validator.c -- implements geometry validation and repair
 
- version 4.3, 2015 June 29
+ version 5.0, 2020 August 1
 
  Author: Sandro Furieri a.furieri@lqt.it
 
@@ -24,7 +24,7 @@ The Original Code is the SpatiaLite library
 
 The Initial Developer of the Original Code is Alessandro Furieri
  
-Portions created by the Initial Developer are Copyright (C) 2008-2015
+Portions created by the Initial Developer are Copyright (C) 2008-2020
 the Initial Developer. All Rights Reserved.
 
 Alternatively, the contents of this file may be used under the terms of
@@ -2288,7 +2288,7 @@ sanitize_geometry_column_common (const void *p_cache, sqlite3 * sqlite,
     if (report->n_not_repaired > 0)
       {
 	  fprintf (out,
-		   "\t\t\t<tr><td colspan=\"2\" class=\"err\">This layer contains severly damaged Geometries (beyond any possible repair);<br>");
+		   "\t\t\t<tr><td colspan=\"2\" class=\"err\">This layer contains severely damaged Geometries (beyond any possible repair);<br>");
 	  fprintf (out,
 		   "please manually check the <b>%s</b> table.</td></tr>\n",
 		   tmp_table);

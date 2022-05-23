@@ -2,7 +2,7 @@
 
  virtualshape.c -- SQLite3 extension [VIRTUAL TABLE accessing Shapefile]
 
- version 4.3, 2015 June 29
+ version 5.0, 2020 August 1
 
  Author: Sandro Furieri a.furieri@lqt.it
 
@@ -24,7 +24,7 @@ The Original Code is the SpatiaLite library
 
 The Initial Developer of the Original Code is Alessandro Furieri
  
-Portions created by the Initial Developer are Copyright (C) 2008-2015
+Portions created by the Initial Developer are Copyright (C) 2008-2020
 the Initial Developer. All Rights Reserved.
 
 Contributor(s):
@@ -640,8 +640,8 @@ vshp_create (sqlite3 * db, void *pAux, int argc, const char *const *argv,
 	  sqlite3_free (sql);
       }
 
-/* inserting into the connection cache: SHP Extent */
-    sql = "SELECT \"*Add-Shapefile+Extent\"(?, ?, ?, ?, ?, ?)";
+/* inserting into the connection cache: Virtual Extent */
+    sql = "SELECT \"*Add-VirtualTable+Extent\"(?, ?, ?, ?, ?, ?)";
     ret = sqlite3_prepare_v2 (db, sql, strlen (sql), &stmt, NULL);
     if (ret == SQLITE_OK)
       {
@@ -713,8 +713,8 @@ vshp_disconnect (sqlite3_vtab * pVTab)
     if (p_vt->Shp)
 	gaiaFreeShapefile (p_vt->Shp);
 
-/* removing from the connection cache: SHP Extent */
-    sql = "SELECT \"*Remove-Shapefile+Extent\"(?)";
+/* removing from the connection cache: Virtual Extent */
+    sql = "SELECT \"*Remove-VirtualTable+Extent\"(?)";
     ret = sqlite3_prepare_v2 (p_vt->db, sql, strlen (sql), &stmt, NULL);
     if (ret == SQLITE_OK)
       {
@@ -1070,7 +1070,12 @@ vshp_eval_constraints (VirtualShapeCursorPtr cursor)
 					      break;
 #ifdef HAVE_DECL_SQLITE_INDEX_CONSTRAINT_LIKE
 					  case SQLITE_INDEX_CONSTRAINT_LIKE:
-					      if (ret >= 0)
+					      ret =
+						  sqlite3_strlike (pC->txtValue,
+								   pFld->
+								   Value->TxtValue,
+								   0);
+					      if (ret == 0)
 						  ok = 1;
 					      break;
 #endif

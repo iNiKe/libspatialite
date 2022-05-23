@@ -2,7 +2,7 @@
 
  gg_geodesic.c -- Gaia functions for geodesic calculations
   
- version 4.3, 2015 June 29
+ version 5.0, 2020 August 1
 
  Author: Sandro Furieri a.furieri@lqt.it
 
@@ -24,7 +24,7 @@ The Original Code is the SpatiaLite library
 
 The Initial Developer of the Original Code is Alessandro Furieri
  
-Portions created by the Initial Developer are Copyright (C) 2008-2015
+Portions created by the Initial Developer are Copyright (C) 2008-2020
 the Initial Developer. All Rights Reserved.
 
 Contributor(s):
@@ -65,6 +65,11 @@ the terms of any one of the MPL, the GPL or the LGPL.
 #include <spatialite_private.h>
 
 #ifndef OMIT_PROJ
+#ifdef PROJ_NEW			/* supporting PROJ.6 */
+#include <proj.h>
+#define PROJ_GEODESIC 1
+#include <geodesic.h>
+#else /* supporting old PROJ.4 */
 #include <proj_api.h>
 #if defined(PJ_VERSION) && PJ_VERSION >= 490
 /* Enable new proj.4's geodesic distance */
@@ -73,6 +78,7 @@ the terms of any one of the MPL, the GPL or the LGPL.
 #else
 /* Use the old (Vincenty) geodesic distance */
 #define PROJ_GEODESIC 0
+#endif
 #endif
 #else
 #define PROJ_GEODESIC 0

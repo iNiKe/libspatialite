@@ -881,7 +881,7 @@ main (int argc, char *argv[])
 	  return -66;
       }
     value = results[1];
-    if (strcmp ("325834", value) != 0)
+    if (strcmp ("900914", value) != 0)
       {
 	  fprintf (stderr, "Unexpected result (SRID from Auth): %s\n",
 		   results[1]);
@@ -1798,7 +1798,7 @@ main (int argc, char *argv[])
 #endif /* end including PROJ.4 */
 
 /* checking dump_geojson */
-    ret = dump_geojson (handle, shape, "col1", dumpname, 10, 5);
+    ret = dump_geojson (handle, shape, "geometry", dumpname, 10, 5);
     if (!ret)
       {
 	  fprintf (stderr, "dump_geojson() error: %s\n", err_msg);

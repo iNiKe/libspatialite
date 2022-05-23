@@ -7,6 +7,7 @@ check_PROGRAMS = check_endian \
 		check_init_full \
 		check_geom_aux \
 		check_geometry_cols \
+		check_tempgeom \
 		check_create \
 		check_bufovflw \
 		check_fdo1 \
@@ -31,6 +32,9 @@ check_PROGRAMS = check_endian \
 		check_extension \
 		check_recover_geom \
 		check_sql_stmt \
+		check_sql_stmt_tiny \
+		check_sql_stmt_legacy \
+		check_sql_stmt_extension \
 		check_multithread \
 		check_virtualtable1 \
 		check_virtualtable2 \
@@ -48,6 +52,7 @@ check_PROGRAMS = check_endian \
 		check_geoscvt_fncts \
 		check_libxml2 \
 		check_styling \
+		check_map_config \
 		check_virtualxpath \
 		check_virtualbbox \
 		check_wfsin \
@@ -69,7 +74,10 @@ check_PROGRAMS = check_endian \
 		check_sequence \
 		check_stored_proc \
 		check_wms \
-		routing_test
+		check_drop_rename \
+		routing_test \
+		geojson_test \
+		check_zipshp
 		
 if ENABLE_GEOPACKAGE
 check_PROGRAMS += \
@@ -119,6 +127,7 @@ EXTRA_DIST = fnmatch_impl4win.h \
 	fnmatch4win.h \
 	scandir4win.h \
 	test_helpers.h \
+	check_sql_stmt.h \
 	shapetest1.dbf \
 	shapetest1.prj \
 	shapetest1.qpj \
@@ -201,23 +210,32 @@ EXTRA_DIST = fnmatch_impl4win.h \
 	symbol.dxf gpkg_test.sqlite gpkg_test.gpkg \
 	gpkg_test_broken.gpkg gpkg_test_extrasrid.gpkg \
 	elba-pg.shp elba-pg.shx elba-pg.dbf \
-	elba-ln.shp elba-ln.shx elba-ln.dbf \
+	elba-ln.shp elba-ln.shx elba-ln.dbf elba.zip \
 	Gpx-sample.gpx 000323485.gpx \
 	sqlproc_sample.txt sqlproc_logfile.txt \
-	sqlproc_error.txt orbetello.sqlite
+	sqlproc_error.txt orbetello.sqlite \
+	test.geojson mapconfig.xml mapconfig2.xml
 
 SUBDIRS = sql_stmt_geosadvanced_tests sql_stmt_geos_tests \
+	sql_stmt_geos_380 sql_stmt_geos_non380 \
 	sql_stmt_libxml2_tests sql_stmt_rtgeom_tests \
+	sql_stmt_libxml2_rttopo_tests \
 	sql_stmt_mathsql_tests sql_stmt_proj_tests \
 	sql_stmt_proj492_tests sql_stmt_proj493_tests \
-	sql_stmt_security_tests sql_stmt_tests \
-	sql_stmt_xmlsec_tests sql_stmt_geopackage_tests \
-	sql_stmt_freexl_tests sql_stmt_cache_tests \
-	sql_stmt_nocache_tests sql_stmt_voronoj1_tests \
-	sql_stmt_voronoj2_tests \
+	sql_stmt_proj600security_tests \
+	sql_stmt_zip_proj6 sql_stmt_minizip \
+	sql_stmt_proj600_tests sql_stmt_security_tests \
+	sql_stmt_tests sql_stmt_xmlsec_tests \
+	sql_stmt_geopackage_tests sql_stmt_freexl_tests \
+	sql_stmt_cache_tests sql_stmt_nocache_tests \
+	sql_stmt_voronoj1_tests sql_stmt_voronoj2_tests \
 	sql_stmt_gpkg_epsg492_tests sql_stmt_gpkg_epsg493_tests \
+	sql_stmt_gpkg_epsg600_tests \
 	sql_stmt_rttopo_tests sql_stmt_gpkgcache_tests \
 	sql_stmt_gpkgnocache_tests sql_stmt_sequence_tests \
 	sql_stmt_routing_tests sql_stmt_logfile_tests \
 	sql_stmt_iconv_tests sql_stmt_point_geom \
-	sql_stmt_tiny_point sql_stmt_postgres_tests
+	sql_stmt_tiny_point sql_stmt_postgres_tests \
+	sql_stmt_proc_tests sql_stmt_geos370_tests \
+	sql_stmt_renamenew_tests sql_stmt_renameold_tests \
+	sql_stmt_bufoptsnew_tests sql_stmt_bufoptsold_tests

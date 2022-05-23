@@ -2,7 +2,7 @@
 
  gaia_cutter.c -- implementation of the Cutter module
     
- version 4.3, 2015 July 2
+ version 5.0, 2020 August 1
 
  Author: Sandro Furieri a.furieri@lqt.it
 
@@ -3767,14 +3767,11 @@ do_cut_tmp_linestrings (sqlite3 * handle, const void *cache,
 			    gaiaToSpatiaLiteBlobWkbEx2 (result, &blob, &blob_sz,
 							gpkg_mode, tiny_point);
 			    gaiaFreeGeomColl (result);
+			    if (!do_update_tmp_cut_linestring
+				(handle, stmt_upd, pk, blob, blob_sz, message))
+				goto error;
 			}
 		      gaiaFreeGeomColl (input_g);
-		  }
-		if (blob != NULL)
-		  {
-		      if (!do_update_tmp_cut_linestring
-			  (handle, stmt_upd, pk, blob, blob_sz, message))
-			  goto error;
 		  }
 	    }
 	  else
@@ -4969,14 +4966,11 @@ do_cut_tmp_polygons (sqlite3 * handle, const void *cache,
 			    gaiaToSpatiaLiteBlobWkbEx2 (result, &blob, &blob_sz,
 							gpkg_mode, tiny_point);
 			    gaiaFreeGeomColl (result);
+			    if (!do_update_tmp_cut_polygon
+				(handle, stmt_upd, pk, blob, blob_sz, message))
+				goto error;
 			}
 		      gaiaFreeGeomColl (input_g);
-		  }
-		if (blob != NULL)
-		  {
-		      if (!do_update_tmp_cut_polygon
-			  (handle, stmt_upd, pk, blob, blob_sz, message))
-			  goto error;
 		  }
 	    }
 	  else
